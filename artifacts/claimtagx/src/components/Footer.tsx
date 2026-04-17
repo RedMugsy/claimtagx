@@ -1,5 +1,21 @@
 import { Link } from 'wouter';
-import { Linkedin, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Linkedin, Twitter, Instagram } from 'lucide-react';
+
+function ThreadsIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.7 11.2c-.1 0-.2-.1-.3-.1-.2-3.1-1.9-4.9-4.7-4.9-1.7 0-3.1.7-4 2l1.6 1.1c.6-.9 1.6-1.1 2.4-1.1 1.6 0 2.4 1 2.6 2.4-.7-.1-1.4-.2-2.2-.2-2.6 0-4.4 1.5-4.4 3.6 0 1.9 1.6 3.4 3.7 3.4 2.3 0 3.5-1.3 4-2.6.6.4 1 1.1 1.2 1.9.3 1.4-.7 2.6-2.7 2.6-1.6 0-2.7-.5-3.5-1.2L7 19.6c1.1 1 2.7 1.5 4.7 1.5 3.5 0 4.9-2 4.9-4.4 0-1-.4-2.1-1.1-2.9.5-.4.8-.9 1-1.5.5-1.4-.4-2.5-1.2-2.7zm-4.4 4.6c-.7 0-1.7-.4-1.7-1.4 0-.8.7-1.5 2.1-1.5.7 0 1.4.1 2 .2-.2 1.6-1.1 2.7-2.4 2.7z"/>
+    </svg>
+  );
+}
+
+function TikTokIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19.6 6.3c-1.4 0-2.6-.7-3.4-1.8-.4-.5-.6-1.2-.7-1.9V2h-3v12.4c0 1.4-1.1 2.5-2.5 2.5S7.5 15.8 7.5 14.4s1.1-2.5 2.5-2.5c.3 0 .5 0 .8.1V8.9c-.3 0-.5-.1-.8-.1C7 8.8 4.5 11.3 4.5 14.4s2.5 5.6 5.6 5.6 5.6-2.5 5.6-5.6V8.7c1.1.8 2.5 1.3 4 1.3V7c-.1-.3-.1-.4-.1-.7z"/>
+    </svg>
+  );
+}
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -35,8 +51,10 @@ export default function Footer() {
             <ul className="flex flex-col gap-3">
               <li><a href="mailto:info@claimtagx.com" className="text-slate hover:text-lime transition-colors text-sm">Contact</a></li>
               <li><a href="https://linkedin.com/company/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">LinkedIn</a></li>
-              <li><a href="https://twitter.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">X (Twitter)</a></li>
+              <li><a href="https://x.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">X</a></li>
               <li><a href="https://instagram.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">Instagram</a></li>
+              <li><a href="https://threads.net/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">Threads</a></li>
+              <li><a href="https://tiktok.com/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">TikTok</a></li>
             </ul>
           </div>
 
@@ -62,14 +80,17 @@ export default function Footer() {
             <a href="https://linkedin.com/company/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors">
               <Linkedin size={20} />
             </a>
-            <a href="https://twitter.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors">
+            <a href="https://x.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="X">
               <Twitter size={20} />
             </a>
-            <a href="https://instagram.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors">
+            <a href="https://instagram.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="Instagram">
               <Instagram size={20} />
             </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors">
-              <Youtube size={20} />
+            <a href="https://threads.net/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="Threads">
+              <ThreadsIcon size={20} />
+            </a>
+            <a href="https://tiktok.com/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="TikTok">
+              <TikTokIcon size={20} />
             </a>
           </div>
         </div>
