@@ -15,8 +15,10 @@ const comparisonData = [
 
 export default function Comparison() {
   return (
-    <section id="comparison" className="py-20 md:py-32 bg-[#080B12] border-t border-white/5 relative overflow-hidden">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="comparison" className="py-24 md:py-32 bg-steel border-y border-white/5 relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.15] pointer-events-none" />
+      
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -37,54 +39,71 @@ export default function Comparison() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.7 }}
           className="w-full overflow-x-auto pb-6"
         >
-          <div className="min-w-[700px] bg-steel/30 rounded-2xl border border-white/5 overflow-hidden">
-            <div className="grid grid-cols-4 bg-steel border-b border-white/10 p-4 font-bold text-sm">
-              <div className="text-white">Feature</div>
-              <div className="text-slate text-center">Paper Tickets</div>
-              <div className="text-slate text-center">Legacy Software</div>
-              <div className="text-lime text-center">ClaimTagX</div>
+          <div className="min-w-[700px] bg-obsidian rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl relative">
+            {/* Highlight Background for ClaimTagX Column */}
+            <div className="absolute top-0 right-0 w-[25%] h-full bg-lime/[0.03] pointer-events-none" />
+            
+            <div className="grid grid-cols-4 bg-white/5 border-b border-white/10 p-6 font-bold text-sm">
+              <div className="text-white/70 uppercase tracking-wider text-xs">Feature</div>
+              <div className="text-slate uppercase tracking-wider text-xs text-center">Paper Tickets</div>
+              <div className="text-slate uppercase tracking-wider text-xs text-center">Legacy Software</div>
+              <div className="text-lime uppercase tracking-wider text-xs text-center relative">
+                ClaimTagX
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-full h-1 bg-lime shadow-[0_0_10px_rgba(198,242,78,0.5)]" />
+              </div>
             </div>
             
             <div className="divide-y divide-white/5">
               {comparisonData.map((row, i) => (
-                <div key={i} className="grid grid-cols-4 p-4 items-center hover:bg-white/[0.02] transition-colors">
-                  <div className="text-white/90 text-sm font-medium">{row.feature}</div>
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: i * 0.05 }}
+                  className="grid grid-cols-4 p-5 items-center hover:bg-white/[0.02] transition-colors relative z-10"
+                >
+                  <div className="text-white font-medium pl-2">{row.feature}</div>
                   
                   {/* Paper Column */}
                   <div className="text-center flex justify-center">
                     {typeof row.paper === 'boolean' ? (
-                      row.paper ? <Check className="w-5 h-5 text-slate" /> : <Minus className="w-5 h-5 text-slate/50" />
+                      row.paper ? <Check className="w-5 h-5 text-slate/60" /> : <Minus className="w-5 h-5 text-slate/30" />
                     ) : (
-                      <span className="text-sm text-slate">{row.paper}</span>
+                      <span className="text-sm text-slate/70 font-medium">{row.paper}</span>
                     )}
                   </div>
                   
                   {/* Legacy Column */}
                   <div className="text-center flex justify-center">
                     {typeof row.legacy === 'boolean' ? (
-                      row.legacy ? <Check className="w-5 h-5 text-slate" /> : <Minus className="w-5 h-5 text-slate/50" />
+                      row.legacy ? <Check className="w-5 h-5 text-slate/60" /> : <Minus className="w-5 h-5 text-slate/30" />
                     ) : row.legacy === "partial" ? (
-                      <span className="text-amber-500 font-bold">~</span>
+                      <span className="text-amber-500/70 font-bold text-lg leading-none">~</span>
                     ) : (
-                      <span className="text-sm text-slate">{row.legacy}</span>
+                      <span className="text-sm text-slate/70 font-medium">{row.legacy}</span>
                     )}
                   </div>
                   
                   {/* ClaimTagX Column */}
-                  <div className="text-center flex justify-center bg-lime/5 -my-4 py-4 rounded-md">
+                  <div className="text-center flex justify-center">
                     {typeof row.us === 'boolean' ? (
-                      row.us ? <Check className="w-5 h-5 text-lime" /> : <Minus className="w-5 h-5 text-lime/50" />
+                      row.us ? (
+                        <div className="bg-lime/10 p-1.5 rounded-full">
+                          <Check className="w-5 h-5 text-lime" />
+                        </div>
+                      ) : <Minus className="w-5 h-5 text-lime/50" />
                     ) : (
                       <span className="text-sm text-lime font-bold">{row.us}</span>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>

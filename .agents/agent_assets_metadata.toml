@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "oGtdaOYCZ-Be63Sty7v7B"
+uri = "file://artifacts/claimtagx/src/assets/hero-mockup.png"
+type = "image"
+title = "Hero device mockup dark UI"
+
+[[generated]]
+id = "jC6sqh9DUenqMX4qLBl0w"
+uri = "file://artifacts/claimtagx/src/assets/how-it-works-1.png"
+type = "image"
+title = "Handler scanning license plate"
+
+[[generated]]
+id = "CqDnXbSsbCqYYlx_YlQrY"
+uri = "file://artifacts/claimtagx/src/assets/how-it-works-2.png"
+type = "image"
+title = "Patron QR code on phone"
+
+[[generated]]
+id = "qHShltYBbkh3E1_xnJMsX"
+uri = "file://artifacts/claimtagx/src/assets/how-it-works-3.png"
+type = "image"
+title = "Handler scanning patron QR"
+
+[[generated]]
+id = "_WSKxwItFuJ-l5Ag57zFf"
+uri = "file://artifacts/claimtagx/src/assets/industry-valet.png"
+type = "image"
+title = "Valet parking night garage"
+
+[[generated]]
+id = "z5yGfl4UixbYU8QKKYfBn"
+uri = "file://artifacts/claimtagx/src/assets/industry-laundry.png"
+type = "image"
+title = "Dry cleaner shop night"
+
+[[generated]]
+id = "Ux0-B2ZfK_ah-DxQmBRfK"
+uri = "file://artifacts/claimtagx/src/assets/industry-luggage.png"
+type = "image"
+title = "Hotel luggage room night"
+
+[[generated]]
+id = "ZOLbfukwc0yZqZoQZk8Kd"
+uri = "file://artifacts/claimtagx/src/assets/industry-repair.png"
+type = "image"
+title = "Premium repair workshop night"
+
+[[generated]]
+id = "ES9aPQ-gsL7E-I6WCtAX1"
+uri = "file://artifacts/claimtagx/src/assets/feature-hero.png"
+type = "image"
+title = "Dashboard data visualization"
+
+[[generated]]
+id = "2xTduLw6HG5_5gfmoRXz4"
+uri = "file://artifacts/claimtagx/src/assets/og-image.png"
+type = "image"
+title = "Brand social share image"
