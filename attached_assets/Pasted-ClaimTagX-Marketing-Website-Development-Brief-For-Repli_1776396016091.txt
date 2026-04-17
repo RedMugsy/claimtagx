@@ -1,0 +1,413 @@
+ClaimTagX — Marketing Website Development Brief
+For: Replit Agent / Developer
+From: Ali Achkar, Founder
+Date: April 17, 2026
+Deadline: Saturday April 19, 2026 (site must be live before Monday April 20 launch)
+
+1. Project Overview
+Build the marketing website for ClaimTagX — a multi-tenant SaaS platform that replaces paper claim tickets with cryptographically signed digital tags. The site covers valet parking, dry cleaning/laundry, luggage/coat check, and repair/service verticals.
+This is the marketing/landing site only. The actual web application lives at app.claimtagx.com (separate codebase, already built). This site lives at the root domain claimtagx.com and www.claimtagx.com.
+
+2. Tech Stack Requirements
+
+Framework: Next.js (App Router) or Astro — either works; prioritize fast build time
+Styling: Tailwind CSS with the custom brand tokens below
+Fonts: Inter (sans) + JetBrains Mono (mono) via Google Fonts
+Animations: Framer Motion for scroll reveals, hover states, and section transitions — keep it subtle and performant
+Deployment target: Cloudflare Pages (static export) or Vercel
+Performance targets: Lighthouse 95+ on all four categories, <2s LCP, <100ms CLS
+
+
+3. Brand System
+3.1 Colors
+css:root {
+  /* Brand */
+  --obsidian: #0B0F19;      /* Primary dark — backgrounds, navbars, hero */
+  --lime: #C6F24E;          /* Accent — CTAs, highlights, badges, logo C */
+  --lime-hover: #D4FF5E;    /* Hover state for lime elements */
+  --lime-dim: rgba(198, 242, 78, 0.1);   /* Subtle lime tint for badges/cards */
+  --lime-border: rgba(198, 242, 78, 0.2); /* Borders on lime-tinted elements */
+
+  /* Neutrals */
+  --steel: #1F2937;         /* Card backgrounds, secondary surfaces */
+  --slate: #64748B;         /* Secondary text, captions */
+  --fog: #F1F5F9;           /* Light backgrounds, alternating rows */
+  --paper: #FFFFFF;         /* Primary text on dark, body bg (light mode) */
+
+  /* Semantic */
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+}
+Accessibility notes:
+
+Lime on Obsidian: 10.8:1 contrast (AAA) ✓
+White on Obsidian: 17.4:1 contrast (AAA) ✓
+NEVER use lime text on white background — 1.7:1 contrast (FAIL). Lime on white is decorative only (borders, backgrounds, large interactive targets).
+
+3.2 Typography
+RoleFontWeightsSizesDisplay / H1Inter700, 80048–72pxH2Inter70028–40pxH3Inter60020–24pxBodyInter400, 50016–18pxCaption / LabelInter50012–14pxMonospace (ticket codes, tech specs)JetBrains Mono400, 50014px
+html<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+3.3 Logo
+The logo is an XC monogram (geometric interlocking X and C). Ali will provide these files:
+VariantX colorC colorBackgroundFile to requestPrimaryWhiteLime #C6F24EObsidian #0B0F19logo-primary.svgInvertedDark #0B0F19Lime #C6F24EWhitelogo-inverted.svgIconDark #0B0F19Lime #C6F24EBlack #000000logo-icon.png (for favicon, app icon)
+Text wordmark treatment: When the logo is rendered as text (e.g., in the navbar), use:
+Claim  → white (or dark on light bg), font-weight: 800
+TagX   → lime #C6F24E, font-weight: 800
+3.4 Design Tokens (Tailwind)
+javascript// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        obsidian: '#0B0F19',
+        lime: '#C6F24E',
+        'lime-hover': '#D4FF5E',
+        steel: '#1F2937',
+        slate: '#64748B',
+        fog: '#F1F5F9',
+        paper: '#FFFFFF',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Courier New', 'monospace'],
+      },
+      borderRadius: {
+        card: '16px',
+        button: '8px',
+      },
+      maxWidth: {
+        content: '1200px',
+      },
+    },
+  },
+};
+3.5 Component Patterns
+
+Card radius: 16px
+Button radius: 8px
+Section padding: 100px top/bottom desktop, 64px mobile
+Base spacing unit: 8px grid
+Card border on dark: 1px rgba(255, 255, 255, 0.06)
+Card hover: border transitions to rgba(198, 242, 78, 0.2)
+Nav: Fixed, backdrop-blur, semi-transparent Obsidian
+Buttons:
+
+Primary: Lime bg, Obsidian text, hover → lime-hover + subtle translateY(-1px) + box-shadow
+Secondary/Outline: Transparent bg, white text, 1px white/15% border, hover → lime border + lime text
+
+
+
+
+4. Site Architecture — Pages & Sections
+4.1 Homepage (/)
+The homepage is the primary conversion page. It must be long-form, with each section flowing into the next. All sections on one page with smooth-scroll anchor navigation.
+Section order:
+Navigation (fixed)
+
+Logo (text wordmark: "Claim" white + "TagX" lime)
+Links: How it works · Features · Industries · Pricing
+CTA button: "Start free trial" (lime)
+Mobile: hamburger menu
+
+Hero
+
+Badge: "Now in public beta" with pulse dot
+H1: Paper tickets lose items. (white) + ClaimTagX doesn't. (lime)
+Subtext: "Replace paper claim tickets with cryptographically signed digital tags. Valet, laundry, luggage, repair — one platform, zero lost items."
+CTA pair: "Start free trial" (lime) + "See how it works" (outline)
+Proof strip: <2s average issue time · Ed25519 cryptographic signing · 100% digital audit trail
+Background: Obsidian with subtle radial lime glow behind heading (very subtle, transparency 94-96%)
+
+Problem Section (#problem)
+
+Label: "THE PROBLEM" (lime, uppercase, letter-spaced)
+H2: "A $0.03 paper ticket is costing you thousands."
+Left column: problem statement paragraph
+Right column: 4 pain points with icons:
+
+🚗 Wrong-item releases — "Unreadable handwriting, duplicate numbers. One mistake = one lawsuit."
+📋 Zero visibility — "No timestamps, no audit trail. Your insurer will ask — you won't have answers."
+⏱️ Slow handoffs — "Patron waits. Handler hunts. Lobby backs up. Tips drop."
+💸 Hidden costs — "Ticket stock, printers, ink, manual logs. The 'cheap' system isn't."
+
+
+
+How It Works (#how)
+
+Label: "HOW IT WORKS"
+H2: "Three taps. No paper. Full custody chain."
+3-card grid:
+
+01: "Handler tags the item" — photo/plate scan → signed digital ticket
+02: "Patron gets a digital claim" — QR via text/email, no app needed
+03: "Scan to release" — QR scan → signature verified → item released → audit log
+
+
+Consider: animated step-by-step flow or mini product mockup showing the 3 steps
+
+Features (#features)
+
+Label: "PLATFORM"
+H2: "Built for operators who can't afford mistakes."
+3x3 card grid (9 features):
+
+🔐 Ed25519 Signed Tickets — cryptographic proof, can't be forged
+🏢 Multi-Tenant Isolation — row-level security, architecturally separated
+📱 Handler Mobile App — native, OCR, offline, auto-sync
+📊 GM Dashboard — real-time tickets, handler performance, wait times
+🌐 No Patron App Needed — web QR link, no download
+📷 Photo + Plate Capture — ML Kit OCR, sub-second reads
+🔄 Offline-First — SQLite sync queue, works in garages
+📈 Full Audit Trail — every action timestamped, exportable
+⚡ 60-Second Setup — no hardware, no installation
+
+
+
+Industries (#verticals)
+
+Label: "INDUSTRIES"
+H2: "Anywhere items change hands, ClaimTagX tracks them."
+4-card grid with hover lift effect:
+
+🚗 Valet Parking
+👔 Dry Cleaning & Laundry
+🧳 Luggage & Coat Check
+🔧 Repair & Service
+
+
+Each card: emoji, vertical name, 1-line description
+
+Pricing (#pricing)
+
+Label: "PRICING"
+H2: "Transparent pricing. No per-ticket fees."
+Subtext: "Start free. Upgrade when your operation grows. Cancel anytime."
+3-card grid:
+
+Starter — $79/month
+
+1 location
+Up to 5 handlers
+Unlimited tickets
+Handler mobile app
+GM dashboard
+Photo + plate capture
+Email support
+CTA: "Start free trial" (outline button)
+
+Pro — $199/month ⭐ MOST POPULAR (lime border + badge)
+
+Up to 5 locations
+Up to 25 handlers
+Unlimited tickets
+Everything in Starter
+Priority support
+API access
+Custom branding
+Advanced analytics
+CTA: "Start free trial" (lime button)
+
+Enterprise — Custom
+
+Unlimited locations
+Unlimited handlers
+Dedicated database
+SSO / SAML
+SLA guarantee
+Custom integrations
+Onboarding + training
+Dedicated account manager
+CTA: "Contact sales" (outline button → mailto:sales@claimtagx.com)
+
+Comparison Table (#comparison)
+
+Label: "WHY SWITCH"
+H2: "ClaimTagX vs. the status quo"
+Table comparing: Paper Tickets | Legacy Software | ClaimTagX
+Rows: Crypto signing, Offline-capable, Photo+OCR, Real-time dashboard, Patron app-free, Multi-tenant, Audit trail, Setup time, Price
+Use ✓ (lime), ~ (warning yellow), — (muted slate) for cell values
+ClaimTagX column header in lime
+
+Final CTA
+
+H2: "Ready to ditch the paper?"
+Subtext: "Start your free trial today. No credit card required. Live in 60 seconds."
+CTA pair: "Start free trial" + "Talk to sales"
+Note: "14-day free trial on all plans. Cancel anytime."
+Subtle radial lime glow behind
+
+Footer
+
+Logo (text wordmark)
+Brand description (1 sentence)
+Column: Product (Features, Pricing, Industries, How it works)
+Column: Company (Contact → mailto:info@claimtagx.com, LinkedIn, X/Twitter, Instagram)
+Column: Legal (Privacy Policy → /privacy, Terms of Service → /terms, GDPR → /gdpr, Data Processing → /dpa, Cookie Policy → /cookies, Acceptable Use → /aup)
+Bottom bar: © 2026 ClaimTagX. All rights reserved. | Social links (LinkedIn, X, Instagram, YouTube)
+
+
+4.2 Legal Pages
+Create these as separate pages with consistent layout (Obsidian bg, white text, max-width 800px, Inter body):
+PageRouteContent SourcePrivacy Policy/privacyAli will provide — use placeholder structure for nowTerms of Service/termsAli will provideGDPR/gdprAli will provideData Processing Addendum/dpaAli will provideCookie Policy/cookiesAli will provideAcceptable Use Policy/aupAli will provide
+Legal page template: Simple, clean, single-column layout. H1 title, "Last updated: [date]" subtitle, then body text. No sidebar. Footer remains consistent.
+
+4.3 Blog (optional stretch — if time allows)
+
+Route: /blog (index) and /blog/[slug] (individual posts)
+Simple listing page with cards: title, date, 1-line excerpt, reading time
+Post template: H1, author ("Ali Achkar"), date, reading time, body (markdown rendered), CTA at bottom
+4 initial posts will be provided as markdown
+
+
+5. Functional Requirements
+5.1 CTA Links
+Button textLinks to"Start free trial"https://app.claimtagx.com/signup"See how it works"#how (smooth scroll)"Contact sales" / "Talk to sales"mailto:sales@claimtagx.com"Request demo"https://calendly.com/claimtagx (fallback if Paddle not ready)
+5.2 SEO
+
+Unique <title> and <meta description> per page
+Homepage title: ClaimTagX — Digital Custody Management Platform
+Homepage meta: Replace paper claim tickets with cryptographically signed digital tags. Valet, laundry, luggage, repair — one platform, zero lost items.
+Open Graph tags on every page (og:title, og:description, og:image, og:url)
+Twitter Card tags (summary_large_image)
+Canonical URLs
+Semantic HTML (proper heading hierarchy, landmark regions, alt text)
+JSON-LD structured data (Organization, SoftwareApplication)
+sitemap.xml and robots.txt auto-generated
+All images optimized (WebP with fallbacks)
+
+5.3 Analytics
+Add these tracking snippets (Ali will provide IDs):
+html<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+Also consider: Cloudflare Web Analytics (free, privacy-first, no JS — enabled at the Cloudflare dashboard level).
+5.4 Cookie Consent Banner
+Simple bottom banner for EEA/UK visitors:
+
+Text: "We use cookies to improve your experience. By continuing, you agree to our Cookie Policy."
+Buttons: "Accept" (lime) | "Manage preferences" (outline) | "Reject" (text link)
+Links to /cookies
+Sets cookie claimtagx_consent=true on accept
+Stores preference and doesn't re-show
+
+5.5 Email Capture (optional, nice-to-have)
+If time allows, add a lightweight email signup form in the hero or above the footer:
+
+Single input: "Enter your work email"
+CTA: "Get early access" or "Join the waitlist"
+Sends to: an API endpoint or integrates with Loops.so / Mailchimp / Resend
+For MVP: can just be a mailto: link or a Google Form embed
+
+5.6 Favicon & PWA Manifest
+html<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B0F19">
+Ali will provide the icon files derived from the XC monogram logo.
+
+6. Responsive Breakpoints
+BreakpointWidthNotesMobile< 640pxSingle column, stacked cards, hamburger navTablet640–1024px2-column grids where applicableDesktop> 1024pxFull layout, 3-column grids, side-by-side sections
+Key responsive behaviors:
+
+Nav collapses to hamburger menu below 900px
+Feature grid: 3 columns → 2 columns → 1 column
+Pricing grid: 3 columns → stacked (featured plan first)
+Comparison table: horizontal scroll on mobile OR restructure as stacked cards
+Hero H1: scales from 72px desktop → 36px mobile via clamp()
+Section padding: 100px → 64px
+
+
+7. Animations & Interactions
+Keep animations subtle and performant — this is a B2B SaaS site, not a portfolio.
+
+Scroll reveal: Sections fade-in + slide-up (20px translateY) as they enter viewport. Stagger children by 100ms. Use Intersection Observer or Framer Motion whileInView.
+Nav: Background opacity increases from 85% to 95% on scroll past 50px.
+Cards: Subtle translateY(-4px) on hover with 0.2s transition. Lime border-color transition on hover.
+CTA buttons: translateY(-1px) + lime box-shadow glow on hover.
+Hero badge: Pulsing green dot animation (opacity 1 → 0.4 → 1, 2s infinite).
+Step numbers: Large, low-opacity (15%) mono numbers that add visual rhythm without competing with content.
+NO: Parallax, particle effects, text typewriter effects, heavy scroll-jacking, or anything that delays content visibility.
+
+
+8. Content Reference
+All copy for the site is already written and available in the attached index.html reference file. This HTML file contains the complete content structure with all section copy, pricing details, feature descriptions, and comparison table data. Use it as the source of truth for all text content.
+Key URLs referenced in the site:
+
+Website: https://claimtagx.com
+App: https://app.claimtagx.com
+Signup: https://app.claimtagx.com/signup
+Sales email: sales@claimtagx.com
+Info email: info@claimtagx.com
+Support email: support@claimtagx.com
+LinkedIn: https://linkedin.com/company/claimtagx
+Twitter/X: https://twitter.com/claimtagx
+Instagram: https://instagram.com/claimtagx
+YouTube: https://youtube.com/@claimtagx
+
+
+9. Assets Ali Will Provide
+
+ Logo SVG files (primary, inverted, icon variants)
+ Favicon PNG set (16x16, 32x32, 180x180 apple-touch-icon)
+ OG image (1200x630 PNG — brand-colored with logo + tagline)
+ Google Analytics 4 measurement ID
+ Legal page content (privacy, terms, GDPR, DPA, cookies, AUP) — or use placeholders
+ Calendly link (for "Request demo" CTA fallback)
+
+
+10. Deployment
+Target: Cloudflare Pages
+Steps:
+
+Connect Replit repo to Cloudflare Pages (or export static build and upload)
+Custom domain: claimtagx.com + www.claimtagx.com (DNS already managed in Cloudflare)
+Build command: npm run build (or equivalent for chosen framework)
+Output directory: out/ or dist/ depending on framework
+Environment variables: GA4 ID (if using env-based config)
+
+Alternative: If easier from Replit, deploy to Vercel and CNAME claimtagx.com → Vercel. Either works.
+
+11. Quality Checklist (before handoff)
+
+ All sections render correctly on iPhone SE, iPhone 14, iPad, 1440px desktop
+ Lighthouse score 95+ on Performance, Accessibility, Best Practices, SEO
+ All links work (no broken anchors, no 404 pages)
+ Meta tags render correctly (test with https://metatags.io)
+ Favicon appears in browser tab
+ Cookie banner appears and dismisses correctly
+ Mobile nav opens/closes, links scroll to correct sections
+ Pricing cards display correctly with featured highlight on Pro
+ Comparison table is readable on mobile
+ No console errors
+ HTTPS enforced, no mixed content warnings
+ Page loads in under 2 seconds on 3G throttling
+ Text is selectable and copyable (no user-select: none on body content)
+
+
+12. Reference Files
+These files are available in the project folder and contain all source content:
+FilePurposeindex.htmlComplete landing page with all section copy, styling, and structure — use as content sourceClaimTagX_Brand_Guidelines.mdFull brand system: colors, type, voice, logo usage rulesClaimTagX_Blog_Drafts.md4 SEO blog posts if building the /blog sectionClaimTagX_Sales_One_Pager.pdfFor reference on messaging hierarchy
+
+13. What NOT to Build
+
+The actual SaaS application (lives at app.claimtagx.com, separate codebase)
+User authentication / signup forms (link to app.claimtagx.com/signup)
+Payment/checkout (handled by Paddle, linked externally)
+Admin dashboard
+Blog CMS (static markdown is fine)
+Chat widget (not for launch)
+
+
+Summary
+This is a single-purpose marketing site: explain what ClaimTagX does, build trust, and convert visitors into trial signups or demo requests. Every design decision should serve that goal. The brand is dark, technical, and confident — Obsidian backgrounds with Electric Lime accents. The voice is operator-first: short sentences, specific proof points, no fluff.

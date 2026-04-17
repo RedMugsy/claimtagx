@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ClaimTagX Marketing Site"
+version = "1.0.0"
+id = "artifacts/claimtagx"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20164
+
+[services.development]
+run = "pnpm --filter @workspace/claimtagx run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/claimtagx", "run", "build" ]
+publicDir = "artifacts/claimtagx/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20164"
+BASE_PATH = "/"
