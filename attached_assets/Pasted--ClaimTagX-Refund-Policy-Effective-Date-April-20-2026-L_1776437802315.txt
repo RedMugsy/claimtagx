@@ -1,0 +1,109 @@
+# ClaimTagX Refund Policy
+
+**Effective Date:** April 20, 2026
+**Last Updated:** April 17, 2026
+
+---
+
+## 1. Overview
+
+This Refund Policy governs all purchases made through ClaimTagX ("Platform"), including subscription plans and any paid services offered by Tenants through the Platform.
+
+ClaimTagX operates as a digital custody management infrastructure platform. Refund eligibility is limited and subject to the conditions outlined below.
+
+---
+
+## 2. General Principle
+
+All purchases on ClaimTagX are considered final and non-refundable, unless explicitly stated otherwise in this policy or required by applicable law.
+
+---
+
+## 3. Subscription Fees
+
+### 3.1 Billing
+
+Subscription plans (Starter, Pro, and Enterprise) are billed in advance on a recurring basis. Payments are processed by Paddle.com Market Limited ("Paddle"), our Merchant of Record.
+
+### 3.2 Refunds
+
+Subscription fees are non-refundable once the billing cycle has started. No refunds are provided for partial usage, unused time, or downgrades during an active billing period.
+
+### 3.3 Free Trial
+
+New Tenants may be eligible for a 14-day free trial. No payment is required to start a trial. If you do not select a paid plan before the trial ends, your account will be deactivated and data retained for 30 days before permanent deletion.
+
+### 3.4 Upgrades and Downgrades
+
+Upgrades take effect immediately and may be prorated. Downgrades take effect at the start of the next billing cycle.
+
+### 3.5 Cancellation
+
+Tenants may cancel their subscription at any time through the Paddle billing portal. Cancellation takes effect at the end of the current billing period. No partial refunds are issued for the remainder of a billing period.
+
+---
+
+## 4. Paid Services (Tenant-Provided)
+
+Tenants (operators) may offer physical services to their patrons through the Platform, such as valet parking, laundry, luggage handling, repair services, and other custody or hospitality services.
+
+### 4.1 Responsibility
+
+ClaimTagX does not provide these services, does not control service delivery, and does not set pricing for Tenant-provided services. ClaimTagX is strictly a technology provider (see our [Terms of Service](/terms), Section 2).
+
+### 4.2 Refund Handling
+
+All refund requests related to Tenant-provided services must be directed to the Tenant (service provider). ClaimTagX is not responsible for service quality, service disputes, or refund decisions made by Tenants.
+
+---
+
+## 5. Payment Errors and Duplicate Charges
+
+Refunds may be issued in cases of duplicate charges, unauthorized transactions, or verified billing errors. All such cases are subject to review and validation by ClaimTagX and Paddle.
+
+---
+
+## 6. Chargebacks
+
+If a chargeback is initiated against a ClaimTagX subscription payment, ClaimTagX reserves the right to suspend or restrict the associated account, recover associated losses, and deny future transactions from the account holder.
+
+---
+
+## 7. Fraud and Abuse
+
+Refunds will not be issued in cases involving abuse of the Platform, fraudulent activity, or attempts to manipulate billing or refund eligibility.
+
+---
+
+## 8. Refund Method
+
+Where a refund is approved, it will be processed by Paddle and issued to the original payment method. Processing times depend on Paddle and the cardholder's financial institution — typically 5–10 business days.
+
+---
+
+## 9. Regional Legal Rights
+
+Nothing in this policy overrides any rights provided under applicable consumer protection laws in your jurisdiction. Where required by law, mandatory refund rights will apply regardless of the terms above.
+
+---
+
+## 10. Changes to This Policy
+
+ClaimTagX may update this Refund Policy from time to time. When we make material changes, we will notify Tenant administrators via email and/or in-platform notification. The "Last Updated" date at the top of this policy will be revised. Continued use of the Platform after the effective date of updated terms constitutes acceptance.
+
+---
+
+## 11. Contact
+
+For refund-related inquiries:
+
+- **Email:** billing@claimtagx.com
+- **Website:** https://claimtagx.com
+
+Subscription billing and refund processing is handled by Paddle. For payment-specific questions, you may also contact Paddle directly through your billing portal.
+
+---
+
+*ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.*
+
+*© 2026 ClaimTagX. All rights reserved.*
