@@ -23,10 +23,10 @@ export default function Footer() {
           <div className="col-span-1">
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Product</h4>
             <ul className="flex flex-col gap-3">
-              <li><a href="#features" className="text-slate hover:text-lime transition-colors text-sm">Features</a></li>
-              <li><a href="#pricing" className="text-slate hover:text-lime transition-colors text-sm">Pricing</a></li>
-              <li><a href="#industries" className="text-slate hover:text-lime transition-colors text-sm">Industries</a></li>
-              <li><a href="#how" className="text-slate hover:text-lime transition-colors text-sm">How it works</a></li>
+              <li><a href="/#features" className="text-slate hover:text-lime transition-colors text-sm">Features</a></li>
+              <li><Link href="/pricing" className="text-slate hover:text-lime transition-colors text-sm">Pricing</Link></li>
+              <li><a href="/#industries" className="text-slate hover:text-lime transition-colors text-sm">Industries</a></li>
+              <li><a href="/#how" className="text-slate hover:text-lime transition-colors text-sm">How it works</a></li>
             </ul>
           </div>
 

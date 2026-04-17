@@ -7,7 +7,6 @@ import ProductDemo from '@/components/sections/ProductDemo';
 import Features from '@/components/sections/Features';
 import Stats from '@/components/sections/Stats';
 import Industries from '@/components/sections/Industries';
-import Pricing from '@/components/sections/Pricing';
 import Comparison from '@/components/sections/Comparison';
 import FinalCTA from '@/components/sections/FinalCTA';
 import LiveActivityFeed from '@/components/LiveActivityFeed';
@@ -31,7 +30,6 @@ export default function Home() {
         <Features />
         <Stats />
         <Industries />
-        <Pricing />
         <Comparison />
         <FinalCTA />
         

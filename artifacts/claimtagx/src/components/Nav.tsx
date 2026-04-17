@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Nav() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [location] = useLocation();
+  const isHome = location === '/';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,10 +18,10 @@ export default function Nav() {
   }, []);
 
   const navLinks = [
-    { name: 'How it works', href: '#how' },
-    { name: 'Features', href: '#features' },
-    { name: 'Industries', href: '#industries' },
-    { name: 'Pricing', href: '#pricing' },
+    { name: 'How it works', href: isHome ? '#how' : '/#how', anchor: true },
+    { name: 'Features', href: isHome ? '#features' : '/#features', anchor: true },
+    { name: 'Industries', href: isHome ? '#industries' : '/#industries', anchor: true },
+    { name: 'Pricing', href: '/pricing', anchor: false },
   ];
 
   return (
@@ -39,15 +41,25 @@ export default function Nav() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              className="text-sm font-medium text-slate hover:text-white transition-colors"
-            >
-              {link.name}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.anchor ? (
+              <a
+                key={link.name}
+                href={link.href}
+                className="text-sm font-medium text-slate hover:text-white transition-colors"
+              >
+                {link.name}
+              </a>
+            ) : (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-sm font-medium text-slate hover:text-white transition-colors"
+              >
+                {link.name}
+              </Link>
+            )
+          )}
           <a
             href="https://app.claimtagx.com/signup"
             target="_blank"
@@ -78,16 +90,27 @@ export default function Nav() {
             className="md:hidden bg-obsidian border-b border-white/10 overflow-hidden"
           >
             <div className="px-4 pt-4 pb-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-base font-medium text-slate hover:text-white py-2 border-b border-white/5"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.name}
-                </a>
-              ))}
+              {navLinks.map((link) =>
+                link.anchor ? (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="text-base font-medium text-slate hover:text-white py-2 border-b border-white/5"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.name}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className="text-base font-medium text-slate hover:text-white py-2 border-b border-white/5"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                )
+              )}
               <a
                 href="https://app.claimtagx.com/signup"
                 target="_blank"

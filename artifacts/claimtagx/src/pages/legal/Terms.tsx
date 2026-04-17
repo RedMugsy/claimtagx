@@ -84,7 +84,7 @@ export default function Terms() {
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">8. Subscription Plans and Payment</h2>
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">8.1 Plans and Pricing</h3>
-          <p>ClaimTagX offers subscription plans as published at <a href="/#pricing" className="text-lime hover:underline">claimtagx.com/pricing</a>. Current plans include Starter, Pro, and Enterprise tiers. Pricing is in US Dollars (USD) and may be updated with 30 days' notice to existing subscribers.</p>
+          <p>ClaimTagX offers subscription plans as published at <a href="/pricing" className="text-lime hover:underline">claimtagx.com/pricing</a>. Current plans include Starter, Pro, and Enterprise tiers. Pricing is in US Dollars (USD) and may be updated with 30 days' notice to existing subscribers.</p>
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">8.2 Payment Processing</h3>
           <p>Payments are processed by Paddle.com Market Limited ("Paddle"), our Merchant of Record. Paddle handles billing, invoicing, tax calculation, and payment collection on behalf of ClaimTagX. By subscribing, you agree to Paddle's terms of service and buyer terms in addition to these Terms. ClaimTagX does not directly process or store payment card information.</p>
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">8.3 Free Trial</h3>
