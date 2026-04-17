@@ -50,11 +50,11 @@ export default function Footer() {
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Company</h4>
             <ul className="flex flex-col gap-3">
               <li><a href="mailto:info@claimtagx.com" className="text-slate hover:text-lime transition-colors text-sm">Contact</a></li>
-              <li><a href="https://linkedin.com/company/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">LinkedIn</a></li>
-              <li><a href="https://x.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">X</a></li>
-              <li><a href="https://instagram.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">Instagram</a></li>
-              <li><a href="https://threads.net/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">Threads</a></li>
-              <li><a href="https://tiktok.com/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">TikTok</a></li>
+              <li><a href="https://linkedin.com/company/Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">LinkedIn</a></li>
+              <li><a href="https://x.com/Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">X</a></li>
+              <li><a href="https://instagram.com/Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">Instagram</a></li>
+              <li><a href="https://threads.net/@Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">Threads</a></li>
+              <li><a href="https://tiktok.com/@Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-lime transition-colors text-sm">TikTok</a></li>
             </ul>
           </div>
 
@@ -77,19 +77,19 @@ export default function Footer() {
             © {currentYear} ClaimTagX. All rights reserved.
           </p>
           <div className="flex gap-4">
-            <a href="https://linkedin.com/company/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors">
+            <a href="https://linkedin.com/company/Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors">
               <Linkedin size={20} />
             </a>
-            <a href="https://x.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="X">
+            <a href="https://x.com/Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="X">
               <Twitter size={20} />
             </a>
-            <a href="https://instagram.com/claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="Instagram">
+            <a href="https://instagram.com/Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="Instagram">
               <Instagram size={20} />
             </a>
-            <a href="https://threads.net/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="Threads">
+            <a href="https://threads.net/@Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="Threads">
               <ThreadsIcon size={20} />
             </a>
-            <a href="https://tiktok.com/@claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="TikTok">
+            <a href="https://tiktok.com/@Claimtagx" target="_blank" rel="noopener noreferrer" className="text-slate hover:text-white transition-colors" aria-label="TikTok">
               <TikTokIcon size={20} />
             </a>
           </div>
