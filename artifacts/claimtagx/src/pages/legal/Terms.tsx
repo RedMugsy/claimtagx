@@ -42,7 +42,7 @@ export default function Terms() {
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">3.2 User Access</h3>
           <p>Tenants are responsible for managing access within their organization, including creating and deactivating user accounts, assigning appropriate roles and permissions, ensuring staff compliance with these Terms, and securing all credentials associated with their account.</p>
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">3.3 Account Security</h3>
-          <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. Notify us immediately at <a href="mailto:security@claimtagx.com" className="text-lime hover:underline">security@claimtagx.com</a> if you suspect unauthorized access.</p>
+          <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. Notify us immediately at security@claimtagx.com if you suspect unauthorized access.</p>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">4. Roles and Responsibilities</h2>
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">4.1 Tenant Responsibilities</h3>
@@ -93,7 +93,7 @@ export default function Terms() {
           <p>Tenants may cancel their subscription at any time through the Paddle billing portal. Cancellation takes effect at the end of the current billing period. No partial refunds are issued for unused portions of a billing period. Upon cancellation, Tenant data is retained for 30 days (grace period), then permanently deleted unless a longer retention period is required by law.</p>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">9. Acceptable Use</h2>
-          <p>You may not use the Platform to violate any applicable law, regulation, or third-party rights; process or store data in violation of applicable data protection laws; attempt to gain unauthorized access to other Tenants' data or Platform infrastructure; reverse-engineer, decompile, or disassemble any part of the Platform; interfere with or disrupt the Platform's operation or other users' access; use communication features for harassment, abuse, spam, or unlawful activity; or resell or sublicense access to the Platform without our prior written consent.</p>
+          <p>You may not use the Platform to violate any applicable law, regulation, or third-party rights; process or store data in violation of applicable data protection laws; attempt to gain unauthorized access to other Tenants' data or Platform infrastructure; reverse-engineer, decompile, or disassemble any part of the Platform; interfere with or disrupt the Platform's operation or other users' access; use communication features for harassment, abuse, spam, or unlawful activity; or resell, sublicense, or redistribute access to the Platform without authorization.</p>
           <p>Violations may result in immediate suspension or termination of access. See our <a href="/aup" className="text-lime hover:underline">Acceptable Use Policy</a> for full details.</p>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">10. Intellectual Property</h2>
@@ -103,7 +103,7 @@ export default function Terms() {
           <p>Tenants retain full ownership of their operational data, configurations, branding assets uploaded to the Platform, and any content they create within the Platform.</p>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">11. Data and Privacy</h2>
-          <p>Use of the Platform is governed by our <a href="/privacy" className="text-lime hover:underline">Privacy Policy</a>, which is incorporated into these Terms by reference. Key principles: Tenants act as Data Controllers for their operational and patron data; ClaimTagX acts as a Data Processor and processes data on behalf of Tenants; multi-tenant data isolation is enforced at the database layer via row-level security. Enterprise Tenants may request a Data Processing Addendum (DPA) by contacting <a href="mailto:legal@claimtagx.com" className="text-lime hover:underline">legal@claimtagx.com</a>.</p>
+          <p>Use of the Platform is governed by our <a href="/privacy" className="text-lime hover:underline">Privacy Policy</a>, which is incorporated into these Terms by reference. Key principles: Tenants act as Data Controllers for their operational and patron data; ClaimTagX acts as a Data Processor and processes data on behalf of Tenants; multi-tenant data isolation is enforced at the database layer via row-level security. Enterprise Tenants may request a Data Processing Addendum (DPA) by contacting legal@claimtagx.com.</p>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">12. Service Availability</h2>
           <p>The Platform is provided on an "as available" basis. While we strive for high availability, ClaimTagX does not guarantee continuous, uninterrupted, or error-free operation. We may perform scheduled maintenance with reasonable advance notice where possible. The Platform includes offline-capable features in the Handler mobile app; however, full functionality requires internet connectivity for data synchronization.</p>
@@ -146,14 +146,13 @@ export default function Terms() {
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">19. Contact</h2>
           <p>For questions about these Terms:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong className="text-white">Email:</strong> <a href="mailto:legal@claimtagx.com" className="text-lime hover:underline">legal@claimtagx.com</a></li>
-            <li><strong className="text-white">Website:</strong> <a href="https://claimtagx.com" className="text-lime hover:underline">https://claimtagx.com</a></li>
+            <li><strong className="text-white">Email:</strong> legal@claimtagx.com</li>
+            <li><strong className="text-white">Website:</strong> https://claimtagx.com</li>
             <li><strong className="text-white">Mailing address:</strong> [To be updated upon incorporation]</li>
           </ul>
 
-          <hr className="border-white/10 my-10" />
-          <p className="italic text-slate text-sm">ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.</p>
-          <p className="italic text-slate text-sm">© 2026 ClaimTagX. All rights reserved.</p>
+          <p className="text-slate text-sm italic mt-10 pt-10 border-t border-white/10">ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.</p>
+          <p className="text-slate text-sm italic">© 2026 ClaimTagX. All rights reserved.</p>
         </div>
       </div>
     </>

@@ -87,7 +87,7 @@ export default function Privacy() {
           <p>Data is accessible to authorized personnel within the Tenant's organization based on role-based access control (RBAC): operators, supervisors, and administrators see only the data their role permits.</p>
           <h3 className="text-lg font-semibold text-white mt-6 mb-3">7.2 Third-Party Service Providers</h3>
           <p>We share data with third parties only when necessary to operate the Platform:</p>
-          <ul className="list-disc pl-6 space-y-2">
+          <ul className="list-disc pl-6 space-y-1">
             <li><strong className="text-white">Payment processing:</strong> Paddle (our Merchant of Record) processes subscription payments on behalf of ClaimTagX. Paddle's privacy policy governs payment data handling.</li>
             <li><strong className="text-white">Notification delivery:</strong> SMS and email service providers transmit patron notifications on behalf of Tenants.</li>
             <li><strong className="text-white">Infrastructure:</strong> Cloud hosting providers (Railway for backend services, Cloudflare for frontend delivery and CDN) process data as sub-processors under our data processing agreements.</li>
@@ -114,13 +114,22 @@ export default function Privacy() {
           </ul>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">9. Data Retention</h2>
-          <p>Data retention is configurable by each Tenant within platform-defined boundaries:</p>
-          <p><strong className="text-white">Active tickets:</strong> Retained for the duration of the ticket lifecycle and any associated service period.</p>
-          <p><strong className="text-white">Closed tickets:</strong> Retained for a Tenant-configurable period (default: 12 months) to support audit, dispute resolution, and operational reporting.</p>
-          <p><strong className="text-white">Custody event ledger:</strong> Retained on a long-term basis as required for compliance, fraud defense, insurance documentation, and legal obligations. Minimum retention: 36 months from ticket closure.</p>
-          <p><strong className="text-white">Verification data:</strong> Retained for a limited period based on security requirements (default: 90 days).</p>
-          <p><strong className="text-white">Billing data:</strong> Retained as required by applicable tax and accounting regulations.</p>
-          <p>When a Tenant terminates their subscription, their data is retained for 30 days (grace period), after which it is permanently deleted unless a longer retention period is required by law or requested by the Tenant.</p>
+          <h3 className="text-lg font-semibold text-white mt-6 mb-3">9.1 Core Principle: We Do Not Retain User Data</h3>
+          <p>ClaimTagX does not retain patron (end-user) personal data at the platform level. All patron data — including names, phone numbers, email addresses, and any other personally identifiable information — is controlled entirely by the Tenant. ClaimTagX processes this data on behalf of the Tenant during active operations and does not independently store, archive, or use patron data for any purpose beyond delivering the service as instructed by the Tenant.</p>
+          <p>When patron data is no longer needed for the active ticket lifecycle, it is the Tenant's responsibility to manage its retention or deletion in accordance with their own privacy obligations.</p>
+          <h3 className="text-lg font-semibold text-white mt-6 mb-3">9.2 Tenant-Controlled Data</h3>
+          <p>Tenants configure their own data handling within the Platform:</p>
+          <p><strong className="text-white">Active tickets:</strong> Retained for the duration of the ticket lifecycle only.</p>
+          <p><strong className="text-white">Closed tickets:</strong> Tenant-configurable. Tenants may choose to delete ticket data immediately upon closure or retain it for their own audit and operational purposes.</p>
+          <p><strong className="text-white">Custody event ledger:</strong> The immutable event log records custody state transitions, actor identities, timestamps, and cryptographic signatures. This ledger is retained for operational integrity, dispute resolution, and fraud prevention. Ledger entries are pseudonymized where possible — they record <em>what happened</em> and <em>when</em>, but Tenants control whether personally identifiable data is linked to those events.</p>
+          <p><strong className="text-white">Verification data:</strong> Ephemeral. OTP codes, session tokens, and QR scan logs are purged after use or within a short security window.</p>
+          <h3 className="text-lg font-semibold text-white mt-6 mb-3">9.3 Platform-Level Data</h3>
+          <p>ClaimTagX retains only the minimum data required to operate the Platform itself:</p>
+          <p><strong className="text-white">Tenant account data:</strong> Organization name, administrator email, and subscription status — retained for the duration of the subscription.</p>
+          <p><strong className="text-white">Billing data:</strong> Transaction records retained as required by applicable tax and accounting regulations. This data is held by Paddle (our Merchant of Record), not by ClaimTagX directly.</p>
+          <p><strong className="text-white">Aggregated analytics:</strong> Non-personally-identifiable, aggregated usage metrics for Platform improvement. These cannot be traced back to individual patrons.</p>
+          <h3 className="text-lg font-semibold text-white mt-6 mb-3">9.4 Post-Termination</h3>
+          <p>When a Tenant terminates their subscription, all Tenant data (including any patron data still present) is retained for 30 days to allow for data export, after which it is permanently and irreversibly deleted. ClaimTagX does not retain copies of Tenant data after this period unless specifically required by law.</p>
 
           <h2 className="text-2xl font-bold text-white mt-10 mb-4">10. Security Measures</h2>
           <p>ClaimTagX implements the following technical and organizational measures to protect personal data:</p>
@@ -148,7 +157,7 @@ export default function Privacy() {
             <li><strong className="text-white">Data portability</strong> — receive your data in a structured, machine-readable format</li>
             <li><strong className="text-white">Withdraw consent</strong> where processing is based on consent</li>
           </ul>
-          <p><strong className="text-white">Important:</strong> Certain data within the custody event ledger may not be eligible for deletion where retention is necessary for: establishing, exercising, or defending legal claims; compliance with legal obligations; fraud prevention and detection; or maintaining the integrity of the custody chain-of-evidence. In such cases, we will inform you of the specific legal basis for continued retention.</p>
+          <p><strong className="text-white">Important:</strong> Because ClaimTagX does not independently retain patron personal data (see Section 9.1), most data rights requests should be directed to the Tenant that collected your data. For custody event ledger entries, certain pseudonymized records may not be eligible for deletion where retention is necessary for: establishing, exercising, or defending legal claims; compliance with legal obligations; fraud prevention and detection; or maintaining the integrity of the custody chain-of-evidence. In such cases, we will inform you of the specific legal basis for continued retention.</p>
           <p><strong className="text-white">For patron data requests:</strong> Contact the Tenant (Data Controller) that issued your claim ticket. The Tenant controls your data and will coordinate with ClaimTagX as needed.</p>
           <p><strong className="text-white">For platform account requests:</strong> Contact ClaimTagX directly at the address below.</p>
 
@@ -177,15 +186,14 @@ export default function Privacy() {
           <p><strong className="text-white">Tenant-level data requests</strong> (patron data, operator data): Contact the organization that issued your claim ticket. They are the Data Controller for your data.</p>
           <p><strong className="text-white">Platform-level requests</strong> (account data, billing data, security inquiries):</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong className="text-white">Email:</strong> <a href="mailto:legal@claimtagx.com" className="text-lime hover:underline">legal@claimtagx.com</a></li>
-            <li><strong className="text-white">Website:</strong> <a href="https://claimtagx.com" className="text-lime hover:underline">https://claimtagx.com</a></li>
+            <li><strong className="text-white">Email:</strong> legal@claimtagx.com</li>
+            <li><strong className="text-white">Website:</strong> https://claimtagx.com</li>
             <li><strong className="text-white">Mailing address:</strong> [To be updated upon incorporation]</li>
           </ul>
-          <p>For urgent security concerns or to report a data breach, contact: <a href="mailto:security@claimtagx.com" className="text-lime hover:underline">security@claimtagx.com</a></p>
+          <p>For urgent security concerns or to report a data breach, contact: security@claimtagx.com</p>
 
-          <hr className="border-white/10 my-10" />
-          <p className="italic text-slate text-sm">ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.</p>
-          <p className="italic text-slate text-sm">© 2026 ClaimTagX. All rights reserved.</p>
+          <p className="text-slate text-sm italic mt-10 pt-10 border-t border-white/10">ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.</p>
+          <p className="text-slate text-sm italic">© 2026 ClaimTagX. All rights reserved.</p>
         </div>
       </div>
     </>

@@ -1,0 +1,281 @@
+# ClaimTagX Privacy Policy
+
+**Effective Date:** April 20, 2026
+**Last Updated:** April 17, 2026
+
+---
+
+## 1. Introduction
+
+ClaimTagX ("we," "our," "the Platform") is a digital custody management platform that enables organizations to issue, manage, track, and verify cryptographically signed digital claim tickets across multiple industries, including valet parking, hospitality, dry cleaning, laundry, luggage handling, repair services, and asset custody environments.
+
+This Privacy Policy explains how we collect, process, store, and protect personal data when individuals ("Users") interact with ClaimTagX through:
+
+- Patron interfaces (ticket holders)
+- Operator and handler applications
+- Tenant administrative portals
+- Integrated partner systems
+
+ClaimTagX operates as a multi-tenant platform where each organization ("Tenant") controls its own data environment with row-level security isolation at the database layer.
+
+---
+
+## 2. Roles and Data Responsibility
+
+### 2.1 Data Controller vs. Data Processor
+
+**Tenant (Client Organization)** acts as the **Data Controller** and determines:
+
+- What data is collected from patrons and staff
+- The purpose for which data is collected
+- Data retention policies for their organization
+- Verification methods enabled for their operations
+
+**ClaimTagX (Platform Provider)** acts as the **Data Processor** and processes data strictly on behalf of the Tenant in accordance with their instructions and applicable data processing agreements.
+
+### 2.2 Platform-Level Processing
+
+ClaimTagX acts as a Data Controller only for:
+
+- Platform account management (Tenant administrator accounts)
+- Billing and subscription data
+- Security monitoring, fraud detection, and system integrity
+- Platform usage analytics (aggregated, non-personal)
+
+---
+
+## 3. Data We Collect
+
+### 3.1 Patron (End-User) Data
+
+Collected during ticket issuance and lifecycle management, as configured by the Tenant:
+
+**Identification data** (if enabled by Tenant): name, phone number, email address.
+
+**Ticket data:** ticket ID, asset type (vehicle, luggage, garment, device, or other item), and asset-specific data depending on Tenant configuration — for example, vehicle license plate, model, and color; luggage description and tags; garment type and special instructions.
+
+**Custody data:** custody storage reference (CSR), handler interactions, state transitions, and timestamps.
+
+**Verification data:** OTP/PIN verification logs, QR code scan records.
+
+**Service data:** requested services, transaction values, communication logs, and notification delivery/read status.
+
+### 3.2 Operator and Staff Data
+
+Name and assigned role, employee identifier, authentication credentials (password or device binding), shift assignments, activity logs (actions taken on tickets), and performance metrics.
+
+### 3.3 Technical and Device Data
+
+Device identifiers, IP addresses, location data (if enabled by Tenant), application usage logs, and crash/performance diagnostics.
+
+---
+
+## 4. Custody Event Ledger
+
+ClaimTagX maintains an immutable custody event history for every digital claim ticket. This ledger records:
+
+- State transitions (e.g., INTAKE → STORED → READY → RELEASED)
+- Actor identity (which handler, operator, or system process performed each action)
+- Timestamp and location for each event
+- Cryptographic signatures (Ed25519) verifying the integrity of each transition
+- Action metadata relevant to dispute resolution
+
+This ledger is tamper-resistant by design. It is retained for operational integrity, dispute resolution, insurance documentation, and fraud prevention. Due to its role as a system of record for custody chain-of-evidence, certain ledger data may be retained beyond standard deletion requests (see Section 11).
+
+---
+
+## 5. How Data Is Used
+
+Data is processed for the following purposes:
+
+**Core operations:** Ticket creation and lifecycle management, asset tracking and custody chain management, queue and assignment logic, handler dispatch and workload balancing.
+
+**Verification and security:** Release validation (OTP, QR code, or other Tenant-configured methods), fraud detection and anomaly identification, identity binding between patrons and their claim tickets, and cryptographic signature verification.
+
+**Service delivery:** Processing service requests attached to tickets, billing and invoicing through our payment processor.
+
+**Analytics and reporting:** Operational dashboards for Tenant administrators, handler performance metrics, capacity and utilization analysis. All analytics are scoped to the individual Tenant's data environment.
+
+**Communication:** Real-time notifications to patrons (e.g., "Your vehicle is ready," "Your order is ready for pickup") via SMS, email, or in-app messaging as configured by the Tenant.
+
+---
+
+## 6. Legal Basis for Processing
+
+Depending on the User's jurisdiction, we process personal data under one or more of the following legal bases:
+
+**Contractual necessity:** Processing required to deliver the custody management service as contracted between the Tenant and ClaimTagX, and between the Tenant and its patrons.
+
+**Legitimate interest:** Fraud prevention, operational security, system integrity monitoring, and service improvement — where these interests are not overridden by the individual's rights.
+
+**Legal obligations:** Where processing is required to comply with applicable laws, regulations, or court orders.
+
+**Consent:** For optional features such as location tracking, marketing communications, or enhanced analytics. Consent may be withdrawn at any time without affecting the lawfulness of prior processing.
+
+---
+
+## 7. Data Sharing
+
+### 7.1 Within the Tenant Organization
+
+Data is accessible to authorized personnel within the Tenant's organization based on role-based access control (RBAC): operators, supervisors, and administrators see only the data their role permits.
+
+### 7.2 Third-Party Service Providers
+
+We share data with third parties only when necessary to operate the Platform:
+
+- **Payment processing:** Paddle (our Merchant of Record) processes subscription payments on behalf of ClaimTagX. Paddle's privacy policy governs payment data handling.
+- **Notification delivery:** SMS and email service providers transmit patron notifications on behalf of Tenants.
+- **Infrastructure:** Cloud hosting providers (Railway for backend services, Cloudflare for frontend delivery and CDN) process data as sub-processors under our data processing agreements.
+- **Error monitoring:** Application monitoring services receive anonymized error and performance data.
+
+All third-party providers are contractually bound to process data only as instructed and to maintain appropriate security measures.
+
+### 7.3 No Data Selling
+
+ClaimTagX does not sell, rent, or trade personal data to any third party for advertising, marketing, or any other purpose.
+
+### 7.4 Legal Disclosure
+
+We may disclose data where required by law, regulation, legal process, or enforceable governmental request. Where permitted, we will notify the affected Tenant before disclosure.
+
+---
+
+## 8. Cross-Border Data Transfers
+
+Data may be processed in jurisdictions outside the User's country of residence depending on:
+
+- The Tenant's deployment configuration
+- The location of our infrastructure providers (currently US and EU regions)
+
+Where personal data is transferred across borders, we implement appropriate safeguards including:
+
+- Encryption in transit (TLS 1.2+) and at rest (AES-256)
+- Standard Contractual Clauses (SCCs) where required under GDPR
+- Data processing agreements with all sub-processors
+- Regional hosting options available for Enterprise Tenants with specific data residency requirements
+
+---
+
+## 9. Data Retention
+
+### 9.1 Core Principle: We Do Not Retain User Data
+
+ClaimTagX does not retain patron (end-user) personal data at the platform level. All patron data — including names, phone numbers, email addresses, and any other personally identifiable information — is controlled entirely by the Tenant. ClaimTagX processes this data on behalf of the Tenant during active operations and does not independently store, archive, or use patron data for any purpose beyond delivering the service as instructed by the Tenant.
+
+When patron data is no longer needed for the active ticket lifecycle, it is the Tenant's responsibility to manage its retention or deletion in accordance with their own privacy obligations.
+
+### 9.2 Tenant-Controlled Data
+
+Tenants configure their own data handling within the Platform:
+
+**Active tickets:** Retained for the duration of the ticket lifecycle only.
+
+**Closed tickets:** Tenant-configurable. Tenants may choose to delete ticket data immediately upon closure or retain it for their own audit and operational purposes.
+
+**Custody event ledger:** The immutable event log records custody state transitions, actor identities, timestamps, and cryptographic signatures. This ledger is retained for operational integrity, dispute resolution, and fraud prevention. Ledger entries are pseudonymized where possible — they record *what happened* and *when*, but Tenants control whether personally identifiable data is linked to those events.
+
+**Verification data:** Ephemeral. OTP codes, session tokens, and QR scan logs are purged after use or within a short security window.
+
+### 9.3 Platform-Level Data
+
+ClaimTagX retains only the minimum data required to operate the Platform itself:
+
+**Tenant account data:** Organization name, administrator email, and subscription status — retained for the duration of the subscription.
+
+**Billing data:** Transaction records retained as required by applicable tax and accounting regulations. This data is held by Paddle (our Merchant of Record), not by ClaimTagX directly.
+
+**Aggregated analytics:** Non-personally-identifiable, aggregated usage metrics for Platform improvement. These cannot be traced back to individual patrons.
+
+### 9.4 Post-Termination
+
+When a Tenant terminates their subscription, all Tenant data (including any patron data still present) is retained for 30 days to allow for data export, after which it is permanently and irreversibly deleted. ClaimTagX does not retain copies of Tenant data after this period unless specifically required by law.
+
+---
+
+## 10. Security Measures
+
+ClaimTagX implements the following technical and organizational measures to protect personal data:
+
+- End-to-end encryption in transit (TLS 1.2+)
+- Encryption at rest for patron personally identifiable information (AES-256)
+- Ed25519 cryptographic signing of all custody events and digital tickets
+- JSON Web Token (JWT) authentication with domain-separated token types
+- Row-level security (RLS) enforcing multi-tenant data isolation at the database layer
+- Role-based access control (RBAC) across all user types
+- Comprehensive audit logging for all data access and modification events
+- Rate limiting on public-facing endpoints
+- Automated security monitoring and anomaly detection
+
+We regularly review and update our security practices in response to evolving threats and industry standards.
+
+---
+
+## 11. User Rights
+
+Depending on your jurisdiction (including under GDPR, UK GDPR, CCPA/CPRA, and other applicable privacy laws), you may have the right to:
+
+- **Access** the personal data we hold about you
+- **Correct** inaccurate or incomplete personal data
+- **Delete** your personal data (right to erasure)
+- **Restrict** the processing of your personal data
+- **Object** to processing based on legitimate interests
+- **Data portability** — receive your data in a structured, machine-readable format
+- **Withdraw consent** where processing is based on consent
+
+**Important:** Because ClaimTagX does not independently retain patron personal data (see Section 9.1), most data rights requests should be directed to the Tenant that collected your data. For custody event ledger entries, certain pseudonymized records may not be eligible for deletion where retention is necessary for: establishing, exercising, or defending legal claims; compliance with legal obligations; fraud prevention and detection; or maintaining the integrity of the custody chain-of-evidence. In such cases, we will inform you of the specific legal basis for continued retention.
+
+**For patron data requests:** Contact the Tenant (Data Controller) that issued your claim ticket. The Tenant controls your data and will coordinate with ClaimTagX as needed.
+
+**For platform account requests:** Contact ClaimTagX directly at the address below.
+
+---
+
+## 12. Cookies and Tracking
+
+ClaimTagX uses the following technologies:
+
+- **Strictly necessary cookies:** Session management, authentication tokens, and security cookies required for the Platform to function.
+- **Analytics:** Privacy-compliant analytics to understand Platform usage patterns. We use aggregated, non-personally-identifiable metrics where possible.
+
+We do not use invasive tracking technologies, behavioral advertising cookies, or cross-site tracking without explicit consent. For details, see our [Cookie Policy](/cookies).
+
+---
+
+## 13. Children's Data
+
+ClaimTagX is a business-to-business platform not intended for direct use by individuals under the age of 16 (or the applicable age of digital consent in your jurisdiction). We do not knowingly collect personal data from children. If we become aware that we have inadvertently collected data from a child, we will take steps to delete it promptly.
+
+---
+
+## 14. Changes to This Policy
+
+We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors. When we make material changes:
+
+- Tenant administrators will be notified via email and/or in-platform notification
+- The "Last Updated" date at the top of this policy will be revised
+- Where required by law, we will obtain consent before applying material changes
+
+We encourage Users to review this policy periodically.
+
+---
+
+## 15. Contact
+
+For privacy-related inquiries or to exercise your data rights:
+
+**Tenant-level data requests** (patron data, operator data): Contact the organization that issued your claim ticket. They are the Data Controller for your data.
+
+**Platform-level requests** (account data, billing data, security inquiries):
+
+- **Email:** legal@claimtagx.com
+- **Website:** https://claimtagx.com
+- **Mailing address:** [To be updated upon incorporation]
+
+For urgent security concerns or to report a data breach, contact: security@claimtagx.com
+
+---
+
+*ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.*
+
+*© 2026 ClaimTagX. All rights reserved.*

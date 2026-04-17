@@ -1,0 +1,258 @@
+# ClaimTagX Terms of Service
+
+**Effective Date:** April 20, 2026
+**Last Updated:** April 17, 2026
+
+---
+
+## 1. Acceptance of Terms
+
+These Terms of Service ("Terms") govern access to and use of ClaimTagX ("Platform"), a digital custody management platform operated by Ali Achkar ("ClaimTagX," "we," "our"). This notice will be updated upon formal incorporation.
+
+By creating an account, accessing, or using the Platform, you agree to be bound by these Terms. If you do not agree, do not use the Platform.
+
+These Terms apply to:
+
+- Organizations subscribing to the Platform ("Tenants")
+- Authorized personnel operating within a Tenant's account (operators, handlers, supervisors, administrators)
+- End users interacting with digital claim tickets (patrons, ticket holders)
+
+---
+
+## 2. Platform Description and Scope
+
+ClaimTagX provides digital infrastructure for recording, managing, and verifying custody transactions and service workflows. The Platform enables Tenants to issue cryptographically signed digital claim tickets, track custody events, manage handlers and operations, and maintain auditable records.
+
+### 2.1 What ClaimTagX Is Not
+
+ClaimTagX is strictly a technology provider. The Platform does not:
+
+- Take physical possession of any assets (vehicles, luggage, garments, devices, or other items)
+- Provide valet, storage, cleaning, repair, or any other physical service
+- Guarantee the performance, quality, or outcome of any service provided by a Tenant
+- Act as an insurer, guarantor, or bailee of any kind
+
+### 2.2 Industry-Neutral Application
+
+The Platform may be used across multiple industries including valet parking, hospitality, dry cleaning and laundry, luggage handling, coat check, repair services, and other custody or service environments. Regardless of industry, all physical custody obligations remain solely with the Tenant.
+
+---
+
+## 3. Account Registration and Access
+
+### 3.1 Tenant Accounts
+
+To use the Platform, an authorized representative of the Tenant organization must create an account, provide accurate and complete registration information, and select a subscription plan. The person creating the account represents and warrants that they have authority to bind the organization to these Terms.
+
+### 3.2 User Access
+
+Tenants are responsible for managing access within their organization, including creating and deactivating user accounts, assigning appropriate roles and permissions, ensuring staff compliance with these Terms, and securing all credentials associated with their account.
+
+### 3.3 Account Security
+
+You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. Notify us immediately at security@claimtagx.com if you suspect unauthorized access.
+
+---
+
+## 4. Roles and Responsibilities
+
+### 4.1 Tenant Responsibilities
+
+The Tenant is fully responsible for:
+
+- Physical custody of all assets checked into their care
+- Staff hiring, training, behavior, and supervision
+- Configuring verification policies and operational procedures within the Platform
+- Compliance with all applicable laws and regulations in their jurisdiction
+- Accuracy of data entered into the Platform by their personnel
+- Relationships with their patrons, including dispute resolution
+
+### 4.2 Staff User Responsibilities
+
+Staff users (operators, handlers, supervisors) act on behalf of their Tenant and must follow operational procedures established by their organization, use verification methods correctly and consistently, maintain the integrity of custody records, and not share credentials or access with unauthorized individuals.
+
+### 4.3 Patron Responsibilities
+
+Patrons (end users who receive digital claim tickets) must safeguard their ticket credentials (QR codes, PINs, or other verification tokens), provide accurate information when required for ticket issuance, and follow retrieval and verification procedures established by the Tenant.
+
+---
+
+## 5. Digital Tickets and Custody Records
+
+### 5.1 Nature of a Digital Ticket
+
+A ClaimTagX digital ticket is a cryptographically signed digital reference to a custody transaction. It records that an item was received into a Tenant's custody at a specific time and place.
+
+A digital ticket is not proof of ownership of the underlying asset, a guarantee that the asset will be returned in any particular condition, a substitute for legal title or insurance, or a contract between the patron and ClaimTagX.
+
+### 5.2 Custody Event Ledger
+
+The Platform maintains an immutable, tamper-resistant log of custody events for each ticket, including state transitions (intake, stored, ready, released, disputed), the identity of the actor performing each action, cryptographic signatures (Ed25519) verifying the integrity of each event, and timestamps and metadata.
+
+This ledger is system-generated, designed for operational integrity and audit purposes, and may be used as evidence in dispute resolution or legal proceedings. The Tenant, as Data Controller, determines access policies for ledger data within their organization.
+
+### 5.3 Cryptographic Signing
+
+Each ticket and custody event is signed using Ed25519 digital signatures. This means tickets cannot be forged, duplicated, or tampered with after issuance. Signature verification occurs at the time of release to confirm the authenticity of the claim. The signing infrastructure is provided "as is" — ClaimTagX does not guarantee that cryptographic signing will prevent all forms of fraud or unauthorized access.
+
+---
+
+## 6. Custody and Liability
+
+### 6.1 Separation of Responsibility
+
+The Tenant is responsible for physical custody and service execution. ClaimTagX is responsible for the digital record infrastructure only. This separation is fundamental to the Platform's design and cannot be overridden by any Tenant configuration, marketing material, or verbal representation.
+
+### 6.2 No Liability for Physical Outcomes
+
+ClaimTagX is not liable for lost, stolen, or damaged assets; service delays, failures, or quality issues; staff misconduct, negligence, or errors; unauthorized release of assets (whether due to social engineering, stolen credentials, or operational failures at the Tenant level); or any harm arising from the physical custody or handling of assets.
+
+### 6.3 Dispute Resolution
+
+All disputes between a patron and a Tenant, or between a patron and Tenant staff, must be resolved directly with the Tenant. ClaimTagX may provide custody event logs and audit trails to assist in dispute resolution upon request from the Tenant, but ClaimTagX is not a party to such disputes and bears no responsibility for their outcome.
+
+---
+
+## 7. Verification and Access Control
+
+The Platform supports multiple verification methods as configured by the Tenant, including QR code scanning (static or dynamic), one-time passwords (OTP) via SMS or email, and other methods as may be added.
+
+Verification policies are configured and controlled by the Tenant. No verification method guarantees absolute fraud prevention. Users are responsible for securing their verification credentials. ClaimTagX is not liable for unauthorized access resulting from compromised credentials.
+
+---
+
+## 8. Subscription Plans and Payment
+
+### 8.1 Plans and Pricing
+
+ClaimTagX offers subscription plans as published at https://claimtagx.com/pricing. Current plans include Starter, Pro, and Enterprise tiers. Pricing is in US Dollars (USD) and may be updated with 30 days' notice to existing subscribers.
+
+### 8.2 Payment Processing
+
+Payments are processed by Paddle.com Market Limited ("Paddle"), our Merchant of Record. Paddle handles billing, invoicing, tax calculation, and payment collection on behalf of ClaimTagX. By subscribing, you agree to Paddle's terms of service and buyer terms in addition to these Terms. ClaimTagX does not directly process or store payment card information.
+
+### 8.3 Free Trial
+
+New Tenants may be eligible for a 14-day free trial. No credit card is required to start a trial. At the end of the trial period, the Tenant must select a paid plan to continue using the Platform. Data created during the trial will be retained for 30 days after trial expiration, then permanently deleted.
+
+### 8.4 Cancellation and Refunds
+
+Tenants may cancel their subscription at any time through the Paddle billing portal. Cancellation takes effect at the end of the current billing period. No partial refunds are issued for unused portions of a billing period. Upon cancellation, Tenant data is retained for 30 days (grace period), then permanently deleted unless a longer retention period is required by law.
+
+---
+
+## 9. Acceptable Use
+
+You may not use the Platform to violate any applicable law, regulation, or third-party rights; process or store data in violation of applicable data protection laws; attempt to gain unauthorized access to other Tenants' data or Platform infrastructure; reverse-engineer, decompile, or disassemble any part of the Platform; interfere with or disrupt the Platform's operation or other users' access; use communication features for harassment, abuse, spam, or unlawful activity; or resell access to the Platform without written authorization.
+
+Violations may result in immediate suspension or termination of access. See our [Acceptable Use Policy](/aup) for full details.
+
+---
+
+## 10. Intellectual Property
+
+### 10.1 ClaimTagX Property
+
+All rights in the Platform remain with ClaimTagX, including software, architecture, algorithms, user interface design, documentation, and trademarks. These Terms do not grant you any ownership interest in the Platform. Your subscription provides a limited, non-exclusive, non-transferable, revocable license to use the Platform in accordance with these Terms.
+
+### 10.2 Tenant Property
+
+Tenants retain full ownership of their operational data, configurations, branding assets uploaded to the Platform, and any content they create within the Platform.
+
+---
+
+## 11. Data and Privacy
+
+Use of the Platform is governed by our [Privacy Policy](/privacy), which is incorporated into these Terms by reference. Key principles: Tenants act as Data Controllers for their operational and patron data; ClaimTagX acts as a Data Processor and processes data on behalf of Tenants; multi-tenant data isolation is enforced at the database layer via row-level security. Enterprise Tenants may request a Data Processing Addendum (DPA) by contacting legal@claimtagx.com.
+
+---
+
+## 12. Service Availability
+
+The Platform is provided on an "as available" basis. While we strive for high availability, ClaimTagX does not guarantee continuous, uninterrupted, or error-free operation. We may perform scheduled maintenance with reasonable advance notice where possible. The Platform includes offline-capable features in the Handler mobile app; however, full functionality requires internet connectivity for data synchronization.
+
+Enterprise Tenants may negotiate separate service level agreements (SLAs) with defined uptime commitments, support response times, and remedies.
+
+---
+
+## 13. Limitation of Liability
+
+To the maximum extent permitted by applicable law:
+
+ClaimTagX shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of business, revenue, profits, data, or goodwill, arising from or related to your use of the Platform.
+
+ClaimTagX's total aggregate liability for all claims arising from or related to these Terms or the Platform shall not exceed the total fees paid by the Tenant to ClaimTagX during the twelve (12) months immediately preceding the event giving rise to the claim.
+
+Nothing in these Terms excludes or limits liability for death or personal injury caused by negligence, fraud or fraudulent misrepresentation, or any other liability that cannot be excluded by applicable law.
+
+---
+
+## 14. Indemnification
+
+Tenants agree to indemnify, defend, and hold harmless ClaimTagX and its officers, directors, employees, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable legal fees) arising from or related to: the Tenant's operations and use of the Platform; staff misconduct or negligence; violations of applicable law or third-party rights; disputes with patrons or other third parties; or breach of these Terms.
+
+---
+
+## 15. Suspension and Termination
+
+### 15.1 By ClaimTagX
+
+We may suspend or terminate access to the Platform immediately if these Terms or the Acceptable Use Policy are violated, fraud or misuse is detected, required by law or regulatory order, or fees remain unpaid for more than 30 days past due.
+
+We will provide notice where reasonably practicable before suspension, except in cases of fraud, security threats, or legal requirements.
+
+### 15.2 By the Tenant
+
+Tenants may terminate their subscription at any time by canceling through the Paddle billing portal. Termination takes effect at the end of the current billing period.
+
+### 15.3 Effect of Termination
+
+Upon termination, the Tenant's access to the Platform will be deactivated. Tenant data will be retained for 30 days, during which the Tenant may request data export. After 30 days, data is permanently deleted, except where longer retention is required by law or for the integrity of the custody event ledger as described in the Privacy Policy.
+
+---
+
+## 16. Modifications to These Terms
+
+ClaimTagX may update these Terms from time to time. When we make material changes, we will notify Tenant administrators via email and/or in-platform notification at least 30 days before the changes take effect, and update the "Last Updated" date at the top of this page.
+
+Continued use of the Platform after the effective date of updated Terms constitutes acceptance. If you do not agree to the updated Terms, you must stop using the Platform and cancel your subscription.
+
+---
+
+## 17. Governing Law and Dispute Resolution
+
+These Terms shall be governed by and construed in accordance with the laws of England and Wales, without regard to conflict of law principles.
+
+Any dispute arising from or related to these Terms shall first be subject to good-faith negotiation between the parties. If negotiation fails, disputes shall be submitted to the exclusive jurisdiction of the courts of England and Wales.
+
+Enterprise Tenants may negotiate alternative governing law and dispute resolution provisions in a separate Master Service Agreement (MSA).
+
+---
+
+## 18. General Provisions
+
+**Entire Agreement:** These Terms, together with the Privacy Policy, Acceptable Use Policy, and any applicable DPA or MSA, constitute the entire agreement between you and ClaimTagX regarding the Platform.
+
+**Severability:** If any provision of these Terms is found to be unenforceable, the remaining provisions shall continue in full force and effect.
+
+**Waiver:** Failure to enforce any provision of these Terms shall not constitute a waiver of that provision or any other provision.
+
+**Assignment:** You may not assign your rights or obligations under these Terms without our prior written consent. ClaimTagX may assign these Terms in connection with a merger, acquisition, or sale of all or substantially all of its assets.
+
+**Force Majeure:** ClaimTagX shall not be liable for any failure or delay in performance due to circumstances beyond its reasonable control, including natural disasters, acts of war or terrorism, epidemics, government actions, power failures, internet disruptions, or third-party service outages.
+
+---
+
+## 19. Contact
+
+For questions about these Terms:
+
+- **Email:** legal@claimtagx.com
+- **Website:** https://claimtagx.com
+- **Mailing address:** [To be updated upon incorporation]
+
+---
+
+*ClaimTagX is operated by Ali Achkar (sole proprietor). This notice will be updated upon formal incorporation.*
+
+*© 2026 ClaimTagX. All rights reserved.*
