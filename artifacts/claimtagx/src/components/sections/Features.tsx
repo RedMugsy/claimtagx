@@ -35,8 +35,8 @@ const features = [
   },
   {
     icon: <WifiOff className="w-6 h-6 text-lime" />,
-    title: "Offline-First",
-    description: "SQLite sync queue means handlers keep working even when the garage has no signal."
+    title: "Offline-First Ticketing",
+    description: "Issue a tag to any patron, guest, or customer even when they have no signal. Tickets sync the moment connectivity returns."
   },
   {
     icon: <FileText className="w-6 h-6 text-lime" />,
