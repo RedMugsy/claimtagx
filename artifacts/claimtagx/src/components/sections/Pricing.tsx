@@ -64,7 +64,7 @@ const plans: {
     price: 'Custom',
     period: '',
     description: 'For large operators with security and sovereignty needs.',
-    highlights: ['Unlimited everything', 'Fully customizable tickets', 'Biometric validation', 'White label', 'Predictive AI', 'Cloud or on-prem', 'Multi-region / sovereign'],
+    highlights: ['Unlimited stations', 'Unlimited staff', 'Unlimited tickets', 'Fully customizable tickets', 'Biometric validation', 'White label', 'Cloud or on-prem', 'Multi-region / sovereign'],
     cta: 'Contact sales',
     url: 'mailto:sales@claimtagx.com',
   },
