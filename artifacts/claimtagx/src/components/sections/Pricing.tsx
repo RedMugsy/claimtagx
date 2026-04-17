@@ -1,90 +1,235 @@
+import { Fragment } from 'react';
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 
-const plans = [
+type Tier = 'free' | 'basic' | 'essential' | 'advanced' | 'enterprise';
+
+const plans: {
+  key: Tier;
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  highlights: string[];
+  cta: string;
+  url: string;
+  primary?: boolean;
+  badge?: string;
+}[] = [
   {
-    name: "STARTER",
-    price: "$79",
-    period: "/month",
-    description: "Perfect for single locations needing to digitize their operations.",
-    features: [
-      "1 location",
-      "Up to 5 handlers",
-      "Unlimited tickets",
-      "Handler mobile app",
-      "GM dashboard",
-      "Photo + plate capture",
-      "Email support"
-    ],
-    cta: "Start free trial",
-    url: "https://app.claimtagx.com/signup",
-    primary: false
+    key: 'free',
+    name: 'FREE',
+    price: '$0',
+    period: '/month',
+    description: 'Try the platform with a single station.',
+    highlights: ['1 station', '1 staff member', '15 tickets / month', 'Text-only tickets', 'Cloud only'],
+    cta: 'Start free',
+    url: 'https://app.claimtagx.com/signup',
   },
   {
-    name: "PRO",
-    price: "$199",
-    period: "/month",
-    description: "For growing operations requiring more locations and advanced features.",
-    features: [
-      "Up to 5 locations",
-      "Up to 25 handlers",
-      "Unlimited tickets",
-      "Everything in Starter",
-      "Priority support",
-      "API access",
-      "Custom branding",
-      "Advanced analytics"
-    ],
-    cta: "Start free trial",
-    url: "https://app.claimtagx.com/signup",
+    key: 'basic',
+    name: 'BASIC',
+    price: '$25',
+    period: '/month',
+    description: 'For small operators getting started with digital tags.',
+    highlights: ['1 station', 'Up to 5 staff', '250 tickets / month', 'OOTB ticket template', 'Static QR + optional PIN', 'Logo branding'],
+    cta: 'Start free trial',
+    url: 'https://app.claimtagx.com/signup',
+  },
+  {
+    key: 'essential',
+    name: 'ESSENTIAL',
+    price: '$50',
+    period: '/month',
+    description: 'For growing operations needing workflow and validation.',
+    highlights: ['Up to 5 stations', 'Up to 25 staff', '1,000 tickets / month', 'Configurable tickets', 'Dynamic QR + OTP', 'Shift management', 'Marketplace access (buy)'],
+    cta: 'Start free trial',
+    url: 'https://app.claimtagx.com/signup',
     primary: true,
-    badge: "MOST POPULAR"
+    badge: 'MOST POPULAR',
   },
   {
-    name: "ENTERPRISE",
-    price: "Custom",
-    period: "",
-    description: "For large scale operators with specific security and integration needs.",
-    features: [
-      "Unlimited locations",
-      "Unlimited handlers",
-      "Dedicated database",
-      "SSO/SAML",
-      "SLA guarantee",
-      "Custom integrations",
-      "Onboarding + training",
-      "Dedicated account manager"
-    ],
-    cta: "Contact sales",
-    url: "mailto:sales@claimtagx.com",
-    primary: false
-  }
+    key: 'advanced',
+    name: 'ADVANCED',
+    price: '$100',
+    period: '/month',
+    description: 'For multi-station operators needing full control.',
+    highlights: ['Unlimited stations', 'Unlimited staff', '2,500 tickets / month', 'Multi-template per station', 'NFC / BLE validation', 'Supervisor controls', 'Marketplace buy + sell', 'Limited API access'],
+    cta: 'Start free trial',
+    url: 'https://app.claimtagx.com/signup',
+  },
+  {
+    key: 'enterprise',
+    name: 'ENTERPRISE',
+    price: 'Custom',
+    period: '',
+    description: 'For large operators with security and sovereignty needs.',
+    highlights: ['Unlimited everything', 'Fully customizable tickets', 'Biometric validation', 'White label', 'Predictive AI', 'Cloud or on-prem', 'Multi-region / sovereign'],
+    cta: 'Contact sales',
+    url: 'mailto:sales@claimtagx.com',
+  },
 ];
+
+type Cell = boolean | string;
+type Row = { feature: string; values: Record<Tier, Cell> };
+type Group = { category: string; rows: Row[] };
+
+const matrix: Group[] = [
+  {
+    category: 'Capacity',
+    rows: [
+      { feature: 'Stations', values: { free: '1', basic: '1', essential: '5', advanced: 'Unlimited', enterprise: 'Unlimited' } },
+      { feature: 'Staff', values: { free: '1', basic: '5', essential: '25', advanced: 'Unlimited', enterprise: 'Unlimited' } },
+      { feature: 'Tickets / month', values: { free: '15', basic: '250', essential: '1,000', advanced: '2,500', enterprise: 'Unlimited' } },
+      { feature: 'Ticket type', values: { free: 'Text only', basic: 'OOTB template', essential: 'Configurable (shared)', advanced: 'Multi-template per station', enterprise: 'Fully customizable' } },
+    ],
+  },
+  {
+    category: 'Core & workflow',
+    rows: [
+      { feature: 'Full lifecycle states', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Multi-asset support', values: { free: false, basic: 'Limited', essential: true, advanced: true, enterprise: true } },
+      { feature: 'Workflow engine', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Per-station configuration', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Workforce',
+    rows: [
+      { feature: 'Staff accounts', values: { free: '1 only', basic: 'Basic', essential: 'Full', advanced: 'Full', enterprise: 'Full' } },
+      { feature: 'Shift management', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Handler assignment', values: { free: false, basic: 'Manual', essential: 'Rotation / first available', advanced: 'Full (SLA + supervisor)', enterprise: 'Full' } },
+      { feature: 'Task management', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Supervisor controls', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Custody & CSR',
+    rows: [
+      { feature: 'CSR (unstructured)', values: { free: false, basic: 'Optional', essential: true, advanced: true, enterprise: true } },
+      { feature: 'CSR (structured)', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Capacity tracking', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Multi-layer custody', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Cross-station transfers', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Validation & security',
+    rows: [
+      { feature: 'Static QR', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Dynamic QR', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'PIN', values: { free: false, basic: 'Optional', essential: true, advanced: true, enterprise: true } },
+      { feature: 'OTP', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'NFC / BLE', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Biometric', values: { free: false, basic: false, essential: false, advanced: false, enterprise: true } },
+      { feature: 'Validation rules engine', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
+    ],
+  },
+  {
+    category: 'Control layer',
+    rows: [
+      { feature: 'Validation logs', values: { free: false, basic: false, essential: 'Basic', advanced: 'Full', enterprise: 'Full' } },
+      { feature: 'Dispute management', values: { free: false, basic: false, essential: 'Basic (log only)', advanced: 'Full workflow', enterprise: 'Full' } },
+      { feature: 'Internal notes (text)', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Internal notes (voice)', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Audit logs', values: { free: false, basic: false, essential: 'Basic', advanced: 'Full', enterprise: 'Full' } },
+    ],
+  },
+  {
+    category: 'Communication',
+    rows: [
+      { feature: 'Notifications', values: { free: false, basic: 'Basic', essential: 'Full', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Patron ↔ operator messaging', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Internal messaging', values: { free: false, basic: false, essential: 'Limited', advanced: 'Full', enterprise: 'Full' } },
+      { feature: 'Intercom (staff comms)', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Revenue',
+    rows: [
+      { feature: 'Paid services', values: { free: false, basic: 'Basic', essential: 'Tiered', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Service pricing logic', values: { free: false, basic: 'Flat', essential: 'Tiered', advanced: 'Advanced', enterprise: 'Advanced' } },
+      { feature: 'Ancillary services', values: { free: false, basic: false, essential: 'Limited', advanced: true, enterprise: true } },
+      { feature: 'Invoice generation', values: { free: false, basic: 'Basic', essential: 'Full', advanced: 'Full', enterprise: 'Full' } },
+    ],
+  },
+  {
+    category: 'Marketplace',
+    rows: [
+      { feature: 'Marketplace access (buy)', values: { free: false, basic: false, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Marketplace access (sell)', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Ticket market participation', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Free template credit', values: { free: false, basic: false, essential: false, advanced: '1 included', enterprise: 'Custom' } },
+    ],
+  },
+  {
+    category: 'AI layer',
+    rows: [
+      { feature: 'AI suggestions', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Operational insights', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Predictive' } },
+      { feature: 'Dispute assistance', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Predictive optimization', values: { free: false, basic: false, essential: false, advanced: false, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Branding & white label',
+    rows: [
+      { feature: 'Logo branding', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Template customization', values: { free: false, basic: false, essential: 'Limited', advanced: 'Full', enterprise: 'Full' } },
+      { feature: 'Per-station branding', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'White label', values: { free: false, basic: false, essential: false, advanced: 'Partial', enterprise: 'Full' } },
+    ],
+  },
+  {
+    category: 'Integrations & deployment',
+    rows: [
+      { feature: 'API access', values: { free: false, basic: false, essential: false, advanced: 'Limited', enterprise: 'Full' } },
+      { feature: 'Third-party integrations', values: { free: false, basic: false, essential: 'Limited', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Deployment options', values: { free: 'Cloud only', basic: 'Cloud', essential: 'Cloud', advanced: 'Cloud', enterprise: 'Cloud / on-prem' } },
+      { feature: 'Multi-region / sovereign', values: { free: false, basic: false, essential: false, advanced: false, enterprise: true } },
+    ],
+  },
+];
+
+const tierOrder: Tier[] = ['free', 'basic', 'essential', 'advanced', 'enterprise'];
+const tierLabels: Record<Tier, string> = {
+  free: 'Free',
+  basic: 'Basic',
+  essential: 'Essential',
+  advanced: 'Advanced',
+  enterprise: 'Enterprise',
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15 }
-  }
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 30, scale: 0.95 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6 } }
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5 } },
 };
+
+function CellContent({ value, highlighted }: { value: Cell; highlighted?: boolean }) {
+  if (value === true) {
+    return <Check className={`w-4 h-4 mx-auto ${highlighted ? 'text-lime' : 'text-lime/80'}`} />;
+  }
+  if (value === false) {
+    return <Minus className="w-4 h-4 mx-auto text-white/20" />;
+  }
+  return <span className={`text-xs ${highlighted ? 'text-white' : 'text-white/80'}`}>{value}</span>;
+}
 
 export default function Pricing() {
   return (
     <section id="pricing" className="py-24 md:py-32 bg-obsidian border-t border-white/5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_rgba(198,242,78,0.03),_transparent_60%)] pointer-events-none" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
           variants={containerVariants}
           className="flex flex-col items-center text-center mb-20"
         >
@@ -93,59 +238,58 @@ export default function Pricing() {
               Pricing
             </span>
           </motion.div>
-          
+
           <motion.h2 variants={itemVariants} className="text-3xl md:text-5xl font-bold text-white mb-6">
-            Transparent pricing.<br className="hidden sm:block" /> No per-ticket fees.
+            Five tiers.<br className="hidden sm:block" /> Built to scale with your operation.
           </motion.h2>
 
           <motion.p variants={itemVariants} className="text-lg text-slate max-w-2xl">
-            Start free. Upgrade when your operation grows. Cancel anytime.
+            Start free. Upgrade when you outgrow it. No per-ticket fees, no surprises.
           </motion.p>
         </motion.div>
 
+        {/* Tier cards */}
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
           variants={containerVariants}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-center"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-24"
         >
-          {plans.map((plan, index) => (
-            <motion.div 
-              key={index}
+          {plans.map((plan) => (
+            <motion.div
+              key={plan.key}
               variants={itemVariants}
-              whileHover={{ y: -10 }}
-              className={`relative flex flex-col rounded-[2rem] p-8 transition-all duration-300 ${
-                plan.primary 
-                  ? 'bg-steel border-lime/50 shadow-[0_0_30px_rgba(198,242,78,0.15)] border-2 animate-pulse-glow lg:scale-105 z-10' 
+              whileHover={{ y: -6 }}
+              className={`relative flex flex-col rounded-2xl p-6 transition-all duration-300 ${
+                plan.primary
+                  ? 'bg-steel border-2 border-lime/50 shadow-[0_0_30px_rgba(198,242,78,0.15)] animate-pulse-glow lg:scale-[1.04] z-10'
                   : 'bg-steel/50 border border-white/10 hover:border-lime/30 hover:shadow-xl'
               }`}
             >
               {plan.badge && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-lime text-obsidian px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase shadow-lg">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime text-obsidian px-3 py-1 rounded-full text-[10px] font-extrabold tracking-widest uppercase shadow-lg whitespace-nowrap">
                   {plan.badge}
                 </div>
               )}
-              
-              <div className="mb-8 mt-2">
-                <h3 className={`font-mono font-bold text-sm tracking-widest uppercase mb-4 ${plan.primary ? 'text-lime' : 'text-slate'}`}>
+
+              <div className="mb-6 mt-1">
+                <h3 className={`font-mono font-bold text-xs tracking-widest uppercase mb-3 ${plan.primary ? 'text-lime' : 'text-slate'}`}>
                   {plan.name}
                 </h3>
                 <div className="flex items-baseline gap-1 mb-3">
-                  <span className="text-5xl font-extrabold text-white tracking-tight">{plan.price}</span>
-                  {plan.period && <span className="text-slate text-base font-medium">{plan.period}</span>}
+                  <span className="text-4xl font-extrabold text-white tracking-tight">{plan.price}</span>
+                  {plan.period && <span className="text-slate text-sm font-medium">{plan.period}</span>}
                 </div>
-                <p className="text-slate text-sm leading-relaxed h-12">{plan.description}</p>
+                <p className="text-slate text-xs leading-relaxed min-h-[3rem]">{plan.description}</p>
               </div>
 
               <div className="flex-1">
-                <ul className="space-y-4 mb-10">
-                  {plan.features.map((feature, fIndex) => (
-                    <li key={fIndex} className="flex items-start gap-3 group">
-                      <div className="bg-white/5 rounded-full p-1 mt-0.5 group-hover:bg-lime/20 transition-colors">
-                        <Check className={`w-4 h-4 ${plan.primary ? 'text-lime' : 'text-slate group-hover:text-lime'} transition-colors`} />
-                      </div>
-                      <span className="text-sm text-white/90 font-medium">{feature}</span>
+                <ul className="space-y-3 mb-8">
+                  {plan.highlights.map((feature, fIndex) => (
+                    <li key={fIndex} className="flex items-start gap-2.5">
+                      <Check className={`w-4 h-4 mt-0.5 shrink-0 ${plan.primary ? 'text-lime' : 'text-lime/70'}`} />
+                      <span className="text-xs text-white/85 font-medium leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -155,7 +299,7 @@ export default function Pricing() {
                 href={plan.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full text-center py-4 rounded-xl font-bold text-base transition-all duration-300 mt-auto ${
+                className={`w-full text-center py-3 rounded-xl font-bold text-sm transition-all duration-300 mt-auto ${
                   plan.primary
                     ? 'bg-lime text-obsidian hover:bg-lime-hover hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(198,242,78,0.4)]'
                     : 'bg-white/5 border border-white/10 text-white hover:border-lime/50 hover:text-lime hover:bg-white/10'
@@ -165,6 +309,79 @@ export default function Pricing() {
               </a>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* Full feature matrix */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          transition={{ duration: 0.6 }}
+          className="mt-12"
+        >
+          <div className="text-center mb-10">
+            <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">Full feature matrix</h3>
+            <p className="text-slate text-sm">Compare every capability across all five tiers.</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-steel/30 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] text-left">
+                <thead className="sticky top-0 bg-[#0E1320] z-10">
+                  <tr className="border-b border-white/10">
+                    <th className="py-4 px-5 text-xs font-mono font-bold uppercase tracking-widest text-slate w-[28%]">Feature</th>
+                    {tierOrder.map((t) => (
+                      <th
+                        key={t}
+                        className={`py-4 px-3 text-center text-xs font-mono font-bold uppercase tracking-widest ${
+                          t === 'essential' ? 'text-lime bg-lime/5' : 'text-slate'
+                        }`}
+                      >
+                        {tierLabels[t]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrix.map((group) => (
+                    <Fragment key={group.category}>
+                      <tr className="bg-white/[0.02]">
+                        <td colSpan={6} className="py-3 px-5 text-[11px] font-mono font-bold uppercase tracking-widest text-lime/80">
+                          {group.category}
+                        </td>
+                      </tr>
+                      {group.rows.map((row, rIdx) => (
+                        <tr
+                          key={`${group.category}-${row.feature}`}
+                          className={`border-t border-white/5 ${rIdx % 2 === 0 ? '' : 'bg-white/[0.015]'}`}
+                        >
+                          <td className="py-3 px-5 text-sm text-white/90 font-medium">{row.feature}</td>
+                          {tierOrder.map((t) => (
+                            <td
+                              key={t}
+                              className={`py-3 px-3 text-center align-middle ${t === 'essential' ? 'bg-lime/5' : ''}`}
+                            >
+                              <CellContent value={row.values[t]} highlighted={t === 'essential'} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <p className="text-slate text-sm mb-5">Need something custom? Talk to us.</p>
+            <a
+              href="mailto:sales@claimtagx.com"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:border-lime/50 hover:text-lime hover:bg-white/10 font-bold text-sm transition-all duration-300"
+            >
+              Contact sales
+            </a>
+          </div>
         </motion.div>
       </div>
     </section>

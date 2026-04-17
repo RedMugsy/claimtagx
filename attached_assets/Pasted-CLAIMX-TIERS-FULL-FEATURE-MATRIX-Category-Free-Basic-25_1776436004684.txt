@@ -1,0 +1,78 @@
+CLAIMX TIERS — FULL FEATURE MATRIX
+Category	Free	Basic ($25)	Essential ($50)	Advanced ($100)	Enterprise
+Stations	1	1	5	Unlimited	Unlimited
+Staff	1	5	25	Unlimited	Unlimited
+Tickets / Month	15	250	1,000	2,500	Unlimited
+Ticket Type	Text only	OOTB template	Configurable (shared)	Multi-template per station	Fully customizable
+CORE & WORKFLOW
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Full Lifecycle States	❌	✅	✅	✅	✅
+Multi-Asset Support	❌	Limited	✅	✅	✅
+Workflow Engine	❌	❌	Basic	Advanced	Full
+Per-Station Configuration	❌	❌	❌	✅	✅
+WORKFORCE (Staff, Shifts, Tasks)
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Staff Accounts	1 only	Basic	Full	Full	Full
+Shift Management	❌	❌	Basic	Advanced	Full
+Handler Assignment	❌	Manual	Rotation / First Available	Full (SLA + Supervisor)	Full
+Task Management	❌	❌	Basic	Advanced	Full
+Supervisor Controls	❌	❌	❌	✅	✅
+CUSTODY & CSR
+Feature	Free	Basic	Essential	Advanced	Enterprise
+CSR (Unstructured)	❌	Optional	✅	✅	✅
+CSR (Structured)	❌	❌	✅	✅	✅
+Capacity Tracking	❌	❌	✅	✅	✅
+Multi-Layer Custody	❌	❌	❌	✅	✅
+Cross-Station Transfers	❌	❌	❌	✅	✅
+VALIDATION & SECURITY
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Static QR	❌	✅	✅	✅	✅
+Dynamic QR	❌	❌	✅	✅	✅
+PIN	❌	Optional	✅	✅	✅
+OTP	❌	❌	✅	✅	✅
+NFC / BLE	❌	❌	❌	✅	✅
+Biometric	❌	❌	❌	❌	✅
+Validation Rules Engine	❌	❌	Basic	Advanced	Full
+CONTROL LAYER (Validation, Disputes, Notes)
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Validation Logs	❌	❌	Basic	Full	Full
+Dispute Management	❌	❌	Basic (log only)	Full workflow	Full
+Internal Notes (Text)	❌	❌	✅	✅	✅
+Internal Notes (Voice)	❌	❌	❌	✅	✅
+Audit Logs	❌	❌	Basic	Full	Full
+COMMUNICATION
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Notifications	❌	Basic	Full	Advanced	Full
+Messaging (Patron ↔ Operator)	❌	❌	✅	✅	✅
+Internal Messaging	❌	❌	Limited	Full	Full
+Intercom (Staff Comms)	❌	❌	❌	✅	✅
+REVENUE LAYER
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Paid Services	❌	Basic	Tiered	Advanced	Full
+Service Pricing Logic	❌	Flat	Tiered	Advanced	Advanced
+Ancillary Services	❌	❌	Limited	✅	✅
+Invoice Generation	❌	Basic	Full	Full	Full
+MARKETPLACE & TICKET MARKET
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Marketplace Access (Buy)	❌	❌	✅	✅	✅
+Marketplace Access (Sell)	❌	❌	❌	✅	✅
+Ticket Market Participation	❌	❌	❌	✅	✅
+Free Template Credit	❌	❌	❌	1 Included	Custom
+AI LAYER
+Feature	Free	Basic	Essential	Advanced	Enterprise
+AI Suggestions	❌	❌	Basic	Advanced	Full
+Operational Insights	❌	❌	Basic	Advanced	Predictive
+Dispute Assistance	❌	❌	❌	✅	✅
+Predictive Optimization	❌	❌	❌	❌	✅
+BRANDING & WHITE LABEL
+Feature	Free	Basic	Essential	Advanced	Enterprise
+Logo Branding	❌	✅	✅	✅	✅
+Template Customization	❌	❌	Limited	Full	Full
+Per-Station Branding	❌	❌	❌	✅	✅
+White Label	❌	❌	❌	Partial	Full
+INTEGRATIONS & DEPLOYMENT
+Feature	Free	Basic	Essential	Advanced	Enterprise
+API Access	❌	❌	❌	Limited	Full
+Third-Party Integrations	❌	❌	Limited	Advanced	Full
+Deployment Options	Cloud only	Cloud	Cloud	Cloud	Cloud / On-Prem
+Multi-Region / Sovereign	❌	❌	❌	❌	✅
