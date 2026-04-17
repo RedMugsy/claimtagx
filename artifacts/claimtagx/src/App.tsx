@@ -11,6 +11,7 @@ import GDPR from "@/pages/legal/GDPR";
 import DPA from "@/pages/legal/DPA";
 import Cookies from "@/pages/legal/Cookies";
 import AUP from "@/pages/legal/AUP";
+import Refund from "@/pages/legal/Refund";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import CookieBanner from "@/components/CookieBanner";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/dpa" component={DPA} />
       <Route path="/cookies" component={Cookies} />
       <Route path="/aup" component={AUP} />
+      <Route path="/refund" component={Refund} />
       <Route component={NotFound} />
     </Switch>
   );
