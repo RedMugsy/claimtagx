@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "claimtagx",
+  "name": "claimtagx-website",
   "compatibility_date": "2025-04-01",
   "assets": {
     "directory": "./artifacts/claimtagx/dist/public",
