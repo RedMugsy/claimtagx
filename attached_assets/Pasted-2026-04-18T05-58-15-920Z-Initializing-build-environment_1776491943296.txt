@@ -1,0 +1,89 @@
+2026-04-18T05:58:15.920Z	Initializing build environment...
+2026-04-18T05:58:17.318Z	Success: Finished initializing build environment
+2026-04-18T05:58:18.786Z	Cloning repository...
+2026-04-18T05:58:20.049Z	Restoring from dependencies cache
+2026-04-18T05:58:20.054Z	Restoring from build output cache
+2026-04-18T05:58:21.231Z	Detected the following tools from environment: pnpm@10.26.1, nodejs@22.16.0
+2026-04-18T05:58:22.685Z	Installing project dependencies: pnpm install --frozen-lockfile
+2026-04-18T05:58:23.221Z	Scope: all 9 workspace projects
+2026-04-18T05:58:23.328Z	Lockfile is up to date, resolution step is skipped
+2026-04-18T05:58:23.425Z	Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-04-18T05:58:23.486Z	Packages: +495
+2026-04-18T05:58:23.487Z	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-04-18T05:58:24.431Z	Progress: resolved 495, reused 0, downloaded 14, added 0
+2026-04-18T05:58:25.432Z	Progress: resolved 495, reused 0, downloaded 158, added 70
+2026-04-18T05:58:26.432Z	Progress: resolved 495, reused 0, downloaded 281, added 143
+2026-04-18T05:58:27.433Z	Progress: resolved 495, reused 0, downloaded 292, added 147
+2026-04-18T05:58:28.434Z	Progress: resolved 495, reused 0, downloaded 296, added 147
+2026-04-18T05:58:29.435Z	Progress: resolved 495, reused 0, downloaded 374, added 179
+2026-04-18T05:58:30.437Z	Progress: resolved 495, reused 0, downloaded 478, added 219
+2026-04-18T05:58:31.438Z	Progress: resolved 495, reused 0, downloaded 495, added 282
+2026-04-18T05:58:32.097Z	Progress: resolved 495, reused 0, downloaded 495, added 495, done
+2026-04-18T05:58:32.310Z	.../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-04-18T05:58:32.311Z	.../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+2026-04-18T05:58:32.312Z	.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-04-18T05:58:32.413Z	.../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-04-18T05:58:32.418Z	.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-04-18T05:58:32.419Z	.../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+2026-04-18T05:58:32.755Z	
+2026-04-18T05:58:32.755Z	devDependencies:
+2026-04-18T05:58:32.756Z	+ prettier 3.8.1
+2026-04-18T05:58:32.756Z	+ typescript 5.9.3
+2026-04-18T05:58:32.756Z	
+2026-04-18T05:58:32.818Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-04-18T05:58:32.824Z	. preinstall: Done
+2026-04-18T05:58:32.959Z	Done in 10.1s using pnpm v10.26.1
+2026-04-18T05:58:33.153Z	Executing user build command: pnpm run build
+2026-04-18T05:58:33.581Z	
+2026-04-18T05:58:33.582Z	> workspace@0.0.0 build /opt/buildhome/repo
+2026-04-18T05:58:33.583Z	> pnpm run typecheck && pnpm -r --if-present run build
+2026-04-18T05:58:33.583Z	
+2026-04-18T05:58:33.916Z	
+2026-04-18T05:58:33.916Z	> workspace@0.0.0 typecheck /opt/buildhome/repo
+2026-04-18T05:58:33.916Z	> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+2026-04-18T05:58:33.916Z	
+2026-04-18T05:58:34.238Z	
+2026-04-18T05:58:34.238Z	> workspace@0.0.0 typecheck:libs /opt/buildhome/repo
+2026-04-18T05:58:34.242Z	> tsc --build
+2026-04-18T05:58:34.242Z	
+2026-04-18T05:58:37.218Z	Scope: 4 of 9 workspace projects
+2026-04-18T05:58:37.225Z	artifacts/claimtagx typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T05:58:37.228Z	artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T05:58:39.168Z	artifacts/api-server typecheck: Done
+2026-04-18T05:58:39.169Z	artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T05:58:47.454Z	artifacts/claimtagx typecheck: Done
+2026-04-18T05:58:47.455Z	scripts typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T05:58:48.813Z	artifacts/mockup-sandbox typecheck: Done
+2026-04-18T05:58:49.044Z	scripts typecheck: Done
+2026-04-18T05:58:49.428Z	Scope: 8 of 9 workspace projects
+2026-04-18T05:58:49.434Z	artifacts/mockup-sandbox build$ vite build
+2026-04-18T05:58:49.917Z	artifacts/mockup-sandbox build: vite v7.3.1 building client environment for production...
+2026-04-18T05:58:49.999Z	artifacts/mockup-sandbox build: transforming...
+2026-04-18T05:58:50.987Z	artifacts/mockup-sandbox build: ✓ 30 modules transformed.
+2026-04-18T05:58:51.155Z	artifacts/mockup-sandbox build: rendering chunks...
+2026-04-18T05:58:51.161Z	artifacts/mockup-sandbox build: computing gzip size...
+2026-04-18T05:58:51.178Z	artifacts/mockup-sandbox build: dist/index.html                   4.42 kB │ gzip:  1.23 kB
+2026-04-18T05:58:51.179Z	artifacts/mockup-sandbox build: dist/assets/index-BhVw-XfD.css   89.70 kB │ gzip: 14.88 kB
+2026-04-18T05:58:51.179Z	artifacts/mockup-sandbox build: dist/assets/index-ZTNvmnih.js   187.72 kB │ gzip: 59.51 kB
+2026-04-18T05:58:51.179Z	artifacts/mockup-sandbox build: ✓ built in 1.22s
+2026-04-18T05:58:51.215Z	artifacts/mockup-sandbox build: Done
+2026-04-18T05:58:51.216Z	artifacts/api-server build$ node ./build.mjs
+2026-04-18T05:58:51.216Z	artifacts/claimtagx build$ vite build --config vite.config.ts
+2026-04-18T05:58:51.555Z	artifacts/claimtagx build: failed to load config from /opt/buildhome/repo/artifacts/claimtagx/vite.config.ts
+2026-04-18T05:58:51.557Z	artifacts/claimtagx build: error during build:
+2026-04-18T05:58:51.557Z	artifacts/claimtagx build: Error: PORT environment variable is required but was not provided.
+2026-04-18T05:58:51.559Z	artifacts/claimtagx build:     at file:///opt/buildhome/repo/artifacts/claimtagx/node_modules/.vite-temp/vite.config.ts.timestamp-1776491931405-4816417746af4.mjs:10:9
+2026-04-18T05:58:51.559Z	artifacts/claimtagx build:     at ModuleJob.run (node:internal/modules/esm/module_job:274:25)
+2026-04-18T05:58:51.559Z	artifacts/claimtagx build:     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)
+2026-04-18T05:58:51.560Z	artifacts/claimtagx build:     at async loadConfigFromBundledFile (file:///opt/buildhome/repo/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35909:12)
+2026-04-18T05:58:51.560Z	artifacts/claimtagx build:     at async bundleAndLoadConfigFile (file:///opt/buildhome/repo/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35797:17)
+2026-04-18T05:58:51.562Z	artifacts/claimtagx build:     at async loadConfigFromFile (file:///opt/buildhome/repo/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35764:42)
+2026-04-18T05:58:51.562Z	artifacts/claimtagx build:     at async resolveConfig (file:///opt/buildhome/repo/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35413:22)
+2026-04-18T05:58:51.562Z	artifacts/claimtagx build:     at async createBuilder (file:///opt/buildhome/repo/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:33875:19)
+2026-04-18T05:58:51.563Z	artifacts/claimtagx build:     at async CAC.<anonymous> (file:///opt/buildhome/repo/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:629:10)
+2026-04-18T05:58:51.575Z	artifacts/claimtagx build: Failed
+2026-04-18T05:58:51.599Z	/opt/buildhome/repo/artifacts/claimtagx:
+2026-04-18T05:58:51.599Z	 ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/claimtagx@0.0.0 build: `vite build --config vite.config.ts`
+2026-04-18T05:58:51.599Z	Exit status 1
+2026-04-18T05:58:51.634Z	 ELIFECYCLE  Command failed with exit code 1.
+2026-04-18T05:58:51.655Z	Failed: error occurred while running build command
