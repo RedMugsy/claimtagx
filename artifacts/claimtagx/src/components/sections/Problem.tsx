@@ -1,26 +1,26 @@
 import { motion } from 'framer-motion';
-import { Car, ClipboardList, Clock, DollarSign } from 'lucide-react';
+import { EyeOff, ClipboardList, Clock, DollarSign } from 'lucide-react';
 
 const painPoints = [
   {
-    icon: <Car className="w-6 h-6 text-lime" />,
-    title: "Wrong-item releases",
-    description: "Unreadable handwriting, duplicate numbers. One mistake = one lawsuit."
-  },
-  {
-    icon: <ClipboardList className="w-6 h-6 text-lime" />,
-    title: "Zero visibility",
-    description: "No timestamps, no audit trail. Your insurer will ask — you won't have answers."
+    icon: <EyeOff className="w-6 h-6 text-lime" />,
+    title: "Blind Custody",
+    description: "Who moved the item? When? Where is it now? Paper doesn't know. You're relying on staff memory in an industry with annual turnover above 100%. If your system lives in your handlers' heads, you aren't managing — you're guessing."
   },
   {
     icon: <Clock className="w-6 h-6 text-lime" />,
-    title: "Slow handoffs",
-    description: "Patron waits. Handler hunts. Lobby backs up. Tips drop."
+    title: "The Last Impression",
+    description: "Your guest's experience ends at your counter. Every minute they spend watching your team hunt for an asset is a minute they spend reconsidering their tip and their review. Paper is the bottleneck between a happy guest and a frustrated one."
   },
   {
     icon: <DollarSign className="w-6 h-6 text-lime" />,
-    title: "Hidden costs",
-    description: "Ticket stock, printers, ink, manual logs. The 'cheap' system isn't."
+    title: "The \u201CHidden Minute Tax\u201D",
+    description: "You're paying for every second of disorder. A 60-second delay in retrieval doesn't seem like much until you multiply it by 100 transactions a night. You aren't just losing time; you're paying for excess labor to compensate for a \u201Ccheap\u201D paper system."
+  },
+  {
+    icon: <ClipboardList className="w-6 h-6 text-lime" />,
+    title: "Zero Visibility",
+    description: "Most days, paper \u201Cworks.\u201D But the day a VIP claims a $5,000 scratch or a traveler loses their stub, paper fails completely. Without a digital audit trail and photo intake, your insurer will ask — you won't have answers. You don't win disputes — you just settle them."
   }
 ];
 
@@ -59,11 +59,17 @@ export default function Problem() {
             </motion.div>
             
             <motion.h2 variants={itemVariants} className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">
-              A $0.03 paper ticket is costing you thousands.
+              A paper ticket doesn't break your operation.
+              <span className="block text-slate font-bold mt-2">
+                It raises complaints, leaves you guessing — and costs you every minute.
+              </span>
             </motion.h2>
             
             <motion.p variants={itemVariants} className="text-lg text-slate leading-relaxed">
-              Every year, millions of dollars in claims, lawsuits, and lost business trace back to a single point of failure: the paper ticket. Unreadable. Duplicable. Loseable. No timestamp. No photo. No audit trail. And when something goes wrong, it's your word against theirs — and you have no proof.
+              Paper works — until it doesn't. Every shift creates small gaps: assets aren't ready when needed, handoffs aren't consistent, and there's no record of what actually happened. Your team compensates by searching instead of executing and asking instead of knowing — adding time to every transaction.
+            </motion.p>
+            <motion.p variants={itemVariants} className="text-lg text-slate leading-relaxed mt-4">
+              You don't notice the problem per ticket. You feel it at scale, every shift. In a high-stakes custody business, relying on a paper stub isn't a strategy — it's a choice to stay in the dark.
             </motion.p>
           </div>
 
