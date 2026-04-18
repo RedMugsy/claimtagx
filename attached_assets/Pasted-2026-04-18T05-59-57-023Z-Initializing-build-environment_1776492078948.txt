@@ -1,0 +1,123 @@
+2026-04-18T05:59:57.023Z	Initializing build environment...
+2026-04-18T06:00:01.214Z	Success: Finished initializing build environment
+2026-04-18T06:00:03.384Z	Cloning repository...
+2026-04-18T06:00:04.819Z	Restoring from dependencies cache
+2026-04-18T06:00:04.824Z	Restoring from build output cache
+2026-04-18T06:00:06.073Z	Detected the following tools from environment: pnpm@10.26.1, nodejs@22.16.0
+2026-04-18T06:00:07.677Z	Installing project dependencies: pnpm install --frozen-lockfile
+2026-04-18T06:00:08.284Z	Scope: all 9 workspace projects
+2026-04-18T06:00:08.413Z	Lockfile is up to date, resolution step is skipped
+2026-04-18T06:00:08.496Z	Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-04-18T06:00:08.564Z	Packages: +495
+2026-04-18T06:00:08.565Z	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-04-18T06:00:09.493Z	Progress: resolved 495, reused 0, downloaded 78, added 42
+2026-04-18T06:00:10.493Z	Progress: resolved 495, reused 0, downloaded 152, added 70
+2026-04-18T06:00:11.499Z	Progress: resolved 495, reused 0, downloaded 175, added 82
+2026-04-18T06:00:12.500Z	Progress: resolved 495, reused 0, downloaded 179, added 82
+2026-04-18T06:00:13.508Z	Progress: resolved 495, reused 0, downloaded 181, added 82
+2026-04-18T06:00:14.516Z	Progress: resolved 495, reused 0, downloaded 228, added 98
+2026-04-18T06:00:15.520Z	Progress: resolved 495, reused 0, downloaded 370, added 163
+2026-04-18T06:00:16.517Z	Progress: resolved 495, reused 0, downloaded 424, added 180
+2026-04-18T06:00:17.519Z	Progress: resolved 495, reused 0, downloaded 495, added 228
+2026-04-18T06:00:17.813Z	Progress: resolved 495, reused 0, downloaded 495, added 495, done
+2026-04-18T06:00:18.046Z	.../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-04-18T06:00:18.047Z	.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-04-18T06:00:18.048Z	.../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+2026-04-18T06:00:18.160Z	.../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-04-18T06:00:18.168Z	.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-04-18T06:00:18.169Z	.../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+2026-04-18T06:00:18.571Z	
+2026-04-18T06:00:18.571Z	devDependencies:
+2026-04-18T06:00:18.571Z	+ prettier 3.8.1
+2026-04-18T06:00:18.571Z	+ typescript 5.9.3
+2026-04-18T06:00:18.571Z	
+2026-04-18T06:00:18.637Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-04-18T06:00:18.655Z	. preinstall: Done
+2026-04-18T06:00:18.798Z	Done in 10.9s using pnpm v10.26.1
+2026-04-18T06:00:18.941Z	Executing user build command: pnpm run build
+2026-04-18T06:00:19.386Z	
+2026-04-18T06:00:19.386Z	> workspace@0.0.0 build /opt/buildhome/repo
+2026-04-18T06:00:19.387Z	> pnpm run typecheck && pnpm -r --if-present run build
+2026-04-18T06:00:19.387Z	
+2026-04-18T06:00:19.754Z	
+2026-04-18T06:00:19.756Z	> workspace@0.0.0 typecheck /opt/buildhome/repo
+2026-04-18T06:00:19.756Z	> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+2026-04-18T06:00:19.757Z	
+2026-04-18T06:00:20.135Z	
+2026-04-18T06:00:20.135Z	> workspace@0.0.0 typecheck:libs /opt/buildhome/repo
+2026-04-18T06:00:20.135Z	> tsc --build
+2026-04-18T06:00:20.135Z	
+2026-04-18T06:00:23.314Z	Scope: 4 of 9 workspace projects
+2026-04-18T06:00:23.322Z	artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:00:23.323Z	artifacts/claimtagx typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:00:25.368Z	artifacts/api-server typecheck: Done
+2026-04-18T06:00:25.373Z	artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:00:35.244Z	artifacts/claimtagx typecheck: Done
+2026-04-18T06:00:35.245Z	scripts typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:00:35.867Z	artifacts/mockup-sandbox typecheck: Done
+2026-04-18T06:00:36.319Z	scripts typecheck: Done
+2026-04-18T06:00:36.728Z	Scope: 8 of 9 workspace projects
+2026-04-18T06:00:36.736Z	artifacts/mockup-sandbox build$ vite build
+2026-04-18T06:00:37.267Z	artifacts/mockup-sandbox build: vite v7.3.1 building client environment for production...
+2026-04-18T06:00:37.364Z	artifacts/mockup-sandbox build: transforming...
+2026-04-18T06:00:38.465Z	artifacts/mockup-sandbox build: ✓ 30 modules transformed.
+2026-04-18T06:00:38.627Z	artifacts/mockup-sandbox build: rendering chunks...
+2026-04-18T06:00:38.635Z	artifacts/mockup-sandbox build: computing gzip size...
+2026-04-18T06:00:38.654Z	artifacts/mockup-sandbox build: dist/index.html                   4.42 kB │ gzip:  1.23 kB
+2026-04-18T06:00:38.657Z	artifacts/mockup-sandbox build: dist/assets/index-BhVw-XfD.css   89.70 kB │ gzip: 14.88 kB
+2026-04-18T06:00:38.659Z	artifacts/mockup-sandbox build: dist/assets/index-ZTNvmnih.js   187.72 kB │ gzip: 59.51 kB
+2026-04-18T06:00:38.660Z	artifacts/mockup-sandbox build: ✓ built in 1.35s
+2026-04-18T06:00:38.700Z	artifacts/mockup-sandbox build: Done
+2026-04-18T06:00:38.700Z	artifacts/api-server build$ node ./build.mjs
+2026-04-18T06:00:38.701Z	artifacts/claimtagx build$ vite build --config vite.config.ts
+2026-04-18T06:00:39.153Z	artifacts/api-server build:   dist/index.mjs                       1.4mb ⚠️
+2026-04-18T06:00:39.154Z	artifacts/api-server build:   dist/pino-worker.mjs               153.4kb
+2026-04-18T06:00:39.154Z	artifacts/api-server build:   dist/pino-file.mjs                 142.1kb
+2026-04-18T06:00:39.154Z	artifacts/api-server build:   dist/pino-pretty.mjs               114.6kb
+2026-04-18T06:00:39.154Z	artifacts/api-server build:   dist/thread-stream-worker.mjs        7.3kb
+2026-04-18T06:00:39.155Z	artifacts/api-server build:   dist/index.mjs.map                   2.1mb
+2026-04-18T06:00:39.162Z	artifacts/api-server build:   dist/pino-worker.mjs.map           256.9kb
+2026-04-18T06:00:39.162Z	artifacts/api-server build:   dist/pino-file.mjs.map             229.0kb
+2026-04-18T06:00:39.162Z	artifacts/api-server build:   dist/pino-pretty.mjs.map           203.9kb
+2026-04-18T06:00:39.162Z	artifacts/api-server build:   dist/thread-stream-worker.mjs.map   12.0kb
+2026-04-18T06:00:39.162Z	artifacts/api-server build: ⚡ Done in 350ms
+2026-04-18T06:00:39.175Z	artifacts/api-server build: Done
+2026-04-18T06:00:39.196Z	artifacts/claimtagx build: vite v7.3.1 building client environment for production...
+2026-04-18T06:00:39.275Z	artifacts/claimtagx build: transforming...
+2026-04-18T06:00:39.923Z	artifacts/claimtagx build: src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-04-18T06:00:43.503Z	artifacts/claimtagx build: ✓ 2199 modules transformed.
+2026-04-18T06:00:43.940Z	artifacts/claimtagx build: rendering chunks...
+2026-04-18T06:00:43.998Z	artifacts/claimtagx build: computing gzip size...
+2026-04-18T06:00:44.061Z	artifacts/claimtagx build: dist/public/index.html                                0.78 kB │ gzip:   0.44 kB
+2026-04-18T06:00:44.063Z	artifacts/claimtagx build: dist/public/assets/hero-mockup-DI9wEun5.png         806.68 kB
+2026-04-18T06:00:44.063Z	artifacts/claimtagx build: dist/public/assets/how-it-works-2-CXCQ12Dd.png    1,042.05 kB
+2026-04-18T06:00:44.064Z	artifacts/claimtagx build: dist/public/assets/how-it-works-1-BQUJQPfE.png    1,101.61 kB
+2026-04-18T06:00:44.064Z	artifacts/claimtagx build: dist/public/assets/how-it-works-3-6sMxRqj-.png    1,128.43 kB
+2026-04-18T06:00:44.065Z	artifacts/claimtagx build: dist/public/assets/industry-valet-DK91DYz1.png    1,191.60 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: dist/public/assets/industry-repair-z_zLL4-w.png   1,323.91 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: dist/public/assets/feature-hero-CZmUQhPg.png      1,359.77 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: dist/public/assets/industry-laundry-7hmvlq2J.png  1,420.02 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: dist/public/assets/industry-luggage-OUFjGksr.png  1,497.91 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: dist/public/assets/index-B8SI1XRw.css               136.55 kB │ gzip:  21.60 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: dist/public/assets/index-Bp9AnIzS.js                566.11 kB │ gzip: 173.07 kB
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: 
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-04-18T06:00:44.069Z	artifacts/claimtagx build: - Using dynamic import() to code-split the application
+2026-04-18T06:00:44.070Z	artifacts/claimtagx build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2026-04-18T06:00:44.070Z	artifacts/claimtagx build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+2026-04-18T06:00:44.070Z	artifacts/claimtagx build: ✓ built in 4.83s
+2026-04-18T06:00:44.201Z	artifacts/claimtagx build: Done
+2026-04-18T06:00:44.225Z	Success: Build command completed
+2026-04-18T06:00:44.400Z	Executing user deploy command: npx wrangler deploy
+2026-04-18T06:00:45.494Z	npm warn exec The following package was not found and will be installed: wrangler@4.83.0
+2026-04-18T06:00:53.753Z	
+2026-04-18T06:00:53.754Z	 ⛅️ wrangler 4.83.0
+2026-04-18T06:00:53.754Z	───────────────────
+2026-04-18T06:00:54.264Z	
+2026-04-18T06:00:54.264Z	Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-04-18T06:00:54.267Z	
+2026-04-18T06:00:54.315Z	✘ [ERROR] The Wrangler application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again.
+2026-04-18T06:00:54.315Z	
+2026-04-18T06:00:54.315Z	
+2026-04-18T06:00:54.339Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-04-18_06-00-53_457.log"
+2026-04-18T06:00:54.416Z	Failed: error occurred while running deploy command
