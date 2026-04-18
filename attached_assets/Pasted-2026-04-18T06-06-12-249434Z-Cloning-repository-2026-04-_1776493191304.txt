@@ -1,0 +1,129 @@
+2026-04-18T06:06:12.249434Z	Cloning repository...
+2026-04-18T06:06:13.306405Z	From https://github.com/RedMugsy/claimtagx
+2026-04-18T06:06:13.306912Z	 * branch            90e05d7a7ec6b7a36de3ed2744d1e5b120a9c437 -> FETCH_HEAD
+2026-04-18T06:06:13.307019Z	
+2026-04-18T06:06:13.37686Z	HEAD is now at 90e05d7 Configure deployment for static asset serving on Cloudflare
+2026-04-18T06:06:13.377236Z	
+2026-04-18T06:06:13.418302Z	
+2026-04-18T06:06:13.418656Z	Using v2 root directory strategy
+2026-04-18T06:06:13.431097Z	Success: Finished cloning repository files
+2026-04-18T06:06:14.910879Z	Checking for configuration in a Wrangler configuration file (BETA)
+2026-04-18T06:06:14.911445Z	
+2026-04-18T06:06:14.911511Z	Found wrangler.json file. Reading build configuration...
+2026-04-18T06:06:15.99418Z	A Wrangler configuration file was found but it does not appear to be valid. Did you mean to use wrangler.toml to configure Pages? If so, then make sure the file is valid and contains the `pages_build_output_dir` property. Skipping file and continuing.
+2026-04-18T06:06:16.159372Z	Detected the following tools from environment: pnpm@10.26.1, nodejs@22.16.0
+2026-04-18T06:06:16.56376Z	Preparing pnpm@10.26.1 for immediate activation...
+2026-04-18T06:06:18.439707Z	Installing project dependencies: pnpm install
+2026-04-18T06:06:18.902472Z	Scope: all 9 workspace projects
+2026-04-18T06:06:18.965025Z	Lockfile is up to date, resolution step is skipped
+2026-04-18T06:06:19.00667Z	Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-04-18T06:06:19.048958Z	Packages: +495
+2026-04-18T06:06:19.0509Z	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-04-18T06:06:20.010618Z	Progress: resolved 495, reused 0, downloaded 210, added 202
+2026-04-18T06:06:21.007283Z	Progress: resolved 495, reused 0, downloaded 301, added 267
+2026-04-18T06:06:22.007222Z	Progress: resolved 495, reused 0, downloaded 450, added 374
+2026-04-18T06:06:22.997297Z	Progress: resolved 495, reused 0, downloaded 495, added 495, done
+2026-04-18T06:06:23.221234Z	.../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+2026-04-18T06:06:23.222325Z	.../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-04-18T06:06:23.223177Z	.../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-04-18T06:06:23.326431Z	.../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-04-18T06:06:23.335735Z	.../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+2026-04-18T06:06:23.339261Z	.../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-04-18T06:06:23.631126Z	
+2026-04-18T06:06:23.632229Z	devDependencies:
+2026-04-18T06:06:23.632344Z	+ prettier 3.8.1
+2026-04-18T06:06:23.632383Z	+ typescript 5.9.3
+2026-04-18T06:06:23.632421Z	
+2026-04-18T06:06:23.69092Z	. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-04-18T06:06:23.705689Z	. preinstall: Done
+2026-04-18T06:06:23.839566Z	Done in 5.2s using pnpm v10.26.1
+2026-04-18T06:06:23.886349Z	Executing user command: npm run build
+2026-04-18T06:06:24.240612Z	
+2026-04-18T06:06:24.241468Z	> workspace@0.0.0 build
+2026-04-18T06:06:24.241572Z	> pnpm run typecheck && pnpm -r --if-present run build
+2026-04-18T06:06:24.241622Z	
+2026-04-18T06:06:24.545763Z	
+2026-04-18T06:06:24.546113Z	> workspace@0.0.0 typecheck /opt/buildhome/repo
+2026-04-18T06:06:24.54624Z	> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+2026-04-18T06:06:24.546352Z	
+2026-04-18T06:06:24.97317Z	
+2026-04-18T06:06:24.974153Z	> workspace@0.0.0 typecheck:libs /opt/buildhome/repo
+2026-04-18T06:06:24.974327Z	> tsc --build
+2026-04-18T06:06:24.97441Z	
+2026-04-18T06:06:27.475397Z	Scope: 4 of 9 workspace projects
+2026-04-18T06:06:27.482089Z	artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:06:27.482774Z	artifacts/claimtagx typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:06:27.483109Z	artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:06:27.48361Z	scripts typecheck$ tsc -p tsconfig.json --noEmit
+2026-04-18T06:06:28.856852Z	scripts typecheck: Done
+2026-04-18T06:06:29.255801Z	artifacts/api-server typecheck: Done
+2026-04-18T06:06:33.745369Z	artifacts/mockup-sandbox typecheck: Done
+2026-04-18T06:06:34.681735Z	artifacts/claimtagx typecheck: Done
+2026-04-18T06:06:35.059781Z	Scope: 8 of 9 workspace projects
+2026-04-18T06:06:35.063243Z	artifacts/mockup-sandbox build$ vite build
+2026-04-18T06:06:35.644236Z	artifacts/mockup-sandbox build: [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+2026-04-18T06:06:35.732223Z	artifacts/mockup-sandbox build: transforming...
+2026-04-18T06:06:36.627053Z	artifacts/mockup-sandbox build: [32m✓[39m 30 modules transformed.
+2026-04-18T06:06:36.777324Z	artifacts/mockup-sandbox build: rendering chunks...
+2026-04-18T06:06:36.784219Z	artifacts/mockup-sandbox build: computing gzip size...
+2026-04-18T06:06:37.291708Z	artifacts/mockup-sandbox build: [2mdist/[22m[32mindex.html                 [39m[1m[2m  4.42 kB[22m[1m[22m[2m │ gzip:  1.23 kB[22m
+2026-04-18T06:06:37.292115Z	artifacts/mockup-sandbox build: [2mdist/[22m[2massets/[22m[35mindex-BhVw-XfD.css  [39m[1m[2m 89.70 kB[22m[1m[22m[2m │ gzip: 14.88 kB[22m
+2026-04-18T06:06:37.292539Z	artifacts/mockup-sandbox build: [2mdist/[22m[2massets/[22m[36mindex-ZTNvmnih.js   [39m[1m[2m187.72 kB[22m[1m[22m[2m │ gzip: 59.51 kB[22m
+2026-04-18T06:06:37.292763Z	artifacts/mockup-sandbox build: [32m✓ built in 1.61s[39m
+2026-04-18T06:06:37.33431Z	artifacts/mockup-sandbox build: Done
+2026-04-18T06:06:37.335525Z	artifacts/api-server build$ node ./build.mjs
+2026-04-18T06:06:37.335955Z	artifacts/claimtagx build$ vite build --config vite.config.ts
+2026-04-18T06:06:37.627447Z	artifacts/api-server build:   dist/index.mjs                       1.4mb ⚠️
+2026-04-18T06:06:37.628852Z	artifacts/api-server build:   dist/pino-worker.mjs               153.4kb
+2026-04-18T06:06:37.629527Z	artifacts/api-server build:   dist/pino-file.mjs                 142.1kb
+2026-04-18T06:06:37.629806Z	artifacts/api-server build:   dist/pino-pretty.mjs               114.6kb
+2026-04-18T06:06:37.62988Z	artifacts/api-server build:   dist/thread-stream-worker.mjs        7.3kb
+2026-04-18T06:06:37.62993Z	artifacts/api-server build:   dist/index.mjs.map                   2.1mb
+2026-04-18T06:06:37.629981Z	artifacts/api-server build:   dist/pino-worker.mjs.map           256.9kb
+2026-04-18T06:06:37.630028Z	artifacts/api-server build:   dist/pino-file.mjs.map             229.0kb
+2026-04-18T06:06:37.630263Z	artifacts/api-server build:   dist/pino-pretty.mjs.map           203.9kb
+2026-04-18T06:06:37.630507Z	artifacts/api-server build:   dist/thread-stream-worker.mjs.map   12.0kb
+2026-04-18T06:06:37.63107Z	artifacts/api-server build: ⚡ Done in 190ms
+2026-04-18T06:06:37.637231Z	artifacts/api-server build: Done
+2026-04-18T06:06:37.725748Z	artifacts/claimtagx build: [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+2026-04-18T06:06:37.792407Z	artifacts/claimtagx build: transforming...
+2026-04-18T06:06:38.828403Z	artifacts/claimtagx build: [33msrc/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.[39m
+2026-04-18T06:06:41.895245Z	artifacts/claimtagx build: [32m✓[39m 2199 modules transformed.
+2026-04-18T06:06:42.267434Z	artifacts/claimtagx build: rendering chunks...
+2026-04-18T06:06:42.297057Z	artifacts/claimtagx build: computing gzip size...
+2026-04-18T06:06:42.357106Z	artifacts/claimtagx build: [2mdist/public/[22m[32mindex.html                            [39m[1m[2m    0.78 kB[22m[1m[22m[2m │ gzip:   0.44 kB[22m
+2026-04-18T06:06:42.357425Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mhero-mockup-DI9wEun5.png       [39m[1m[2m  806.68 kB[22m[1m[22m
+2026-04-18T06:06:42.357509Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mhow-it-works-2-CXCQ12Dd.png    [39m[1m[2m1,042.05 kB[22m[1m[22m
+2026-04-18T06:06:42.357552Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mhow-it-works-1-BQUJQPfE.png    [39m[1m[2m1,101.61 kB[22m[1m[22m
+2026-04-18T06:06:42.35759Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mhow-it-works-3-6sMxRqj-.png    [39m[1m[2m1,128.43 kB[22m[1m[22m
+2026-04-18T06:06:42.357626Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mindustry-valet-DK91DYz1.png    [39m[1m[2m1,191.60 kB[22m[1m[22m
+2026-04-18T06:06:42.357662Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mindustry-repair-z_zLL4-w.png   [39m[1m[2m1,323.91 kB[22m[1m[22m
+2026-04-18T06:06:42.357698Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mfeature-hero-CZmUQhPg.png      [39m[1m[2m1,359.77 kB[22m[1m[22m
+2026-04-18T06:06:42.357734Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mindustry-laundry-7hmvlq2J.png  [39m[1m[2m1,420.02 kB[22m[1m[22m
+2026-04-18T06:06:42.357783Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[32mindustry-luggage-OUFjGksr.png  [39m[1m[2m1,497.91 kB[22m[1m[22m
+2026-04-18T06:06:42.357838Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[35mindex-B8SI1XRw.css             [39m[1m[2m  136.55 kB[22m[1m[22m[2m │ gzip:  21.60 kB[22m
+2026-04-18T06:06:42.357895Z	artifacts/claimtagx build: [2mdist/public/[22m[2massets/[22m[36mindex-Bp9AnIzS.js              [39m[1m[33m  566.11 kB[39m[22m[2m │ gzip: 173.07 kB[22m
+2026-04-18T06:06:42.357951Z	artifacts/claimtagx build: [33m
+2026-04-18T06:06:42.357986Z	artifacts/claimtagx build: (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-04-18T06:06:42.358119Z	artifacts/claimtagx build: - Using dynamic import() to code-split the application
+2026-04-18T06:06:42.358162Z	artifacts/claimtagx build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2026-04-18T06:06:42.358203Z	artifacts/claimtagx build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+2026-04-18T06:06:42.358241Z	artifacts/claimtagx build: [32m✓ built in 4.60s[39m
+2026-04-18T06:06:42.446628Z	artifacts/claimtagx build: Done
+2026-04-18T06:06:42.488367Z	Finished
+2026-04-18T06:06:43.134331Z	Checking for configuration in a Wrangler configuration file (BETA)
+2026-04-18T06:06:43.134847Z	
+2026-04-18T06:06:43.134969Z	Found wrangler.json file. Reading build configuration...
+2026-04-18T06:06:44.216302Z	A Wrangler configuration file was found but it does not appear to be valid. Did you mean to use wrangler.toml to configure Pages? If so, then make sure the file is valid and contains the `pages_build_output_dir` property. Skipping file and continuing.
+2026-04-18T06:06:44.217378Z	Note: No functions dir at /functions found. Skipping.
+2026-04-18T06:06:44.217488Z	Validating asset output directory
+2026-04-18T06:06:47.247853Z	Deploying your site to Cloudflare's global network...
+2026-04-18T06:06:49.720564Z	Uploading... (0/284)
+2026-04-18T06:06:52.608574Z	Uploading... (94/284)
+2026-04-18T06:06:52.658805Z	Uploading... (189/284)
+2026-04-18T06:06:53.22528Z	Uploading... (284/284)
+2026-04-18T06:06:53.22557Z	✨ Success! Uploaded 284 files (4.37 sec)
+2026-04-18T06:06:53.225635Z	
+2026-04-18T06:06:53.743008Z	✨ Upload complete!
+2026-04-18T06:06:56.213691Z	Success: Assets published!
+2026-04-18T06:06:58.054863Z	Success: Your site was deployed!
