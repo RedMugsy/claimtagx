@@ -40,10 +40,12 @@ export default function FinalCTA() {
               Start free trial
             </a>
             <a
-              href="mailto:sales@claimtagx.com"
+              href="https://calendly.com/claimtagx/demo"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full sm:w-auto bg-white/5 border border-white/10 text-white px-10 py-5 rounded-xl font-bold text-lg hover:border-lime/50 hover:bg-white/10 hover:text-lime transition-all duration-300 group flex items-center justify-center gap-2"
             >
-              Talk to sales
+              Book a demo
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </a>
           </div>

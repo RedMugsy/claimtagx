@@ -61,6 +61,14 @@ export default function Nav() {
             )
           )}
           <a
+            href="https://calendly.com/claimtagx/demo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold text-white px-4 py-2.5 rounded-lg border border-white/15 hover:border-lime/40 hover:text-lime transition-all duration-200 inline-block"
+          >
+            Book a demo
+          </a>
+          <a
             href="https://app.claimtagx.com/signup"
             target="_blank"
             rel="noopener noreferrer"
@@ -112,10 +120,19 @@ export default function Nav() {
                 )
               )}
               <a
+                href="https://calendly.com/claimtagx/demo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border border-white/15 text-white px-5 py-3 rounded-lg font-semibold text-center mt-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Book a demo
+              </a>
+              <a
                 href="https://app.claimtagx.com/signup"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-lime text-obsidian px-5 py-3 rounded-lg font-semibold text-center mt-2"
+                className="bg-lime text-obsidian px-5 py-3 rounded-lg font-semibold text-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Start free trial

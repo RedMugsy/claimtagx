@@ -85,10 +85,12 @@ export default function Hero() {
                 Start free trial
               </a>
               <a
-                href="#how"
+                href="https://calendly.com/claimtagx/demo"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full sm:w-auto border border-white/15 text-white px-8 py-4 rounded-lg font-bold text-lg hover:border-lime/40 hover:text-lime transition-all duration-200 group flex items-center justify-center gap-2"
               >
-                See how it works
+                Book a demo
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </a>
             </motion.div>
