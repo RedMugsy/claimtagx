@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { MODE_BY_ID, MODE_ICONS, MODES } from "@/lib/modes";
-import { ChevronDown, ClipboardList, PackagePlus, ScanLine, Settings, LogOut } from "lucide-react";
+import { ChevronDown, ClipboardList, PackagePlus, ScanLine, Settings, LogOut, Building2, Plus, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,8 +20,8 @@ const tabs = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { session, mode, setMode, signOut, assets } = useStore();
-  const [location] = useLocation();
+  const { session, mode, setMode, signOut, assets, venues, activeVenue, setActiveVenue } = useStore();
+  const [location, navigate] = useLocation();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
   const activeCount = assets.filter((a) => a.status === "active" && a.mode === mode).length;
@@ -72,6 +72,53 @@ export function Shell({ children }: { children: ReactNode }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 hover-elevate text-sm"
+                data-testid="button-venue-switcher"
+              >
+                <Building2 className="w-4 h-4 text-lime" />
+                <span className="font-semibold text-white truncate max-w-[10rem]">
+                  {activeVenue?.name ?? "Pick venue"}
+                </span>
+                <span className="font-mono text-xs text-slate">{activeVenue?.code ?? ""}</span>
+                <ChevronDown className="w-4 h-4 text-slate" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Switch venue</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {venues.length === 0 && (
+                <div className="px-2 py-2 text-xs text-slate">No venues yet</div>
+              )}
+              {venues.map((v) => {
+                const active = v.code === activeVenue?.code;
+                return (
+                  <DropdownMenuItem
+                    key={v.code}
+                    onSelect={() => setActiveVenue(v.code)}
+                    data-testid={`menuitem-venue-${v.code}`}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{v.name}</div>
+                      <div className="text-[10px] font-mono text-slate">{v.code}</div>
+                    </div>
+                    {active && <Check className="w-4 h-4 text-lime" />}
+                  </DropdownMenuItem>
+                );
+              })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => navigate("/settings")}
+                data-testid="menuitem-add-venue"
+              >
+                <Plus className="w-4 h-4" /> Manage venues
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
                 className="flex items-center gap-2 text-right hover-elevate rounded-xl px-2 py-1.5"
                 data-testid="button-handler-menu"
               >
@@ -95,7 +142,17 @@ export function Shell({ children }: { children: ReactNode }) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{session?.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={signOut} data-testid="menuitem-signout">
+              <DropdownMenuItem
+                onSelect={() => navigate("/settings")}
+                data-testid="menuitem-settings"
+              >
+                <Settings className="w-4 h-4" /> Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => void signOut()}
+                data-testid="menuitem-signout"
+              >
                 <LogOut className="w-4 h-4" /> Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>

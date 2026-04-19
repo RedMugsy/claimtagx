@@ -8,6 +8,14 @@ export const VENUE_DEFAULTS: Record<string, string> = {
   DEMO: "ClaimTagX Demo Venue",
 };
 
+export const DEMO_INVITE_TOKENS: Record<string, string> = {
+  "VLT-001": "demo-invite-vlt-001",
+  "BAG-002": "demo-invite-bag-002",
+  "CLK-003": "demo-invite-clk-003",
+  "RET-004": "demo-invite-ret-004",
+  DEMO: "demo-invite-demo",
+};
+
 export interface SeedAsset
   extends Omit<InsertAssetRow, "venueId" | "intakeAt"> {
   intakeAtOffsetMs: number;

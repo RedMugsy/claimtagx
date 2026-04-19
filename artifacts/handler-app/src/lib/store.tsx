@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth, useClerk, useUser } from "@clerk/react";
 import {
   createAsset,
   getAssetByTicket,
@@ -16,10 +17,20 @@ import {
   releaseAsset,
   type CustodyAsset as ApiCustodyAsset,
 } from "@workspace/api-client-react";
-import type { AssetModeId, CustodyAsset, HandlerSession } from "./types";
+import type {
+  AssetModeId,
+  CustodyAsset,
+  HandlerSession,
+  VenueMembership,
+} from "./types";
 import { MODES } from "./modes";
+import {
+  fetchMe,
+  joinVenue as apiJoinVenue,
+  leaveVenue as apiLeaveVenue,
+} from "./api";
 
-const SESSION_KEY = "ctx_handler_session";
+const ACTIVE_VENUE_KEY = "ctx_active_venue";
 const MODE_KEY = "ctx_handler_mode";
 
 function toLocal(a: ApiCustodyAsset): CustodyAsset {
@@ -38,9 +49,16 @@ function toLocal(a: ApiCustodyAsset): CustodyAsset {
 }
 
 interface StoreCtx {
+  ready: boolean;
+  signedIn: boolean;
   session: HandlerSession | null;
-  signIn: (s: HandlerSession) => void;
-  signOut: () => void;
+  venues: VenueMembership[];
+  activeVenue: VenueMembership | null;
+  setActiveVenue: (code: string) => void;
+  joinVenue: (inviteToken: string) => Promise<VenueMembership[]>;
+  leaveVenue: (code: string) => Promise<VenueMembership[]>;
+  refreshMe: () => Promise<void>;
+  signOut: () => Promise<void>;
   mode: AssetModeId;
   setMode: (m: AssetModeId) => void;
   assets: CustodyAsset[];
@@ -54,15 +72,20 @@ interface StoreCtx {
 
 const Ctx = createContext<StoreCtx | null>(null);
 
+function readStoredVenue(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_VENUE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<HandlerSession | null>(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      return raw ? (JSON.parse(raw) as HandlerSession) : null;
-    } catch {
-      return null;
-    }
-  });
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const clerk = useClerk();
+  const queryClient = useQueryClient();
+
   const [mode, setModeState] = useState<AssetModeId>(() => {
     try {
       const raw = localStorage.getItem(MODE_KEY);
@@ -70,20 +93,74 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {}
     return "vehicles";
   });
-
-  useEffect(() => {
-    if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    else localStorage.removeItem(SESSION_KEY);
-  }, [session]);
+  const [activeVenueCode, setActiveVenueCodeState] = useState<string | null>(
+    () => readStoredVenue(),
+  );
 
   useEffect(() => {
     localStorage.setItem(MODE_KEY, mode);
   }, [mode]);
 
-  const venueCode = session?.venueCode ?? "";
-  const queryClient = useQueryClient();
+  useEffect(() => {
+    try {
+      if (activeVenueCode) localStorage.setItem(ACTIVE_VENUE_KEY, activeVenueCode);
+      else localStorage.removeItem(ACTIVE_VENUE_KEY);
+    } catch {}
+  }, [activeVenueCode]);
 
-  const { data: assets = [], isLoading } = useQuery({
+  // Pull membership info from server. /api/me reads memberships from the
+  // handler_venues table (server-authoritative), not from client state.
+  const meQuery = useQuery({
+    queryKey: ["me", user?.id ?? null],
+    queryFn: fetchMe,
+    enabled: Boolean(authLoaded && isSignedIn),
+    staleTime: 30_000,
+  });
+
+  const venues = meQuery.data?.venues ?? [];
+  const email = meQuery.data?.email ?? user?.primaryEmailAddress?.emailAddress ?? "";
+  const handlerName =
+    meQuery.data?.name ??
+    ([user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+      user?.username ||
+      email.split("@")[0] ||
+      "Handler");
+
+  // Reconcile active venue with the membership list.
+  useEffect(() => {
+    if (!isSignedIn) {
+      setActiveVenueCodeState(null);
+      return;
+    }
+    if (!meQuery.data) return;
+    if (venues.length === 0) {
+      setActiveVenueCodeState(null);
+      return;
+    }
+    const matches = activeVenueCode
+      ? venues.find((v) => v.code === activeVenueCode)
+      : null;
+    if (!matches) setActiveVenueCodeState(venues[0].code);
+  }, [isSignedIn, meQuery.data, venues, activeVenueCode]);
+
+  const activeVenue = useMemo<VenueMembership | null>(
+    () => venues.find((v) => v.code === activeVenueCode) ?? null,
+    [venues, activeVenueCode],
+  );
+
+  const session = useMemo<HandlerSession | null>(() => {
+    if (!isSignedIn || !activeVenue || !email) return null;
+    return {
+      email,
+      handlerName,
+      venueCode: activeVenue.code,
+      venueName: activeVenue.name,
+    };
+  }, [isSignedIn, activeVenue, email, handlerName]);
+
+  const venueCode = activeVenue?.code ?? "";
+
+  const { data: assets = [], isLoading: assetsLoading } = useQuery({
     queryKey: getListAssetsQueryKey(venueCode),
     queryFn: () => listAssets(venueCode).then((rows) => rows.map(toLocal)),
     enabled: Boolean(venueCode),
@@ -107,7 +184,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         venueName: session.venueName,
       });
       const local = toLocal(created);
-      // Optimistic insert into cache so Custody view feels instant.
       queryClient.setQueryData<CustodyAsset[] | undefined>(
         getListAssetsQueryKey(session.venueCode),
         (prev) => (prev ? [local, ...prev] : [local]),
@@ -122,7 +198,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async (ticketId) => {
       if (!session) return null;
       try {
-        const updated = await releaseAsset(session.venueCode, ticketId, {});
+        const updated = await releaseAsset(session.venueCode, ticketId, {
+          handlerEmail: session.email,
+          handlerName: session.handlerName,
+        });
         const local = toLocal(updated);
         queryClient.setQueryData<CustodyAsset[] | undefined>(
           getListAssetsQueryKey(session.venueCode),
@@ -152,23 +231,92 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [session],
   );
 
+  const refreshMe = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["me"] });
+    await meQuery.refetch();
+  }, [queryClient, meQuery]);
+
+  const join: StoreCtx["joinVenue"] = useCallback(
+    async (inviteToken) => {
+      const { venues: next, joined } = await apiJoinVenue(inviteToken);
+      queryClient.setQueryData(
+        ["me", user?.id ?? null],
+        (prev: typeof meQuery.data) => (prev ? { ...prev, venues: next } : prev),
+      );
+      if (joined?.code) setActiveVenueCodeState(joined.code.toUpperCase());
+      return next;
+    },
+    [queryClient, user?.id, meQuery.data],
+  );
+
+  const leave: StoreCtx["leaveVenue"] = useCallback(
+    async (code) => {
+      const { venues: next } = await apiLeaveVenue(code);
+      queryClient.setQueryData(
+        ["me", user?.id ?? null],
+        (prev: typeof meQuery.data) => (prev ? { ...prev, venues: next } : prev),
+      );
+      setActiveVenueCodeState((cur) => (cur === code ? next[0]?.code ?? null : cur));
+      return next;
+    },
+    [queryClient, user?.id, meQuery.data],
+  );
+
+  const setActiveVenue = useCallback((code: string) => {
+    setActiveVenueCodeState(code.toUpperCase());
+  }, []);
+
+  const signOutFn = useCallback(async () => {
+    queryClient.clear();
+    setActiveVenueCodeState(null);
+    try {
+      localStorage.removeItem(ACTIVE_VENUE_KEY);
+    } catch {}
+    await clerk.signOut();
+  }, [clerk, queryClient]);
+
+  const ready =
+    Boolean(authLoaded) &&
+    (!isSignedIn || (meQuery.isFetched && !meQuery.isLoading));
+
   const value = useMemo<StoreCtx>(
     () => ({
+      ready,
+      signedIn: Boolean(isSignedIn),
       session,
-      signIn: (s) => setSession(s),
-      signOut: () => {
-        setSession(null);
-        queryClient.clear();
-      },
+      venues,
+      activeVenue,
+      setActiveVenue,
+      joinVenue: join,
+      leaveVenue: leave,
+      refreshMe,
+      signOut: signOutFn,
       mode,
       setMode: (m) => setModeState(m),
       assets,
-      loading: isLoading,
+      loading: assetsLoading,
       intake,
       release,
       findByTicket,
     }),
-    [session, mode, assets, isLoading, intake, release, findByTicket, queryClient],
+    [
+      ready,
+      isSignedIn,
+      session,
+      venues,
+      activeVenue,
+      setActiveVenue,
+      join,
+      leave,
+      refreshMe,
+      signOutFn,
+      mode,
+      assets,
+      assetsLoading,
+      intake,
+      release,
+      findByTicket,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

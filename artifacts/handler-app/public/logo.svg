@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" width="240" height="80">
+  <rect width="240" height="80" fill="transparent"/>
+  <g font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="34">
+    <text x="12" y="52" fill="#FFFFFF">Claim</text>
+    <text x="120" y="52" fill="#C6F24E">TagX</text>
+  </g>
+  <g font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" letter-spacing="2">
+    <text x="14" y="70" fill="#94A3B8">HANDLER · CUSTODY OS</text>
+  </g>
+</svg>

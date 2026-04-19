@@ -42,9 +42,21 @@ export interface CustodyAsset {
   releasedAt?: number;
 }
 
+export interface VenueMembership {
+  code: string;
+  name: string;
+  role?: string;
+}
+
+export interface AvailableVenue {
+  code: string;
+  name: string;
+  inviteToken: string;
+}
+
 export interface HandlerSession {
   email: string;
+  handlerName: string;
   venueCode: string;
   venueName: string;
-  handlerName: string;
 }

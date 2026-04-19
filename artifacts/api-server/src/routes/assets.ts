@@ -9,12 +9,18 @@ import {
   seedVenueIfEmpty,
   serializeAsset,
 } from "../lib/assets";
+import {
+  requireAuth,
+  requireVenueMembership,
+} from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
+router.use("/venues/:venueCode", requireAuth, requireVenueMembership());
+
 router.get("/venues/:venueCode/assets", async (req, res, next) => {
   try {
-    const venueCode = req.params.venueCode;
+    const venueCode = req.params.venueCode.toUpperCase();
     await ensureVenue(venueCode);
     await seedVenueIfEmpty(venueCode);
     const rows = await db
@@ -30,15 +36,17 @@ router.get("/venues/:venueCode/assets", async (req, res, next) => {
 
 router.post("/venues/:venueCode/assets", async (req, res, next) => {
   try {
-    const venueCode = req.params.venueCode;
+    const venueCode = req.params.venueCode.toUpperCase();
     const parsed = CreateAssetBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
       return;
     }
     const body = parsed.data;
+    const handlerEmail = req.userEmail || body.handlerEmail;
+    const handlerName = req.userName || body.handlerName;
     await ensureVenue(venueCode, body.venueName ?? undefined);
-    const handlerId = await ensureHandler(venueCode, body.handlerEmail, body.handlerName);
+    const handlerId = await ensureHandler(venueCode, handlerEmail, handlerName);
     const ticketId = await createTicketId(venueCode, body.mode);
     const now = new Date();
     const [inserted] = await db
@@ -52,7 +60,7 @@ router.post("/venues/:venueCode/assets", async (req, res, next) => {
         fields: (body.fields ?? {}) as Record<string, string | number | boolean>,
         photos: (body.photos ?? []) as string[],
         handlerId,
-        handlerName: body.handlerName,
+        handlerName,
         status: "active",
         intakeAt: now,
       })
@@ -76,7 +84,8 @@ router.post("/venues/:venueCode/assets", async (req, res, next) => {
 
 router.get("/venues/:venueCode/assets/:ticketId", async (req, res, next) => {
   try {
-    const { venueCode, ticketId } = req.params;
+    const venueCode = req.params.venueCode.toUpperCase();
+    const ticketId = req.params.ticketId;
     const [row] = await db
       .select()
       .from(assetsTable)
@@ -99,12 +108,15 @@ router.get("/venues/:venueCode/assets/:ticketId", async (req, res, next) => {
 
 router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next) => {
   try {
-    const { venueCode, ticketId } = req.params;
+    const venueCode = req.params.venueCode.toUpperCase();
+    const ticketId = req.params.ticketId;
     const parsed = ReleaseAssetBody.safeParse(req.body ?? {});
     const body = parsed.success ? parsed.data : {};
+    const handlerEmail = req.userEmail || body.handlerEmail;
+    const handlerName = req.userName || body.handlerName;
     let handlerId: string | null = null;
-    if (body.handlerEmail && body.handlerName) {
-      handlerId = await ensureHandler(venueCode, body.handlerEmail, body.handlerName);
+    if (handlerEmail && handlerName) {
+      handlerId = await ensureHandler(venueCode, handlerEmail, handlerName);
     }
     const now = new Date();
     const [updated] = await db
