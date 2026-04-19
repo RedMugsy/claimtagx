@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ScanLine, CheckCircle2, AlertTriangle, RotateCcw, ArrowRight } from "lucide-react";
+import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,19 @@ import { useStore } from "@/lib/store";
 import { MODE_BY_ID, MODE_ICONS } from "@/lib/modes";
 import { QrTag } from "@/components/handler/QrTag";
 import type { CustodyAsset } from "@/lib/types";
+
+function extractTicketId(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === "object" && typeof parsed.t === "string") {
+      return parsed.t.trim().toUpperCase();
+    }
+  } catch {
+    // not JSON, treat as plain ticket id
+  }
+  return trimmed.toUpperCase();
+}
 
 type Stage = "scan" | "confirm" | "released" | "missing";
 
@@ -21,8 +35,7 @@ export default function Release() {
   const [scanOn, setScanOn] = useState(false);
   const [scanNote, setScanNote] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const detectorRef = useRef<unknown>(null);
-  const rafRef = useRef<number | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   const [missingReason, setMissingReason] = useState<"unknown" | "wrong-mode">("unknown");
 
@@ -42,75 +55,58 @@ export default function Release() {
   );
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
     let cancelled = false;
 
-    async function setupDetector() {
-      const w = window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (s: HTMLVideoElement) => Promise<{ rawValue: string }[]> } };
-      if (!w.BarcodeDetector) {
-        setScanNote("Live QR decode is not supported in this browser. Use manual entry.");
-        return null;
-      }
-      try {
-        return new w.BarcodeDetector({ formats: ["qr_code"] });
-      } catch {
-        setScanNote("Live QR decode unavailable. Use manual entry.");
-        return null;
-      }
-    }
-
-    async function tick() {
-      const v = videoRef.current;
-      const d = detectorRef.current as { detect: (s: HTMLVideoElement) => Promise<{ rawValue: string }[]> } | null;
-      if (cancelled || !v || !d || stage !== "scan") return;
-      if (v.readyState >= 2) {
+    function stopScanner() {
+      if (controlsRef.current) {
         try {
-          const results = await d.detect(v);
-          if (results && results.length > 0) {
-            const raw = results[0].rawValue;
-            const ticket = raw.trim().toUpperCase();
-            setCode(ticket);
-            setScanOn(false);
-            lookup(ticket);
-            return;
-          }
+          controlsRef.current.stop();
         } catch {
-          // ignore detection frame errors
+          // ignore stop errors
         }
+        controlsRef.current = null;
       }
-      rafRef.current = requestAnimationFrame(tick);
     }
 
-    if (scanOn) {
+    if (scanOn && stage === "scan") {
       setScanNote(null);
-      navigator.mediaDevices
-        ?.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-        .then(async (s) => {
-          if (cancelled) {
-            s.getTracks().forEach((t) => t.stop());
-            return;
-          }
-          stream = s;
-          if (videoRef.current) {
-            videoRef.current.srcObject = s;
-            await videoRef.current.play().catch(() => {});
-          }
-          detectorRef.current = await setupDetector();
-          if (detectorRef.current) {
-            rafRef.current = requestAnimationFrame(tick);
-          }
-        })
-        .catch(() => {
-          setScanOn(false);
-          setScanNote("Camera permission denied. Use manual entry.");
-        });
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setScanOn(false);
+        setScanNote("Camera not available in this browser. Use manual entry.");
+      } else {
+        const reader = new BrowserQRCodeReader();
+        reader
+          .decodeFromVideoDevice(undefined, videoRef.current!, (result, _err, controls) => {
+            if (cancelled) {
+              controls.stop();
+              return;
+            }
+            if (result) {
+              const ticket = extractTicketId(result.getText());
+              setCode(ticket);
+              controls.stop();
+              controlsRef.current = null;
+              setScanOn(false);
+              lookup(ticket);
+            }
+          })
+          .then((controls) => {
+            if (cancelled) {
+              controls.stop();
+              return;
+            }
+            controlsRef.current = controls;
+          })
+          .catch(() => {
+            if (cancelled) return;
+            setScanOn(false);
+            setScanNote("Camera permission denied or unavailable. Use manual entry.");
+          });
+      }
     }
     return () => {
       cancelled = true;
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      detectorRef.current = null;
-      stream?.getTracks().forEach((t) => t.stop());
+      stopScanner();
     };
   }, [scanOn, stage, lookup]);
 
