@@ -200,6 +200,9 @@ components:
         releasedAt:
           type: ["integer", "null"]
           description: Epoch milliseconds, present when released
+        signature:
+          type: string
+          description: HMAC signature of the ticket id, used by handler-issued QR codes
       required:
         - id
         - ticketId
@@ -211,6 +214,7 @@ components:
         - intakeAt
         - handler
         - status
+        - signature
     CreateAssetRequest:
       type: object
       properties:
@@ -245,3 +249,10 @@ components:
           type: string
         handlerName:
           type: string
+        signature:
+          type: string
+          description: HMAC signature from a scanned QR; verified server-side. Omit for manual entry fallback.
+        source:
+          type: string
+          enum: [scan, manual]
+          description: Where the ticket id originated. "scan" requires a valid signature; "manual" is the fallback when a handler types the id.

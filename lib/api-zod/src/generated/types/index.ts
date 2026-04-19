@@ -17,3 +17,4 @@ export * from "./custodyAssetFields";
 export * from "./healthStatus";
 export * from "./patron";
 export * from "./releaseAssetRequest";
+export * from "./releaseAssetRequestSource";

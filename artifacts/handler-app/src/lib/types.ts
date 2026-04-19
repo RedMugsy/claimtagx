@@ -40,6 +40,7 @@ export interface CustodyAsset {
   handler: string;
   status: "active" | "released";
   releasedAt?: number;
+  signature: string;
 }
 
 export interface VenueMembership {

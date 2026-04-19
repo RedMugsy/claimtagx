@@ -1,17 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 
 interface Props {
-  value: string;
+  ticketId: string;
+  signature?: string;
   size?: number;
 }
 
-export function QrTag({ value, size = 180 }: Props) {
+export function QrTag({ ticketId, signature, size = 180 }: Props) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+  const payload = useMemo(() => {
+    if (signature) {
+      return JSON.stringify({ t: ticketId, v: 1, sig: signature });
+    }
+    return ticketId;
+  }, [ticketId, signature]);
 
   useEffect(() => {
     let cancelled = false;
-    QRCode.toDataURL(value, {
+    QRCode.toDataURL(payload, {
       errorCorrectionLevel: "M",
       margin: 1,
       width: size,
@@ -26,7 +34,7 @@ export function QrTag({ value, size = 180 }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [value, size]);
+  }, [payload, size]);
 
   return (
     <div className="inline-block bg-white p-3 rounded-2xl">
@@ -35,14 +43,14 @@ export function QrTag({ value, size = 180 }: Props) {
           src={dataUrl}
           width={size}
           height={size}
-          alt={`QR tag for ${value}`}
+          alt={`QR tag for ${ticketId}`}
           className="block"
         />
       ) : (
         <div
           style={{ width: size, height: size }}
           className="bg-white animate-pulse rounded"
-          aria-label={`QR tag for ${value}`}
+          aria-label={`QR tag for ${ticketId}`}
         />
       )}
     </div>

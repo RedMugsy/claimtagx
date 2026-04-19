@@ -2,6 +2,7 @@ import { db, assetsTable, venuesTable, handlersTable, eventsTable } from "@works
 import type { AssetRow } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 import { buildSeedAssets, VENUE_DEFAULTS } from "./seed";
+import { signTicket } from "./signing";
 
 const DEMO_VENUE_CODES = new Set(Object.keys(VENUE_DEFAULTS));
 
@@ -17,6 +18,7 @@ export interface SerializedAsset {
   handler: string;
   status: "active" | "released";
   releasedAt: number | null;
+  signature: string;
 }
 
 export function serializeAsset(row: AssetRow): SerializedAsset {
@@ -32,6 +34,7 @@ export function serializeAsset(row: AssetRow): SerializedAsset {
     handler: row.handlerName,
     status: row.status as "active" | "released",
     releasedAt: row.releasedAt ? row.releasedAt.getTime() : null,
+    signature: signTicket(row.venueId, row.ticketId),
   };
 }
 

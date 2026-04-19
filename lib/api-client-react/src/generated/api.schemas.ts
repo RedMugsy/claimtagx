@@ -55,6 +55,8 @@ export interface CustodyAsset {
    * @nullable
    */
   releasedAt?: number | null;
+  /** HMAC signature of the ticket id, used by handler-issued QR codes */
+  signature: string;
 }
 
 export type CreateAssetRequestFields = { [key: string]: AssetFieldValue };
@@ -69,7 +71,22 @@ export interface CreateAssetRequest {
   venueName?: string;
 }
 
+/**
+ * Where the ticket id originated. "scan" requires a valid signature; "manual" is the fallback when a handler types the id.
+ */
+export type ReleaseAssetRequestSource =
+  (typeof ReleaseAssetRequestSource)[keyof typeof ReleaseAssetRequestSource];
+
+export const ReleaseAssetRequestSource = {
+  scan: "scan",
+  manual: "manual",
+} as const;
+
 export interface ReleaseAssetRequest {
   handlerEmail?: string;
   handlerName?: string;
+  /** HMAC signature from a scanned QR; verified server-side. Omit for manual entry fallback. */
+  signature?: string;
+  /** Where the ticket id originated. "scan" requires a valid signature; "manual" is the fallback when a handler types the id. */
+  source?: ReleaseAssetRequestSource;
 }

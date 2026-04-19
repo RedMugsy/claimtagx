@@ -5,8 +5,13 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ReleaseAssetRequestSource } from "./releaseAssetRequestSource";
 
 export interface ReleaseAssetRequest {
   handlerEmail?: string;
   handlerName?: string;
+  /** HMAC signature from a scanned QR; verified server-side. Omit for manual entry fallback. */
+  signature?: string;
+  /** Where the ticket id originated. "scan" requires a valid signature; "manual" is the fallback when a handler types the id. */
+  source?: ReleaseAssetRequestSource;
 }

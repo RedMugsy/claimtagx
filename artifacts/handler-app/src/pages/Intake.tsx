@@ -294,7 +294,7 @@ export default function Intake() {
                 </div>
               </div>
               <div className="flex flex-col items-center justify-center">
-                <QrTag value={created.ticketId} size={220} />
+                <QrTag ticketId={created.ticketId} signature={created.signature} size={220} />
                 <div className="mt-4 text-center">
                   <div className="font-mono text-lg text-white tracking-wider">{created.ticketId}</div>
                   <div className="text-xs text-slate font-mono">Visual tag · scan at release</div>

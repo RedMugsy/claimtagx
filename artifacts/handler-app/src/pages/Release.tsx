@@ -10,26 +10,37 @@ import { MODE_BY_ID, MODE_ICONS } from "@/lib/modes";
 import { QrTag } from "@/components/handler/QrTag";
 import type { CustodyAsset } from "@/lib/types";
 
-function extractTicketId(raw: string): string {
+interface ScannedTag {
+  ticketId: string;
+  signature?: string;
+}
+
+function extractScannedTag(raw: string): ScannedTag {
   const trimmed = raw.trim();
   try {
     const parsed = JSON.parse(trimmed);
     if (parsed && typeof parsed === "object" && typeof parsed.t === "string") {
-      return parsed.t.trim().toUpperCase();
+      const sig =
+        typeof parsed.sig === "string" && parsed.sig.length > 0
+          ? parsed.sig
+          : undefined;
+      return { ticketId: parsed.t.trim().toUpperCase(), signature: sig };
     }
   } catch {
     // not JSON, treat as plain ticket id
   }
-  return trimmed.toUpperCase();
+  return { ticketId: trimmed.toUpperCase() };
 }
 
-type Stage = "scan" | "confirm" | "released" | "missing";
+type Stage = "scan" | "confirm" | "released" | "missing" | "tampered";
 
 export default function Release() {
   const { findByTicket, release, mode } = useStore();
   const modeCfg = MODE_BY_ID[mode];
   const [stage, setStage] = useState<Stage>("scan");
   const [code, setCode] = useState("");
+  const [scannedSignature, setScannedSignature] = useState<string | undefined>(undefined);
+  const [scanSource, setScanSource] = useState<"scan" | "manual">("manual");
   const [match, setMatch] = useState<CustodyAsset | null>(null);
   const [released, setReleased] = useState<CustodyAsset | null>(null);
   const [scanOn, setScanOn] = useState(false);
@@ -82,12 +93,14 @@ export default function Release() {
               return;
             }
             if (result) {
-              const ticket = extractTicketId(result.getText());
-              setCode(ticket);
+              const scanned = extractScannedTag(result.getText());
+              setCode(scanned.ticketId);
+              setScannedSignature(scanned.signature);
+              setScanSource("scan");
               controls.stop();
               controlsRef.current = null;
               setScanOn(false);
-              void lookup(ticket);
+              void lookup(scanned.ticketId);
             }
           })
           .then((controls) => {
@@ -112,6 +125,8 @@ export default function Release() {
 
   const reset = () => {
     setCode("");
+    setScannedSignature(undefined);
+    setScanSource("manual");
     setMatch(null);
     setReleased(null);
     setStage("scan");
@@ -119,10 +134,16 @@ export default function Release() {
 
   const confirm = async () => {
     if (!match) return;
-    const r = await release(match.ticketId);
+    const r = await release(match.ticketId, {
+      signature: scannedSignature,
+      source: scanSource,
+    });
     if (r) {
       setReleased(r);
       setStage("released");
+    } else if (scanSource === "scan") {
+      // Server rejected the scanned tag — likely a copied/forged QR.
+      setStage("tampered");
     } else {
       setStage("missing");
     }
@@ -215,7 +236,11 @@ export default function Release() {
                   <Input
                     id="ticket"
                     value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setCode(e.target.value.toUpperCase());
+                      setScannedSignature(undefined);
+                      setScanSource("manual");
+                    }}
                     placeholder="VAL-4839"
                     className="bg-obsidian/40 border-white/10 text-white placeholder:text-slate font-mono text-lg tracking-widest"
                     autoFocus
@@ -315,6 +340,29 @@ export default function Release() {
             </Button>
           </motion.div>
         )}
+
+        {stage === "tampered" && (
+          <motion.div
+            key="tampered"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="rounded-3xl border border-red-500/40 bg-red-500/10 p-8 text-center"
+            data-testid="panel-tampered"
+          >
+            <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-white mb-1">Tag signature didn't verify</h2>
+            <p className="text-slate mb-6">
+              <span className="font-mono">{code || "—"}</span> looks like a copied or forged QR. Verify the patron in person, then use manual entry to release.
+            </p>
+            <Button onClick={reset} className="bg-lime text-obsidian hover:bg-lime-hover font-bold rounded-xl" data-testid="button-try-again">
+              Try again
+            </Button>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -326,7 +374,7 @@ function ConfirmDetails({ asset }: { asset: CustodyAsset }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
       <div className="flex flex-col items-center gap-3">
-        <QrTag value={asset.ticketId} size={160} />
+        <QrTag ticketId={asset.ticketId} signature={asset.signature} size={160} />
         <div className="font-mono text-sm text-lime tracking-wider">{asset.ticketId}</div>
       </div>
       <div>

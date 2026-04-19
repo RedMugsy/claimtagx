@@ -43,6 +43,11 @@ export const ListAssetsResponseItem = zod.object({
     .number()
     .nullish()
     .describe("Epoch milliseconds, present when released"),
+  signature: zod
+    .string()
+    .describe(
+      "HMAC signature of the ticket id, used by handler-issued QR codes",
+    ),
 });
 export const ListAssetsResponse = zod.array(ListAssetsResponseItem);
 
@@ -98,6 +103,11 @@ export const GetAssetByTicketResponse = zod.object({
     .number()
     .nullish()
     .describe("Epoch milliseconds, present when released"),
+  signature: zod
+    .string()
+    .describe(
+      "HMAC signature of the ticket id, used by handler-issued QR codes",
+    ),
 });
 
 /**
@@ -111,6 +121,18 @@ export const ReleaseAssetParams = zod.object({
 export const ReleaseAssetBody = zod.object({
   handlerEmail: zod.string().optional(),
   handlerName: zod.string().optional(),
+  signature: zod
+    .string()
+    .optional()
+    .describe(
+      "HMAC signature from a scanned QR; verified server-side. Omit for manual entry fallback.",
+    ),
+  source: zod
+    .enum(["scan", "manual"])
+    .optional()
+    .describe(
+      'Where the ticket id originated. \"scan\" requires a valid signature; \"manual\" is the fallback when a handler types the id.',
+    ),
 });
 
 export const ReleaseAssetResponse = zod.object({
@@ -134,4 +156,9 @@ export const ReleaseAssetResponse = zod.object({
     .number()
     .nullish()
     .describe("Epoch milliseconds, present when released"),
+  signature: zod
+    .string()
+    .describe(
+      "HMAC signature of the ticket id, used by handler-issued QR codes",
+    ),
 });

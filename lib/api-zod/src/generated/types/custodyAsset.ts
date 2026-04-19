@@ -27,4 +27,6 @@ export interface CustodyAsset {
    * @nullable
    */
   releasedAt?: number | null;
+  /** HMAC signature of the ticket id, used by handler-issued QR codes */
+  signature: string;
 }

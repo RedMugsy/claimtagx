@@ -9,6 +9,7 @@ import {
   seedVenueIfEmpty,
   serializeAsset,
 } from "../lib/assets";
+import { verifyTicket } from "../lib/signing";
 import {
   requireAuth,
   requireVenueMembership,
@@ -114,6 +115,21 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
     const body = parsed.success ? parsed.data : {};
     const handlerEmail = req.userEmail || body.handlerEmail;
     const handlerName = req.userName || body.handlerName;
+    // Releases originating from a QR scan MUST present a valid signature.
+    // Manual typed entry (`source: "manual"` or omitted with no signature)
+    // is the explicit fallback and bypasses signature verification.
+    const hasSignature = typeof body.signature === "string" && body.signature.length > 0;
+    if (body.source === "scan") {
+      if (!hasSignature || !verifyTicket(venueCode, ticketId, body.signature!)) {
+        res.status(403).json({ error: "Invalid or missing tag signature" });
+        return;
+      }
+    } else if (hasSignature) {
+      if (!verifyTicket(venueCode, ticketId, body.signature!)) {
+        res.status(403).json({ error: "Invalid tag signature" });
+        return;
+      }
+    }
     let handlerId: string | null = null;
     if (handlerEmail && handlerName) {
       handlerId = await ensureHandler(venueCode, handlerEmail, handlerName);

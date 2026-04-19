@@ -45,6 +45,7 @@ function toLocal(a: ApiCustodyAsset): CustodyAsset {
     handler: a.handler,
     status: a.status as "active" | "released",
     releasedAt: a.releasedAt ?? undefined,
+    signature: a.signature,
   };
 }
 
@@ -64,9 +65,12 @@ interface StoreCtx {
   assets: CustodyAsset[];
   loading: boolean;
   intake: (
-    a: Omit<CustodyAsset, "id" | "ticketId" | "intakeAt" | "handler" | "status">,
+    a: Omit<CustodyAsset, "id" | "ticketId" | "intakeAt" | "handler" | "status" | "signature">,
   ) => Promise<CustodyAsset>;
-  release: (ticketId: string) => Promise<CustodyAsset | null>;
+  release: (
+    ticketId: string,
+    opts?: { signature?: string; source?: "scan" | "manual" },
+  ) => Promise<CustodyAsset | null>;
   findByTicket: (ticketId: string) => Promise<CustodyAsset | undefined>;
 }
 
@@ -195,12 +199,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const release = useCallback<StoreCtx["release"]>(
-    async (ticketId) => {
+    async (ticketId, opts) => {
       if (!session) return null;
       try {
         const updated = await releaseAsset(session.venueCode, ticketId, {
           handlerEmail: session.email,
           handlerName: session.handlerName,
+          ...(opts?.signature ? { signature: opts.signature } : {}),
+          ...(opts?.source ? { source: opts.source } : {}),
         });
         const local = toLocal(updated);
         queryClient.setQueryData<CustodyAsset[] | undefined>(

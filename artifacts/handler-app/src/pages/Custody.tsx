@@ -221,7 +221,7 @@ export default function Custody() {
               </SheetHeader>
               <div className="mt-6 space-y-5">
                 <div className="flex items-center justify-center">
-                  <QrTag value={selected.ticketId} size={160} />
+                  <QrTag ticketId={selected.ticketId} signature={selected.signature} size={160} />
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                   <div>
