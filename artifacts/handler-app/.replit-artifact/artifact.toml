@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/handler/"
+title = "ClaimTagX Handler App"
+version = "1.0.0"
+id = "artifacts/handler-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/handler/" ]
+localPort = 21995
+
+[services.development]
+run = "pnpm --filter @workspace/handler-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/handler-app", "run", "build" ]
+publicDir = "artifacts/handler-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21995"
+BASE_PATH = "/handler/"
