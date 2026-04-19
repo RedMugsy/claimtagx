@@ -40,8 +40,8 @@ export default function Release() {
   const [missingReason, setMissingReason] = useState<"unknown" | "wrong-mode">("unknown");
 
   const lookup = useCallback(
-    (ticket: string) => {
-      const a = findByTicket(ticket.trim());
+    async (ticket: string) => {
+      const a = await findByTicket(ticket.trim());
       if (a && a.status === "active" && a.mode === mode) {
         setMatch(a);
         setStage("confirm");
@@ -87,7 +87,7 @@ export default function Release() {
               controls.stop();
               controlsRef.current = null;
               setScanOn(false);
-              lookup(ticket);
+              void lookup(ticket);
             }
           })
           .then((controls) => {
@@ -117,9 +117,9 @@ export default function Release() {
     setStage("scan");
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!match) return;
-    const r = release(match.ticketId);
+    const r = await release(match.ticketId);
     if (r) {
       setReleased(r);
       setStage("released");
@@ -204,7 +204,7 @@ export default function Release() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (code.trim()) lookup(code);
+                  if (code.trim()) void lookup(code);
                 }}
                 className="space-y-4"
               >

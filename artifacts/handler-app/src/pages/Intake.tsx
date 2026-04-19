@@ -36,14 +36,26 @@ export default function Intake() {
     patron.name.trim().length > 0 &&
     cfg.fields.every((f) => !f.required || (fields[f.key] !== undefined && String(fields[f.key]).length > 0));
 
-  const submit = () => {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (submitting) return;
     const cleanFields: Record<string, string | number | boolean> = {};
     for (const [k, v] of Object.entries(fields)) {
       if (v !== undefined) cleanFields[k] = v;
     }
-    const a = intake({ mode, patron, fields: cleanFields, photos });
-    setCreated(a);
-    setStep("done");
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const a = await intake({ mode, patron, fields: cleanFields, photos });
+      setCreated(a);
+      setStep("done");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to issue tag");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -223,12 +235,21 @@ export default function Intake() {
               </Button>
               <Button
                 onClick={submit}
+                disabled={submitting}
                 className="bg-lime text-obsidian hover:bg-lime-hover font-bold rounded-xl"
                 data-testid="button-issue-tag"
               >
-                Issue tag <ArrowRight className="w-4 h-4" />
+                {submitting ? "Issuing…" : "Issue tag"} <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
+            {submitError && (
+              <div
+                className="text-sm text-red-400 font-mono text-right"
+                data-testid="text-intake-error"
+              >
+                {submitError}
+              </div>
+            )}
           </motion.div>
         )}
 

@@ -8,3 +8,68 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ApiErrorMessage {
+  error: string;
+}
+
+export type AssetMode = (typeof AssetMode)[keyof typeof AssetMode];
+
+export const AssetMode = {
+  vehicles: "vehicles",
+  baggage: "baggage",
+  cloakrooms: "cloakrooms",
+  bags: "bags",
+} as const;
+
+export type AssetStatus = (typeof AssetStatus)[keyof typeof AssetStatus];
+
+export const AssetStatus = {
+  active: "active",
+  released: "released",
+} as const;
+
+export interface Patron {
+  name: string;
+  phone: string;
+}
+
+export type AssetFieldValue = string | number | boolean;
+
+export type CustodyAssetFields = { [key: string]: AssetFieldValue };
+
+export interface CustodyAsset {
+  id: string;
+  ticketId: string;
+  venueCode: string;
+  mode: AssetMode;
+  patron: Patron;
+  fields: CustodyAssetFields;
+  photos: string[];
+  /** Epoch milliseconds */
+  intakeAt: number;
+  handler: string;
+  status: AssetStatus;
+  /**
+   * Epoch milliseconds, present when released
+   * @nullable
+   */
+  releasedAt?: number | null;
+}
+
+export type CreateAssetRequestFields = { [key: string]: AssetFieldValue };
+
+export interface CreateAssetRequest {
+  mode: AssetMode;
+  patron: Patron;
+  fields: CreateAssetRequestFields;
+  photos: string[];
+  handlerEmail: string;
+  handlerName: string;
+  venueName?: string;
+}
+
+export interface ReleaseAssetRequest {
+  handlerEmail?: string;
+  handlerName?: string;
+}

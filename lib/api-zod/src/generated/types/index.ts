@@ -6,4 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./apiErrorMessage";
+export * from "./assetFieldValue";
+export * from "./assetMode";
+export * from "./assetStatus";
+export * from "./createAssetRequest";
+export * from "./createAssetRequestFields";
+export * from "./custodyAsset";
+export * from "./custodyAssetFields";
 export * from "./healthStatus";
+export * from "./patron";
+export * from "./releaseAssetRequest";

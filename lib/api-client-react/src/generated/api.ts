@@ -5,18 +5,27 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  ApiErrorMessage,
+  CreateAssetRequest,
+  CustodyAsset,
+  HealthStatus,
+  ReleaseAssetRequest,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +108,375 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List custody assets for a venue
+ */
+export const getListAssetsUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/assets`;
+};
+
+export const listAssets = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<CustodyAsset[]> => {
+  return customFetch<CustodyAsset[]>(getListAssetsUrl(venueCode), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAssetsQueryKey = (venueCode: string) => {
+  return [`/api/venues/${venueCode}/assets`] as const;
+};
+
+export const getListAssetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAssets>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAssets>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAssetsQueryKey(venueCode);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssets>>> = ({
+    signal,
+  }) => listAssets(venueCode, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAssets>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAssetsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAssets>>
+>;
+export type ListAssetsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List custody assets for a venue
+ */
+
+export function useListAssets<
+  TData = Awaited<ReturnType<typeof listAssets>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAssets>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAssetsQueryOptions(venueCode, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Intake a new asset and issue a ticket
+ */
+export const getCreateAssetUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/assets`;
+};
+
+export const createAsset = async (
+  venueCode: string,
+  createAssetRequest: CreateAssetRequest,
+  options?: RequestInit,
+): Promise<CustodyAsset> => {
+  return customFetch<CustodyAsset>(getCreateAssetUrl(venueCode), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createAssetRequest),
+  });
+};
+
+export const getCreateAssetMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAsset>>,
+    TError,
+    { venueCode: string; data: BodyType<CreateAssetRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAsset>>,
+  TError,
+  { venueCode: string; data: BodyType<CreateAssetRequest> },
+  TContext
+> => {
+  const mutationKey = ["createAsset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAsset>>,
+    { venueCode: string; data: BodyType<CreateAssetRequest> }
+  > = (props) => {
+    const { venueCode, data } = props ?? {};
+
+    return createAsset(venueCode, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAssetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAsset>>
+>;
+export type CreateAssetMutationBody = BodyType<CreateAssetRequest>;
+export type CreateAssetMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Intake a new asset and issue a ticket
+ */
+export const useCreateAsset = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAsset>>,
+    TError,
+    { venueCode: string; data: BodyType<CreateAssetRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAsset>>,
+  TError,
+  { venueCode: string; data: BodyType<CreateAssetRequest> },
+  TContext
+> => {
+  return useMutation(getCreateAssetMutationOptions(options));
+};
+
+/**
+ * @summary Look up an asset by ticket id (case-insensitive)
+ */
+export const getGetAssetByTicketUrl = (venueCode: string, ticketId: string) => {
+  return `/api/venues/${venueCode}/assets/${ticketId}`;
+};
+
+export const getAssetByTicket = async (
+  venueCode: string,
+  ticketId: string,
+  options?: RequestInit,
+): Promise<CustodyAsset> => {
+  return customFetch<CustodyAsset>(
+    getGetAssetByTicketUrl(venueCode, ticketId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAssetByTicketQueryKey = (
+  venueCode: string,
+  ticketId: string,
+) => {
+  return [`/api/venues/${venueCode}/assets/${ticketId}`] as const;
+};
+
+export const getGetAssetByTicketQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAssetByTicket>>,
+  TError = ErrorType<ApiErrorMessage>,
+>(
+  venueCode: string,
+  ticketId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAssetByTicket>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAssetByTicketQueryKey(venueCode, ticketId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAssetByTicket>>
+  > = ({ signal }) =>
+    getAssetByTicket(venueCode, ticketId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(venueCode && ticketId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAssetByTicket>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAssetByTicketQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAssetByTicket>>
+>;
+export type GetAssetByTicketQueryError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Look up an asset by ticket id (case-insensitive)
+ */
+
+export function useGetAssetByTicket<
+  TData = Awaited<ReturnType<typeof getAssetByTicket>>,
+  TError = ErrorType<ApiErrorMessage>,
+>(
+  venueCode: string,
+  ticketId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAssetByTicket>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAssetByTicketQueryOptions(
+    venueCode,
+    ticketId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Release a held asset
+ */
+export const getReleaseAssetUrl = (venueCode: string, ticketId: string) => {
+  return `/api/venues/${venueCode}/assets/${ticketId}/release`;
+};
+
+export const releaseAsset = async (
+  venueCode: string,
+  ticketId: string,
+  releaseAssetRequest?: ReleaseAssetRequest,
+  options?: RequestInit,
+): Promise<CustodyAsset> => {
+  return customFetch<CustodyAsset>(getReleaseAssetUrl(venueCode, ticketId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(releaseAssetRequest),
+  });
+};
+
+export const getReleaseAssetMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseAsset>>,
+    TError,
+    {
+      venueCode: string;
+      ticketId: string;
+      data: BodyType<ReleaseAssetRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof releaseAsset>>,
+  TError,
+  { venueCode: string; ticketId: string; data: BodyType<ReleaseAssetRequest> },
+  TContext
+> => {
+  const mutationKey = ["releaseAsset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof releaseAsset>>,
+    { venueCode: string; ticketId: string; data: BodyType<ReleaseAssetRequest> }
+  > = (props) => {
+    const { venueCode, ticketId, data } = props ?? {};
+
+    return releaseAsset(venueCode, ticketId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReleaseAssetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof releaseAsset>>
+>;
+export type ReleaseAssetMutationBody = BodyType<ReleaseAssetRequest>;
+export type ReleaseAssetMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Release a held asset
+ */
+export const useReleaseAsset = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseAsset>>,
+    TError,
+    {
+      venueCode: string;
+      ticketId: string;
+      data: BodyType<ReleaseAssetRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof releaseAsset>>,
+  TError,
+  { venueCode: string; ticketId: string; data: BodyType<ReleaseAssetRequest> },
+  TContext
+> => {
+  return useMutation(getReleaseAssetMutationOptions(options));
+};

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: assets
+    description: Custody assets
 paths:
   /healthz:
     get:
@@ -24,6 +26,113 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /venues/{venueCode}/assets:
+    get:
+      operationId: listAssets
+      tags: [assets]
+      summary: List custody assets for a venue
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Asset list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustodyAsset"
+    post:
+      operationId: createAsset
+      tags: [assets]
+      summary: Intake a new asset and issue a ticket
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustodyAsset"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+  /venues/{venueCode}/assets/{ticketId}:
+    get:
+      operationId: getAssetByTicket
+      tags: [assets]
+      summary: Look up an asset by ticket id (case-insensitive)
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: path
+          name: ticketId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustodyAsset"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+  /venues/{venueCode}/assets/{ticketId}/release:
+    post:
+      operationId: releaseAsset
+      tags: [assets]
+      summary: Release a held asset
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: path
+          name: ticketId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseAssetRequest"
+      responses:
+        "200":
+          description: Released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustodyAsset"
+        "404":
+          description: Not found or not active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +142,106 @@ components:
           type: string
       required:
         - status
-
+    ApiErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    AssetMode:
+      type: string
+      enum: [vehicles, baggage, cloakrooms, bags]
+    AssetStatus:
+      type: string
+      enum: [active, released]
+    Patron:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+      required:
+        - name
+        - phone
+    AssetFieldValue:
+      oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+    CustodyAsset:
+      type: object
+      properties:
+        id:
+          type: string
+        ticketId:
+          type: string
+        venueCode:
+          type: string
+        mode:
+          $ref: "#/components/schemas/AssetMode"
+        patron:
+          $ref: "#/components/schemas/Patron"
+        fields:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AssetFieldValue"
+        photos:
+          type: array
+          items: { type: string }
+        intakeAt:
+          type: integer
+          description: Epoch milliseconds
+        handler:
+          type: string
+        status:
+          $ref: "#/components/schemas/AssetStatus"
+        releasedAt:
+          type: ["integer", "null"]
+          description: Epoch milliseconds, present when released
+      required:
+        - id
+        - ticketId
+        - venueCode
+        - mode
+        - patron
+        - fields
+        - photos
+        - intakeAt
+        - handler
+        - status
+    CreateAssetRequest:
+      type: object
+      properties:
+        mode:
+          $ref: "#/components/schemas/AssetMode"
+        patron:
+          $ref: "#/components/schemas/Patron"
+        fields:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AssetFieldValue"
+        photos:
+          type: array
+          items: { type: string }
+        handlerEmail:
+          type: string
+        handlerName:
+          type: string
+        venueName:
+          type: string
+      required:
+        - mode
+        - patron
+        - fields
+        - photos
+        - handlerEmail
+        - handlerName
+    ReleaseAssetRequest:
+      type: object
+      properties:
+        handlerEmail:
+          type: string
+        handlerName:
+          type: string

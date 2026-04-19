@@ -14,3 +14,124 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary List custody assets for a venue
+ */
+export const ListAssetsParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListAssetsResponseItem = zod.object({
+  id: zod.string(),
+  ticketId: zod.string(),
+  venueCode: zod.string(),
+  mode: zod.enum(["vehicles", "baggage", "cloakrooms", "bags"]),
+  patron: zod.object({
+    name: zod.string(),
+    phone: zod.string(),
+  }),
+  fields: zod.record(
+    zod.string(),
+    zod.union([zod.string(), zod.number(), zod.boolean()]),
+  ),
+  photos: zod.array(zod.string()),
+  intakeAt: zod.number().describe("Epoch milliseconds"),
+  handler: zod.string(),
+  status: zod.enum(["active", "released"]),
+  releasedAt: zod
+    .number()
+    .nullish()
+    .describe("Epoch milliseconds, present when released"),
+});
+export const ListAssetsResponse = zod.array(ListAssetsResponseItem);
+
+/**
+ * @summary Intake a new asset and issue a ticket
+ */
+export const CreateAssetParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const CreateAssetBody = zod.object({
+  mode: zod.enum(["vehicles", "baggage", "cloakrooms", "bags"]),
+  patron: zod.object({
+    name: zod.string(),
+    phone: zod.string(),
+  }),
+  fields: zod.record(
+    zod.string(),
+    zod.union([zod.string(), zod.number(), zod.boolean()]),
+  ),
+  photos: zod.array(zod.string()),
+  handlerEmail: zod.string(),
+  handlerName: zod.string(),
+  venueName: zod.string().optional(),
+});
+
+/**
+ * @summary Look up an asset by ticket id (case-insensitive)
+ */
+export const GetAssetByTicketParams = zod.object({
+  venueCode: zod.coerce.string(),
+  ticketId: zod.coerce.string(),
+});
+
+export const GetAssetByTicketResponse = zod.object({
+  id: zod.string(),
+  ticketId: zod.string(),
+  venueCode: zod.string(),
+  mode: zod.enum(["vehicles", "baggage", "cloakrooms", "bags"]),
+  patron: zod.object({
+    name: zod.string(),
+    phone: zod.string(),
+  }),
+  fields: zod.record(
+    zod.string(),
+    zod.union([zod.string(), zod.number(), zod.boolean()]),
+  ),
+  photos: zod.array(zod.string()),
+  intakeAt: zod.number().describe("Epoch milliseconds"),
+  handler: zod.string(),
+  status: zod.enum(["active", "released"]),
+  releasedAt: zod
+    .number()
+    .nullish()
+    .describe("Epoch milliseconds, present when released"),
+});
+
+/**
+ * @summary Release a held asset
+ */
+export const ReleaseAssetParams = zod.object({
+  venueCode: zod.coerce.string(),
+  ticketId: zod.coerce.string(),
+});
+
+export const ReleaseAssetBody = zod.object({
+  handlerEmail: zod.string().optional(),
+  handlerName: zod.string().optional(),
+});
+
+export const ReleaseAssetResponse = zod.object({
+  id: zod.string(),
+  ticketId: zod.string(),
+  venueCode: zod.string(),
+  mode: zod.enum(["vehicles", "baggage", "cloakrooms", "bags"]),
+  patron: zod.object({
+    name: zod.string(),
+    phone: zod.string(),
+  }),
+  fields: zod.record(
+    zod.string(),
+    zod.union([zod.string(), zod.number(), zod.boolean()]),
+  ),
+  photos: zod.array(zod.string()),
+  intakeAt: zod.number().describe("Epoch milliseconds"),
+  handler: zod.string(),
+  status: zod.enum(["active", "released"]),
+  releasedAt: zod
+    .number()
+    .nullish()
+    .describe("Epoch milliseconds, present when released"),
+});

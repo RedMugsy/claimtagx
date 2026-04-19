@@ -49,6 +49,23 @@ pnpm workspace monorepo using TypeScript. Contains the ClaimTagX marketing websi
 
 ### API Server (`artifacts/api-server`)
 - Express 5 API server at `/api`
+- Endpoints:
+  - `GET /api/healthz`
+  - `GET /api/venues/{venueCode}/assets` — list custody assets (auto-creates venue and seeds 8 demo assets if empty)
+  - `POST /api/venues/{venueCode}/assets` — intake (auto-issues ticket id from mode prefix)
+  - `GET /api/venues/{venueCode}/assets/{ticketId}` — case-insensitive lookup
+  - `POST /api/venues/{venueCode}/assets/{ticketId}/release` — release an active ticket
+- Persistence in Postgres via Drizzle (`@workspace/db`):
+  - `venues` (id = code, name, created_at)
+  - `handlers` (id, venue_id, email, name) — find-or-created by (venue, email) on intake/release
+  - `assets` (id, venue_id, ticket_id, mode, patron_name/phone, fields jsonb, photos jsonb, handler_id/name, status, intake_at, released_at)
+  - `events` (id, venue_id, asset_id, handler_id, type [intake|release], at, meta) — append-only audit trail
+
+### Handler App (`artifacts/handler-app`)
+- React + Vite handler PWA at `/handler/`
+- State via React Query against the API server (`useStore` in `src/lib/store.tsx`); session + selected mode persisted in localStorage
+- All intake / custody / release flows hit real endpoints; tickets survive refreshes and device swaps
+- Demo seed loads automatically on first list call per venue code (`VLT-001`, `BAG-002`, `CLK-003`, `RET-004`, or any new code)
 
 ## Key Commands
 
