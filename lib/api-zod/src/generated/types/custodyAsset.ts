@@ -27,6 +27,11 @@ export interface CustodyAsset {
    * @nullable
    */
   releasedAt?: number | null;
+  /**
+   * Name of the handler who released the asset, when known.
+   * @nullable
+   */
+  releasedBy?: string | null;
   /** HMAC signature of the ticket id, used by handler-issued QR codes */
   signature: string;
 }

@@ -11,8 +11,11 @@ import { Shell } from "@/components/handler/Shell";
 import VenuePicker from "@/pages/VenuePicker";
 import Intake from "@/pages/Intake";
 import Custody from "@/pages/Custody";
+import Home from "@/pages/Home";
+import History from "@/pages/History";
 import Release from "@/pages/Release";
 import Settings from "@/pages/Settings";
+import { MessagesPage, IntercomPage, ServicesPage } from "@/pages/ComingSoon";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -100,7 +103,7 @@ function SignInPage() {
         routing="path"
         path={`${basePath}/sign-in`}
         signUpUrl={`${basePath}/sign-up`}
-        fallbackRedirectUrl={`${basePath}/intake`}
+        fallbackRedirectUrl={`${basePath}/`}
       />
     </AuthShell>
   );
@@ -115,7 +118,7 @@ function SignUpPage() {
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
-        fallbackRedirectUrl={`${basePath}/intake`}
+        fallbackRedirectUrl={`${basePath}/`}
       />
     </AuthShell>
   );
@@ -125,10 +128,14 @@ function AuthedRoutes() {
   return (
     <Shell>
       <Switch>
-        <Route path="/" component={() => <Redirect to="/intake" />} />
+        <Route path="/" component={Home} />
         <Route path="/intake" component={Intake} />
         <Route path="/custody" component={Custody} />
         <Route path="/release" component={Release} />
+        <Route path="/history" component={History} />
+        <Route path="/messages" component={MessagesPage} />
+        <Route path="/intercom" component={IntercomPage} />
+        <Route path="/services" component={ServicesPage} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

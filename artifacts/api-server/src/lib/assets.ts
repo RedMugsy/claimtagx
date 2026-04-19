@@ -18,10 +18,14 @@ export interface SerializedAsset {
   handler: string;
   status: "active" | "released";
   releasedAt: number | null;
+  releasedBy: string | null;
   signature: string;
 }
 
-export function serializeAsset(row: AssetRow): SerializedAsset {
+export function serializeAsset(
+  row: AssetRow,
+  releasedBy: string | null = null,
+): SerializedAsset {
   return {
     id: row.id,
     ticketId: row.ticketId,
@@ -34,6 +38,7 @@ export function serializeAsset(row: AssetRow): SerializedAsset {
     handler: row.handlerName,
     status: row.status as "active" | "released",
     releasedAt: row.releasedAt ? row.releasedAt.getTime() : null,
+    releasedBy,
     signature: signTicket(row.venueId, row.ticketId),
   };
 }

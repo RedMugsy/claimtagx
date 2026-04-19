@@ -21,6 +21,7 @@ import type {
   CreateAssetRequest,
   CustodyAsset,
   HealthStatus,
+  ListAssetsParams,
   ReleaseAssetRequest,
 } from "./api.schemas";
 
@@ -112,22 +113,44 @@ export function useHealthCheck<
 /**
  * @summary List custody assets for a venue
  */
-export const getListAssetsUrl = (venueCode: string) => {
-  return `/api/venues/${venueCode}/assets`;
+export const getListAssetsUrl = (
+  venueCode: string,
+  params?: ListAssetsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/venues/${venueCode}/assets?${stringifiedParams}`
+    : `/api/venues/${venueCode}/assets`;
 };
 
 export const listAssets = async (
   venueCode: string,
+  params?: ListAssetsParams,
   options?: RequestInit,
 ): Promise<CustodyAsset[]> => {
-  return customFetch<CustodyAsset[]>(getListAssetsUrl(venueCode), {
+  return customFetch<CustodyAsset[]>(getListAssetsUrl(venueCode, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListAssetsQueryKey = (venueCode: string) => {
-  return [`/api/venues/${venueCode}/assets`] as const;
+export const getListAssetsQueryKey = (
+  venueCode: string,
+  params?: ListAssetsParams,
+) => {
+  return [
+    `/api/venues/${venueCode}/assets`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getListAssetsQueryOptions = <
@@ -135,6 +158,7 @@ export const getListAssetsQueryOptions = <
   TError = ErrorType<unknown>,
 >(
   venueCode: string,
+  params?: ListAssetsParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof listAssets>>,
@@ -146,11 +170,12 @@ export const getListAssetsQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListAssetsQueryKey(venueCode);
+  const queryKey =
+    queryOptions?.queryKey ?? getListAssetsQueryKey(venueCode, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssets>>> = ({
     signal,
-  }) => listAssets(venueCode, { signal, ...requestOptions });
+  }) => listAssets(venueCode, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -178,6 +203,7 @@ export function useListAssets<
   TError = ErrorType<unknown>,
 >(
   venueCode: string,
+  params?: ListAssetsParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof listAssets>>,
@@ -187,7 +213,7 @@ export function useListAssets<
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListAssetsQueryOptions(venueCode, options);
+  const queryOptions = getListAssetsQueryOptions(venueCode, params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

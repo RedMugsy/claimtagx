@@ -55,6 +55,11 @@ export interface CustodyAsset {
    * @nullable
    */
   releasedAt?: number | null;
+  /**
+   * Name of the handler who released the asset, when known.
+   * @nullable
+   */
+  releasedBy?: string | null;
   /** HMAC signature of the ticket id, used by handler-issued QR codes */
   signature: string;
 }
@@ -90,3 +95,26 @@ export interface ReleaseAssetRequest {
   /** Where the ticket id originated. "scan" requires a valid signature; "manual" is the fallback when a handler types the id. */
   source?: ReleaseAssetRequestSource;
 }
+
+export type ListAssetsParams = {
+  /**
+   * Filter by asset status. Omit to return all statuses.
+   */
+  status?: AssetStatus;
+  /**
+   * Filter by asset mode.
+   */
+  mode?: AssetMode;
+  /**
+   * Filter by handler name (matches intake or release handler, case-insensitive substring).
+   */
+  handler?: string;
+  /**
+   * Lower bound (epoch ms). Filters on releasedAt when status=released, otherwise intakeAt.
+   */
+  from?: number;
+  /**
+   * Upper bound (epoch ms). Filters on releasedAt when status=released, otherwise intakeAt.
+   */
+  to?: number;
+};

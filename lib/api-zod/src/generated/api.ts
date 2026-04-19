@@ -22,6 +22,35 @@ export const ListAssetsParams = zod.object({
   venueCode: zod.coerce.string(),
 });
 
+export const ListAssetsQueryParams = zod.object({
+  status: zod
+    .enum(["active", "released"])
+    .optional()
+    .describe("Filter by asset status. Omit to return all statuses."),
+  mode: zod
+    .enum(["vehicles", "baggage", "cloakrooms", "bags"])
+    .optional()
+    .describe("Filter by asset mode."),
+  handler: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Filter by handler name (matches intake or release handler, case-insensitive substring).",
+    ),
+  from: zod.coerce
+    .number()
+    .optional()
+    .describe(
+      "Lower bound (epoch ms). Filters on releasedAt when status=released, otherwise intakeAt.",
+    ),
+  to: zod.coerce
+    .number()
+    .optional()
+    .describe(
+      "Upper bound (epoch ms). Filters on releasedAt when status=released, otherwise intakeAt.",
+    ),
+});
+
 export const ListAssetsResponseItem = zod.object({
   id: zod.string(),
   ticketId: zod.string(),
@@ -43,6 +72,10 @@ export const ListAssetsResponseItem = zod.object({
     .number()
     .nullish()
     .describe("Epoch milliseconds, present when released"),
+  releasedBy: zod
+    .string()
+    .nullish()
+    .describe("Name of the handler who released the asset, when known."),
   signature: zod
     .string()
     .describe(
@@ -103,6 +136,10 @@ export const GetAssetByTicketResponse = zod.object({
     .number()
     .nullish()
     .describe("Epoch milliseconds, present when released"),
+  releasedBy: zod
+    .string()
+    .nullish()
+    .describe("Name of the handler who released the asset, when known."),
   signature: zod
     .string()
     .describe(
@@ -156,6 +193,10 @@ export const ReleaseAssetResponse = zod.object({
     .number()
     .nullish()
     .describe("Epoch milliseconds, present when released"),
+  releasedBy: zod
+    .string()
+    .nullish()
+    .describe("Name of the handler who released the asset, when known."),
   signature: zod
     .string()
     .describe(

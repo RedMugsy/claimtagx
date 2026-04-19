@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { MODE_BY_ID, MODE_ICONS, MODES } from "@/lib/modes";
-import { ChevronDown, ClipboardList, PackagePlus, ScanLine, Settings, LogOut, Building2, Plus, Check } from "lucide-react";
+import { ChevronDown, ClipboardList, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +13,10 @@ import {
 import type { ReactNode } from "react";
 
 const tabs = [
-  { path: "/intake", label: "Intake", icon: PackagePlus },
+  { path: "/", label: "Home", icon: LayoutGrid, exact: true },
   { path: "/custody", label: "Custody", icon: ClipboardList },
-  { path: "/release", label: "Release", icon: ScanLine },
+  { path: "/release", label: "Scan", icon: ScanLine },
+  { path: "/history", label: "History", icon: HistoryIcon },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -31,7 +32,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-white/5 bg-obsidian/95 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <Link href="/intake" className="flex items-center gap-1 group shrink-0">
+          <Link href="/" className="flex items-center gap-1 group shrink-0">
             <span className="font-extrabold text-lg tracking-tight text-white">Claim</span>
             <span className="font-extrabold text-lg tracking-tight text-lime">TagX</span>
             <span className="ml-2 text-xs font-mono uppercase tracking-wider text-slate">handler</span>
@@ -166,10 +167,10 @@ export function Shell({ children }: { children: ReactNode }) {
 
       {/* Bottom tab nav (mobile-first, also visible on desktop) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-obsidian/95 backdrop-blur-md sm:static sm:border-t sm:bg-transparent">
-        <div className="max-w-5xl mx-auto px-2 sm:px-6 py-2 grid grid-cols-4 gap-1 sm:flex sm:justify-center sm:gap-2">
+        <div className="max-w-5xl mx-auto px-2 sm:px-6 py-2 grid grid-cols-5 gap-1 sm:flex sm:justify-center sm:gap-2">
           {tabs.map((t) => {
             const Icon = t.icon;
-            const active = location.startsWith(t.path);
+            const active = t.exact ? location === t.path : location.startsWith(t.path);
             return (
               <Link
                 key={t.path}

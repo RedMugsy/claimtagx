@@ -46,6 +46,7 @@ function toLocal(a: ApiCustodyAsset): CustodyAsset {
     handler: a.handler,
     status: a.status as "active" | "released",
     releasedAt: a.releasedAt ?? undefined,
+    releasedBy: a.releasedBy ?? null,
     signature: a.signature,
   };
 }

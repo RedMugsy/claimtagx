@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, assetsTable, eventsTable } from "@workspace/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { db, assetsTable, eventsTable, handlersTable } from "@workspace/db";
+import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { CreateAssetBody, ReleaseAssetBody } from "@workspace/api-zod";
 import {
   createTicketId,
@@ -38,17 +38,81 @@ router.get("/venues/:venueCode/events", async (req, res, next) => {
   }
 });
 
+const ALLOWED_STATUSES = new Set(["active", "released"]);
+const ALLOWED_MODES = new Set(["vehicles", "baggage", "cloakrooms", "bags"]);
+
+function parseEpochMs(raw: unknown): Date | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  return new Date(n);
+}
+
 router.get("/venues/:venueCode/assets", async (req, res, next) => {
   try {
     const venueCode = req.params.venueCode.toUpperCase();
     await ensureVenue(venueCode);
     await seedVenueIfEmpty(venueCode);
+
+    const statusParam = typeof req.query.status === "string" ? req.query.status : null;
+    const modeParam = typeof req.query.mode === "string" ? req.query.mode : null;
+    const handlerParam =
+      typeof req.query.handler === "string" && req.query.handler.trim().length > 0
+        ? req.query.handler.trim()
+        : null;
+    const fromDate = parseEpochMs(req.query.from);
+    const toDate = parseEpochMs(req.query.to);
+
+    if (statusParam && !ALLOWED_STATUSES.has(statusParam)) {
+      res.status(400).json({ error: "Invalid status filter" });
+      return;
+    }
+    if (modeParam && !ALLOWED_MODES.has(modeParam)) {
+      res.status(400).json({ error: "Invalid mode filter" });
+      return;
+    }
+
+    const conditions = [eq(assetsTable.venueId, venueCode)];
+    if (statusParam) conditions.push(eq(assetsTable.status, statusParam));
+    if (modeParam) conditions.push(eq(assetsTable.mode, modeParam));
+
+    // When filtering released history, range refers to release time.
+    const dateColumn =
+      statusParam === "released" ? assetsTable.releasedAt : assetsTable.intakeAt;
+    if (fromDate) conditions.push(gte(dateColumn, fromDate));
+    if (toDate) conditions.push(lte(dateColumn, toDate));
+
+    if (handlerParam) {
+      const pattern = `%${handlerParam}%`;
+      conditions.push(
+        or(
+          ilike(assetsTable.handlerName, pattern),
+          ilike(handlersTable.name, pattern),
+        )!,
+      );
+    }
+
+    const orderColumn =
+      statusParam === "released" ? assetsTable.releasedAt : assetsTable.intakeAt;
+
     const rows = await db
-      .select()
+      .select({
+        asset: assetsTable,
+        releasedBy: handlersTable.name,
+      })
       .from(assetsTable)
-      .where(eq(assetsTable.venueId, venueCode))
-      .orderBy(desc(assetsTable.intakeAt));
-    res.json(rows.map(serializeAsset));
+      .leftJoin(
+        eventsTable,
+        and(
+          eq(eventsTable.assetId, assetsTable.id),
+          eq(eventsTable.type, "release"),
+        ),
+      )
+      .leftJoin(handlersTable, eq(handlersTable.id, eventsTable.handlerId))
+      .where(and(...conditions))
+      .orderBy(desc(orderColumn));
+
+    res.json(rows.map((r) => serializeAsset(r.asset, r.releasedBy ?? null)));
   } catch (err) {
     next(err);
   }
