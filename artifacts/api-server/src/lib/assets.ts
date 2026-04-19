@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { db, assetsTable, venuesTable, handlersTable, eventsTable } from "@workspace/db";
 import type { AssetRow } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
@@ -24,6 +25,7 @@ export interface SerializedAsset {
 
 export function serializeAsset(
   row: AssetRow,
+  venueSecret: string,
   releasedBy: string | null = null,
 ): SerializedAsset {
   return {
@@ -39,16 +41,45 @@ export function serializeAsset(
     status: row.status as "active" | "released",
     releasedAt: row.releasedAt ? row.releasedAt.getTime() : null,
     releasedBy,
-    signature: signTicket(row.venueId, row.ticketId),
+    signature: signTicket(venueSecret, row.venueId, row.ticketId),
   };
+}
+
+function newSigningSecret(): string {
+  return randomBytes(32).toString("hex");
 }
 
 export async function ensureVenue(code: string, name?: string): Promise<void> {
   const displayName = name ?? VENUE_DEFAULTS[code] ?? code;
   await db
     .insert(venuesTable)
-    .values({ id: code, name: displayName })
+    .values({ id: code, name: displayName, signingSecret: newSigningSecret() })
     .onConflictDoNothing({ target: venuesTable.id });
+}
+
+export async function getVenueSigningSecret(code: string): Promise<string> {
+  const [row] = await db
+    .select({ secret: venuesTable.signingSecret })
+    .from(venuesTable)
+    .where(eq(venuesTable.id, code))
+    .limit(1);
+  if (!row) {
+    throw new Error(`Venue ${code} not found when loading signing secret`);
+  }
+  return row.secret;
+}
+
+export async function rotateVenueSigningSecret(code: string): Promise<string> {
+  const next = newSigningSecret();
+  const updated = await db
+    .update(venuesTable)
+    .set({ signingSecret: next })
+    .where(eq(venuesTable.id, code))
+    .returning({ secret: venuesTable.signingSecret });
+  if (updated.length === 0) {
+    throw new Error(`Venue ${code} not found when rotating signing secret`);
+  }
+  return updated[0].secret;
 }
 
 export async function ensureHandler(

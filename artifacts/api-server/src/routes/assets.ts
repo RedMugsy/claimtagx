@@ -6,6 +6,8 @@ import {
   createTicketId,
   ensureHandler,
   ensureVenue,
+  getVenueSigningSecret,
+  rotateVenueSigningSecret,
   seedVenueIfEmpty,
   serializeAsset,
 } from "../lib/assets";
@@ -14,6 +16,7 @@ import { publish, subscribe } from "../lib/sse";
 import {
   requireAuth,
   requireVenueMembership,
+  requireVenueRole,
 } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -53,6 +56,7 @@ router.get("/venues/:venueCode/assets", async (req, res, next) => {
     const venueCode = req.params.venueCode.toUpperCase();
     await ensureVenue(venueCode);
     await seedVenueIfEmpty(venueCode);
+    const venueSecret = await getVenueSigningSecret(venueCode);
 
     const statusParam = typeof req.query.status === "string" ? req.query.status : null;
     const modeParam = typeof req.query.mode === "string" ? req.query.mode : null;
@@ -112,7 +116,9 @@ router.get("/venues/:venueCode/assets", async (req, res, next) => {
       .where(and(...conditions))
       .orderBy(desc(orderColumn));
 
-    res.json(rows.map((r) => serializeAsset(r.asset, r.releasedBy ?? null)));
+    res.json(
+      rows.map((r) => serializeAsset(r.asset, venueSecret, r.releasedBy ?? null)),
+    );
   } catch (err) {
     next(err);
   }
@@ -130,6 +136,7 @@ router.post("/venues/:venueCode/assets", async (req, res, next) => {
     const handlerEmail = req.userEmail || body.handlerEmail;
     const handlerName = req.userName || body.handlerName;
     await ensureVenue(venueCode, body.venueName ?? undefined);
+    const venueSecret = await getVenueSigningSecret(venueCode);
     const handlerId = await ensureHandler(venueCode, handlerEmail, handlerName);
     const ticketId = await createTicketId(venueCode, body.mode);
     const now = new Date();
@@ -160,7 +167,7 @@ router.post("/venues/:venueCode/assets", async (req, res, next) => {
       type: "intake",
       at: now,
     });
-    const serialized = serializeAsset(inserted);
+    const serialized = serializeAsset(inserted, venueSecret);
     publish(venueCode, {
       type: "asset.created",
       asset: serialized,
@@ -176,6 +183,7 @@ router.get("/venues/:venueCode/assets/:ticketId", async (req, res, next) => {
   try {
     const venueCode = req.params.venueCode.toUpperCase();
     const ticketId = req.params.ticketId;
+    const venueSecret = await getVenueSigningSecret(venueCode);
     const [row] = await db
       .select()
       .from(assetsTable)
@@ -190,7 +198,7 @@ router.get("/venues/:venueCode/assets/:ticketId", async (req, res, next) => {
       res.status(404).json({ error: "Ticket not found" });
       return;
     }
-    res.json(serializeAsset(row));
+    res.json(serializeAsset(row, venueSecret));
   } catch (err) {
     next(err);
   }
@@ -204,17 +212,18 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
     const body = parsed.success ? parsed.data : {};
     const handlerEmail = req.userEmail || body.handlerEmail;
     const handlerName = req.userName || body.handlerName;
+    const venueSecret = await getVenueSigningSecret(venueCode);
     // Releases originating from a QR scan MUST present a valid signature.
     // Manual typed entry (`source: "manual"` or omitted with no signature)
     // is the explicit fallback and bypasses signature verification.
     const hasSignature = typeof body.signature === "string" && body.signature.length > 0;
     if (body.source === "scan") {
-      if (!hasSignature || !verifyTicket(venueCode, ticketId, body.signature!)) {
+      if (!hasSignature || !verifyTicket(venueSecret, venueCode, ticketId, body.signature!)) {
         res.status(403).json({ error: "Invalid or missing tag signature" });
         return;
       }
     } else if (hasSignature) {
-      if (!verifyTicket(venueCode, ticketId, body.signature!)) {
+      if (!verifyTicket(venueSecret, venueCode, ticketId, body.signature!)) {
         res.status(403).json({ error: "Invalid tag signature" });
         return;
       }
@@ -246,7 +255,7 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
       type: "release",
       at: now,
     });
-    const serialized = serializeAsset(updated);
+    const serialized = serializeAsset(updated, venueSecret);
     publish(venueCode, {
       type: "asset.released",
       asset: serialized,
@@ -257,5 +266,24 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
     next(err);
   }
 });
+
+// Owner-triggered rotation of the venue's QR signing secret. After rotation,
+// any QR codes printed/issued before this point will fail signature checks
+// when scanned (handlers can still release via manual typed entry, which
+// remains the documented fallback).
+router.post(
+  "/venues/:venueCode/signing-secret/rotate",
+  requireVenueRole(["owner"]),
+  async (req, res, next) => {
+    try {
+      const venueCode = String(req.params.venueCode).toUpperCase();
+      await ensureVenue(venueCode);
+      await rotateVenueSigningSecret(venueCode);
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 export default router;
