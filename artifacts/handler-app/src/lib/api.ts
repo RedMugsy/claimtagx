@@ -1,4 +1,9 @@
-import type { AvailableVenue, VenueMembership } from "./types";
+import type {
+  AvailableVenue,
+  PendingInvitation,
+  VenueMemberInfo,
+  VenueMembership,
+} from "./types";
 
 export interface MeResponse {
   userId: string;
@@ -48,5 +53,67 @@ export const leaveVenue = (
 ): Promise<{ venues: VenueMembership[] }> =>
   jsonFetch<{ venues: VenueMembership[] }>(
     `/api/me/venues/${encodeURIComponent(code)}`,
+    { method: "DELETE" },
+  );
+
+// Email-targeted invitations -------------------------------------------------
+
+export const fetchMyInvitations = (): Promise<PendingInvitation[]> =>
+  jsonFetch<PendingInvitation[]>("/api/me/invitations");
+
+export const acceptInvitation = (
+  id: string,
+): Promise<{ venue: VenueMembership }> =>
+  jsonFetch<{ venue: VenueMembership }>(
+    `/api/me/invitations/${encodeURIComponent(id)}/accept`,
+    { method: "POST" },
+  );
+
+export const declineInvitation = (id: string): Promise<null> =>
+  jsonFetch<null>(
+    `/api/me/invitations/${encodeURIComponent(id)}/decline`,
+    { method: "POST" },
+  );
+
+// Owner-managed venue admin --------------------------------------------------
+
+export const fetchVenueInvitations = (
+  code: string,
+): Promise<PendingInvitation[]> =>
+  jsonFetch<PendingInvitation[]>(
+    `/api/venues/${encodeURIComponent(code)}/invitations`,
+  );
+
+export const createVenueInvitation = (
+  code: string,
+  body: { email: string; role?: "handler" | "supervisor" | "owner" },
+): Promise<PendingInvitation> =>
+  jsonFetch<PendingInvitation>(
+    `/api/venues/${encodeURIComponent(code)}/invitations`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+
+export const revokeVenueInvitation = (
+  code: string,
+  id: string,
+): Promise<null> =>
+  jsonFetch<null>(
+    `/api/venues/${encodeURIComponent(code)}/invitations/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+
+export const fetchVenueMembers = (
+  code: string,
+): Promise<VenueMemberInfo[]> =>
+  jsonFetch<VenueMemberInfo[]>(
+    `/api/venues/${encodeURIComponent(code)}/members`,
+  );
+
+export const revokeVenueMember = (
+  code: string,
+  userId: string,
+): Promise<null> =>
+  jsonFetch<null>(
+    `/api/venues/${encodeURIComponent(code)}/members/${encodeURIComponent(userId)}`,
     { method: "DELETE" },
   );

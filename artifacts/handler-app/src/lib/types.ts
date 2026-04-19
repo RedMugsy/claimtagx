@@ -56,6 +56,24 @@ export interface AvailableVenue {
   inviteToken: string;
 }
 
+export interface PendingInvitation {
+  id: string;
+  venueCode: string;
+  venueName: string;
+  email: string;
+  role: string;
+  invitedByUserId: string;
+  createdAt: number;
+}
+
+export interface VenueMemberInfo {
+  userId: string;
+  email: string;
+  name: string;
+  role: string;
+  joinedAt: number;
+}
+
 export interface HandlerSession {
   email: string;
   handlerName: string;

@@ -16,6 +16,10 @@ import { useStore } from "@/lib/store";
 import { MODES, MODE_ICONS } from "@/lib/modes";
 import { fetchAvailableVenues } from "@/lib/api";
 import type { AvailableVenue } from "@/lib/types";
+import { InvitationsInbox } from "@/components/handler/InvitationsInbox";
+import { VenueAdminPanel } from "@/components/handler/VenueAdminPanel";
+
+const OWNER_ROLES = new Set(["owner", "supervisor"]);
 
 export default function Settings() {
   const {
@@ -43,6 +47,7 @@ export default function Settings() {
   const presets: AvailableVenue[] = (available.data ?? []).filter(
     (v) => !knownCodes.has(v.code),
   );
+  const ownedVenues = venues.filter((v) => OWNER_ROLES.has(v.role ?? ""));
 
   const onAdd = async (inviteToken: string) => {
     setBusy(true);
@@ -87,6 +92,8 @@ export default function Settings() {
       </header>
 
       <div className="space-y-6">
+        <InvitationsInbox />
+
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
           <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4">Handler</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -229,6 +236,10 @@ export default function Settings() {
             </div>
           )}
         </section>
+
+        {ownedVenues.map((v) => (
+          <VenueAdminPanel key={v.code} venue={v} />
+        ))}
 
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
           <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4">Asset mode</h2>

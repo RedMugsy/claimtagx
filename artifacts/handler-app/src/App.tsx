@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchMyInvitations } from "@/lib/api";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import { StoreProvider, useStore } from "@/lib/store";
 import { Shell } from "@/components/handler/Shell";
 import VenuePicker from "@/pages/VenuePicker";
+import Invitations from "@/pages/Invitations";
 import Intake from "@/pages/Intake";
 import Custody from "@/pages/Custody";
 import Home from "@/pages/Home";
@@ -145,6 +147,15 @@ function AuthedRoutes() {
 
 function Gate() {
   const { ready, signedIn, session, venues } = useStore();
+  // Look up pending email invitations for this user. We need this in the gate
+  // so a freshly-invited handler with zero memberships lands on the
+  // invitations screen (not the venue picker, which they can't use).
+  const invitations = useQuery({
+    queryKey: ["my-invitations"],
+    queryFn: fetchMyInvitations,
+    enabled: Boolean(signedIn && venues.length === 0),
+    staleTime: 30_000,
+  });
   if (!ready) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-obsidian text-slate font-mono text-sm">
@@ -153,7 +164,17 @@ function Gate() {
     );
   }
   if (!signedIn) return <Redirect to="/sign-in" />;
-  if (!session || venues.length === 0) return <VenuePicker />;
+  if (!session || venues.length === 0) {
+    if (invitations.isLoading) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center bg-obsidian text-slate font-mono text-sm">
+          Loading…
+        </div>
+      );
+    }
+    if ((invitations.data ?? []).length > 0) return <Invitations />;
+    return <VenuePicker />;
+  }
   return <AuthedRoutes />;
 }
 
