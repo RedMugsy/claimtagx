@@ -29,6 +29,7 @@ import {
   joinVenue as apiJoinVenue,
   leaveVenue as apiLeaveVenue,
 } from "./api";
+import { toast } from "@/hooks/use-toast";
 
 const ACTIVE_VENUE_KEY = "ctx_active_venue";
 const MODE_KEY = "ctx_handler_mode";
@@ -169,6 +170,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     queryFn: () => listAssets(venueCode).then((rows) => rows.map(toLocal)),
     enabled: Boolean(venueCode),
   });
+
+  // Subscribe to a server-sent event stream so a release or intake on one
+  // handler device shows up on every other device immediately, instead of
+  // waiting for the next React Query refresh. The stream is scoped to the
+  // active venue and re-opens when the venue changes.
+  useEffect(() => {
+    if (!venueCode || !isSignedIn) return;
+    const url = `/api/venues/${encodeURIComponent(venueCode)}/events`;
+    const es = new EventSource(url, { withCredentials: true });
+    const queryKey = getListAssetsQueryKey(venueCode);
+
+    const applyAsset = (incoming: ApiCustodyAsset) => {
+      const local = toLocal(incoming);
+      queryClient.setQueryData<CustodyAsset[] | undefined>(queryKey, (prev) => {
+        if (!prev) return [local];
+        const idx = prev.findIndex((row) => row.id === local.id);
+        if (idx === -1) return [local, ...prev];
+        const next = prev.slice();
+        next[idx] = local;
+        return next;
+      });
+    };
+
+    const handle = (raw: MessageEvent) => {
+      try {
+        const data = JSON.parse(raw.data) as {
+          type: "asset.created" | "asset.released";
+          asset: ApiCustodyAsset;
+          actorEmail: string | null;
+        };
+        applyAsset(data.asset);
+        const fromSelf =
+          !!email && !!data.actorEmail &&
+          data.actorEmail.toLowerCase() === email.toLowerCase();
+        if (fromSelf) return;
+        if (data.type === "asset.released") {
+          toast({
+            title: `Tag ${data.asset.ticketId} released`,
+            description: `Returned to ${data.asset.patron.name} by ${data.asset.handler}.`,
+          });
+        } else {
+          toast({
+            title: `Tag ${data.asset.ticketId} issued`,
+            description: `Logged in by ${data.asset.handler}.`,
+          });
+        }
+      } catch {
+        // ignore malformed payloads
+      }
+    };
+
+    es.addEventListener("asset.created", handle as EventListener);
+    es.addEventListener("asset.released", handle as EventListener);
+    es.onerror = () => {
+      // EventSource auto-reconnects; nothing to do here. If the stream is
+      // truly broken we still have the React Query refetch as a fallback.
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [venueCode, isSignedIn, queryClient, email]);
 
   const invalidate = useCallback(() => {
     if (!venueCode) return;

@@ -10,6 +10,7 @@ import {
   serializeAsset,
 } from "../lib/assets";
 import { verifyTicket } from "../lib/signing";
+import { publish, subscribe } from "../lib/sse";
 import {
   requireAuth,
   requireVenueMembership,
@@ -18,6 +19,24 @@ import {
 const router: IRouter = Router();
 
 router.use("/venues/:venueCode", requireAuth, requireVenueMembership());
+
+router.get("/venues/:venueCode/events", async (req, res, next) => {
+  try {
+    const venueCode = req.params.venueCode.toUpperCase();
+    await ensureVenue(venueCode);
+    const unsubscribe = subscribe(venueCode, res);
+    req.on("close", () => {
+      unsubscribe();
+      try {
+        res.end();
+      } catch {
+        // ignore
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get("/venues/:venueCode/assets", async (req, res, next) => {
   try {
@@ -77,7 +96,13 @@ router.post("/venues/:venueCode/assets", async (req, res, next) => {
       type: "intake",
       at: now,
     });
-    res.status(201).json(serializeAsset(inserted));
+    const serialized = serializeAsset(inserted);
+    publish(venueCode, {
+      type: "asset.created",
+      asset: serialized,
+      actorEmail: handlerEmail ?? null,
+    });
+    res.status(201).json(serialized);
   } catch (err) {
     next(err);
   }
@@ -157,7 +182,13 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
       type: "release",
       at: now,
     });
-    res.json(serializeAsset(updated));
+    const serialized = serializeAsset(updated);
+    publish(venueCode, {
+      type: "asset.released",
+      asset: serialized,
+      actorEmail: handlerEmail ?? null,
+    });
+    res.json(serialized);
   } catch (err) {
     next(err);
   }
