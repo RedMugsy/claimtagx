@@ -28,7 +28,19 @@ function fmtAge(ts: number) {
 }
 
 export default function Custody() {
-  const { mode, assets, activeVenue } = useStore();
+  const { mode, assets, activeVenue, venues, setActiveVenue } = useStore();
+  // Owner-targeted tamper-spike alert emails link to /custody?venue=<code>.
+  // Honour that query param so the owner lands on the right venue's feed
+  // instead of whichever venue they had selected last.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("venue")?.toUpperCase();
+    if (!requested) return;
+    if (activeVenue?.code === requested) return;
+    if (!venues.some((v) => v.code === requested)) return;
+    setActiveVenue(requested);
+  }, [activeVenue?.code, venues, setActiveVenue]);
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
   // Aging bands and headings come from the venue's classification, not from

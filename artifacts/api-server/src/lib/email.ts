@@ -145,6 +145,59 @@ export async function sendInvitationEmail(
   await send({ to: params.to, subject, html, text });
 }
 
+export interface TamperSpikeEmailParams {
+  to: string;
+  venueName: string;
+  venueCode: string;
+  ticketId: string;
+  attempts: number;
+  windowMinutes: number;
+  link: string;
+}
+
+export async function sendTamperSpikeEmail(
+  params: TamperSpikeEmailParams,
+): Promise<void> {
+  const safeVenue = escapeHtml(params.venueName);
+  const safeCode = escapeHtml(params.venueCode);
+  const safeTicket = escapeHtml(params.ticketId);
+  const safeLink = escapeHtml(params.link);
+  const subject = `Tamper attempts spiking on ${params.venueName} (${params.ticketId})`;
+  const headline = `${params.attempts} tamper attempts on ${params.ticketId} in the last ${params.windowMinutes} min`;
+  const html = `
+    <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0b1220">
+      <h1 style="font-size:20px;margin:0 0 12px;color:#b00020">Tamper attempts spiking</h1>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 12px">
+        We just saw <strong>${params.attempts}</strong> failed tag-signature checks for ticket
+        <strong>${safeTicket}</strong> at <strong>${safeVenue}</strong> (${safeCode})
+        in the last ${params.windowMinutes} minute${params.windowMinutes === 1 ? "" : "s"}.
+        That looks like an active fraud attempt &mdash; please take a look.
+      </p>
+      <p style="margin:24px 0">
+        <a href="${safeLink}" style="background:#b00020;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px;display:inline-block">
+          Open the tamper feed
+        </a>
+      </p>
+      <p style="font-size:12px;color:#475569;line-height:1.5;margin:0">
+        You're receiving this because you're an owner of ${safeVenue}. We won't send
+        another alert for this ticket until things calm down.
+      </p>
+    </div>
+  `;
+  const text = [
+    `Tamper attempts spiking on ${params.venueName} (${params.venueCode}).`,
+    "",
+    headline + ".",
+    "That looks like an active fraud attempt — please take a look.",
+    "",
+    `Open the tamper feed: ${params.link}`,
+    "",
+    `You're receiving this because you're an owner of ${params.venueName}.`,
+    "We won't send another alert for this ticket until things calm down.",
+  ].join("\n");
+  await send({ to: params.to, subject, html, text });
+}
+
 export interface RevocationEmailParams {
   to: string;
   venueName: string;

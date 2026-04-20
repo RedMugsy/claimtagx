@@ -14,6 +14,7 @@ import {
 } from "../lib/assets";
 import { verifyTicket } from "../lib/signing";
 import { publish, subscribe } from "../lib/sse";
+import { maybeAlertOnTamperSpike } from "../lib/tamperAlerts";
 import {
   requireAuth,
   requireVenueMembership,
@@ -276,6 +277,11 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
           tamper: serializeTamperEvent(inserted),
           actorEmail: handlerEmail ?? null,
         });
+        // Fire-and-forget: check whether this attempt pushes the venue over
+        // the configured tamper-spike threshold and, if so, email owners.
+        // We deliberately don't await here so a slow email provider can't
+        // delay the request response.
+        void maybeAlertOnTamperSpike({ venueCode, ticketId });
       }
     };
 
