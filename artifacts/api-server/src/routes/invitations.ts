@@ -16,7 +16,37 @@ import {
   revokeMember,
   updateVenueType,
 } from "../lib/memberships";
+import {
+  sendInvitationEmail,
+  sendInvitationRevokedEmail,
+} from "../lib/email";
+import { db, venueInvitationsTable, venuesTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { logger } from "../lib/logger";
 import { VENUE_TYPES } from "@workspace/db";
+
+interface InviterIdentity {
+  name: string;
+  email: string;
+}
+
+async function lookupInviter(userId: string): Promise<InviterIdentity> {
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const email =
+      user.primaryEmailAddress?.emailAddress ??
+      user.emailAddresses[0]?.emailAddress ??
+      "";
+    const name =
+      [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+      user.username ||
+      email.split("@")[0] ||
+      "";
+    return { name, email };
+  } catch {
+    return { name: "", email: "" };
+  }
+}
 
 const router: IRouter = Router();
 
@@ -139,6 +169,20 @@ router.post(
         res.status(result.status).json({ error: result.error });
         return;
       }
+      // Fire the invitation email after the DB write committed. We don't
+      // await for the email to land before responding — the invite already
+      // exists in the database and the recipient can be notified out of
+      // band — but we do log failures.
+      const inviter = await lookupInviter(req.userId!);
+      void sendInvitationEmail({
+        to: result.invitation.email,
+        venueName: result.invitation.venueName,
+        inviterName: inviter.name,
+        inviterEmail: inviter.email,
+        role: result.invitation.role,
+      }).catch((err) =>
+        logger.error({ err }, "sendInvitationEmail threw"),
+      );
       res.status(201).json(result.invitation);
     } catch (err) {
       next(err);
@@ -153,6 +197,26 @@ router.delete(
   async (req, res, next) => {
     try {
       const code = String(req.params.venueCode).toUpperCase();
+      // Snapshot the invite (and venue name) before revoking so we can email
+      // the recipient even though the row's status will be flipped.
+      const [snapshot] = await db
+        .select({
+          email: venueInvitationsTable.email,
+          venueName: venuesTable.name,
+        })
+        .from(venueInvitationsTable)
+        .innerJoin(
+          venuesTable,
+          eq(venuesTable.id, venueInvitationsTable.venueCode),
+        )
+        .where(
+          and(
+            eq(venueInvitationsTable.id, String(req.params.id)),
+            eq(venueInvitationsTable.venueCode, code),
+            eq(venueInvitationsTable.status, "pending"),
+          ),
+        )
+        .limit(1);
       const result = await revokeInvitation({
         invitationId: String(req.params.id),
         venueCode: code,
@@ -161,7 +225,74 @@ router.delete(
         res.status(result.status).json({ error: result.error });
         return;
       }
+      if (snapshot) {
+        const inviter = await lookupInviter(req.userId!);
+        void sendInvitationRevokedEmail({
+          to: snapshot.email,
+          venueName: snapshot.venueName,
+          inviterName: inviter.name,
+          inviterEmail: inviter.email,
+        }).catch((err) =>
+          logger.error({ err }, "sendInvitationRevokedEmail threw"),
+        );
+      }
       res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Re-send the email for an existing pending invitation. Useful when the
+// original message was lost (spam folder, typo on first send, etc.) — the
+// owner can trigger another delivery without revoking and recreating.
+router.post(
+  "/venues/:venueCode/invitations/:id/resend",
+  requireAuth,
+  ownerOnly,
+  async (req, res, next) => {
+    try {
+      const code = String(req.params.venueCode).toUpperCase();
+      const [invite] = await db
+        .select({
+          id: venueInvitationsTable.id,
+          email: venueInvitationsTable.email,
+          role: venueInvitationsTable.role,
+          status: venueInvitationsTable.status,
+          venueName: venuesTable.name,
+        })
+        .from(venueInvitationsTable)
+        .innerJoin(
+          venuesTable,
+          eq(venuesTable.id, venueInvitationsTable.venueCode),
+        )
+        .where(
+          and(
+            eq(venueInvitationsTable.id, String(req.params.id)),
+            eq(venueInvitationsTable.venueCode, code),
+          ),
+        )
+        .limit(1);
+      if (!invite) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
+      }
+      if (invite.status !== "pending") {
+        res.status(410).json({
+          error: "Invitation is no longer pending",
+        });
+        return;
+      }
+      const inviter = await lookupInviter(req.userId!);
+      await sendInvitationEmail({
+        to: invite.email,
+        venueName: invite.venueName,
+        inviterName: inviter.name,
+        inviterEmail: inviter.email,
+        role: invite.role,
+        resend: true,
+      });
+      res.status(202).json({ ok: true });
     } catch (err) {
       next(err);
     }
