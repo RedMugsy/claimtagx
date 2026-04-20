@@ -147,6 +147,107 @@ export interface CreateAssetRequest {
   venueName?: string;
 }
 
+export interface CountResponse {
+  count: number;
+}
+
+export type ServiceRequestStatus =
+  (typeof ServiceRequestStatus)[keyof typeof ServiceRequestStatus];
+
+export const ServiceRequestStatus = {
+  open: "open",
+  claimed: "claimed",
+  done: "done",
+  cancelled: "cancelled",
+} as const;
+
+export type ServiceRequestKind =
+  (typeof ServiceRequestKind)[keyof typeof ServiceRequestKind];
+
+export const ServiceRequestKind = {
+  bring_my_car: "bring_my_car",
+  fetch_my_coat: "fetch_my_coat",
+  repack_my_bag: "repack_my_bag",
+  deliver_to_table: "deliver_to_table",
+  other: "other",
+} as const;
+
+export interface ServiceRequest {
+  id: string;
+  venueCode: string;
+  ticketId: string;
+  /** @nullable */
+  assetId?: string | null;
+  kind: ServiceRequestKind;
+  notes: string;
+  status: ServiceRequestStatus;
+  requestedByName: string;
+  /** @nullable */
+  claimedByUserId?: string | null;
+  /** @nullable */
+  claimedByName?: string | null;
+  createdAt: number;
+  /** @nullable */
+  claimedAt?: number | null;
+  /** @nullable */
+  completedAt?: number | null;
+}
+
+export interface CreateServiceRequest {
+  ticketId: string;
+  kind: ServiceRequestKind;
+  notes?: string;
+  requestedByName?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  venueCode: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  createdAt: number;
+}
+
+export interface PostMessageRequest {
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  body: string;
+}
+
+export interface MarkReadResponse {
+  lastReadAt: number;
+}
+
+export interface JoinIntercomResponse {
+  joinedAt: number;
+}
+
+export interface IntercomPresence {
+  handlerUserId: string;
+  handlerName: string;
+  joinedAt: number;
+}
+
+export interface IntercomTransmission {
+  id: string;
+  venueCode: string;
+  senderUserId: string;
+  senderName: string;
+  audioBase64: string;
+  mimeType: string;
+  durationMs: number;
+  createdAt: number;
+}
+
+export interface TransmitIntercomRequest {
+  audioBase64: string;
+  mimeType?: string;
+  durationMs?: number;
+}
+
 /**
  * Where the ticket id originated. "scan" requires a valid signature; "manual" is the fallback when a handler types the id.
  */
@@ -195,4 +296,19 @@ export type ListTamperEventsParams = {
    * Maximum number of events to return (default 50, max 200).
    */
   limit?: number;
+};
+
+export type ListServiceRequestsParams = {
+  status?: ServiceRequestStatus;
+};
+
+export type ListMessagesParams = {
+  limit?: number;
+};
+
+export type ListIntercomTransmissionsParams = {
+  /**
+   * Epoch ms; only return transmissions newer than this.
+   */
+  since?: number;
 };

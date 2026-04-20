@@ -6,3 +6,6 @@ export * from "./handlerVenues";
 export * from "./venueInvites";
 export * from "./venueInvitations";
 export * from "./shifts";
+export * from "./serviceRequests";
+export * from "./messages";
+export * from "./intercom";

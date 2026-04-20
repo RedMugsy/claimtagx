@@ -17,7 +17,9 @@ import Home from "@/pages/Home";
 import History from "@/pages/History";
 import Release from "@/pages/Release";
 import Settings from "@/pages/Settings";
-import { MessagesPage, IntercomPage, ServicesPage } from "@/pages/ComingSoon";
+import MessagesPage from "@/pages/Messages";
+import IntercomPage from "@/pages/Intercom";
+import ServicesPage from "@/pages/Services";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;

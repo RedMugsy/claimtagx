@@ -19,15 +19,28 @@ import type {
 import type {
   ActiveShiftResponse,
   ApiErrorMessage,
+  ChatMessage,
+  CountResponse,
   CreateAssetRequest,
+  CreateServiceRequest,
   CustodyAsset,
   HealthStatus,
+  IntercomPresence,
+  IntercomTransmission,
+  JoinIntercomResponse,
   ListAssetsParams,
+  ListIntercomTransmissionsParams,
+  ListMessagesParams,
+  ListServiceRequestsParams,
   ListTamperEventsParams,
+  MarkReadResponse,
+  PostMessageRequest,
   ReleaseAssetRequest,
+  ServiceRequest,
   Shift,
   StartShiftRequest,
   TamperEvent,
+  TransmitIntercomRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -955,6 +968,1403 @@ export function useListActiveVenueShifts<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getListActiveVenueShiftsQueryOptions(venueCode, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List service requests for a venue
+ */
+export const getListServiceRequestsUrl = (
+  venueCode: string,
+  params?: ListServiceRequestsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/venues/${venueCode}/services?${stringifiedParams}`
+    : `/api/venues/${venueCode}/services`;
+};
+
+export const listServiceRequests = async (
+  venueCode: string,
+  params?: ListServiceRequestsParams,
+  options?: RequestInit,
+): Promise<ServiceRequest[]> => {
+  return customFetch<ServiceRequest[]>(
+    getListServiceRequestsUrl(venueCode, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListServiceRequestsQueryKey = (
+  venueCode: string,
+  params?: ListServiceRequestsParams,
+) => {
+  return [
+    `/api/venues/${venueCode}/services`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListServiceRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListServiceRequestsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServiceRequests>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListServiceRequestsQueryKey(venueCode, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listServiceRequests>>
+  > = ({ signal }) =>
+    listServiceRequests(venueCode, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServiceRequests>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListServiceRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServiceRequests>>
+>;
+export type ListServiceRequestsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List service requests for a venue
+ */
+
+export function useListServiceRequests<
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListServiceRequestsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServiceRequests>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListServiceRequestsQueryOptions(
+    venueCode,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a service request tied to a ticket
+ */
+export const getCreateServiceRequestUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/services`;
+};
+
+export const createServiceRequest = async (
+  venueCode: string,
+  createServiceRequest: CreateServiceRequest,
+  options?: RequestInit,
+): Promise<ServiceRequest> => {
+  return customFetch<ServiceRequest>(getCreateServiceRequestUrl(venueCode), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createServiceRequest),
+  });
+};
+
+export const getCreateServiceRequestMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServiceRequest>>,
+    TError,
+    { venueCode: string; data: BodyType<CreateServiceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createServiceRequest>>,
+  TError,
+  { venueCode: string; data: BodyType<CreateServiceRequest> },
+  TContext
+> => {
+  const mutationKey = ["createServiceRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createServiceRequest>>,
+    { venueCode: string; data: BodyType<CreateServiceRequest> }
+  > = (props) => {
+    const { venueCode, data } = props ?? {};
+
+    return createServiceRequest(venueCode, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateServiceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createServiceRequest>>
+>;
+export type CreateServiceRequestMutationBody = BodyType<CreateServiceRequest>;
+export type CreateServiceRequestMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Create a service request tied to a ticket
+ */
+export const useCreateServiceRequest = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createServiceRequest>>,
+    TError,
+    { venueCode: string; data: BodyType<CreateServiceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createServiceRequest>>,
+  TError,
+  { venueCode: string; data: BodyType<CreateServiceRequest> },
+  TContext
+> => {
+  return useMutation(getCreateServiceRequestMutationOptions(options));
+};
+
+/**
+ * @summary Count of open + claimed service requests
+ */
+export const getGetOpenServiceCountUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/services/open-count`;
+};
+
+export const getOpenServiceCount = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<CountResponse> => {
+  return customFetch<CountResponse>(getGetOpenServiceCountUrl(venueCode), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOpenServiceCountQueryKey = (venueCode: string) => {
+  return [`/api/venues/${venueCode}/services/open-count`] as const;
+};
+
+export const getGetOpenServiceCountQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOpenServiceCount>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOpenServiceCount>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOpenServiceCountQueryKey(venueCode);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOpenServiceCount>>
+  > = ({ signal }) =>
+    getOpenServiceCount(venueCode, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOpenServiceCount>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOpenServiceCountQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOpenServiceCount>>
+>;
+export type GetOpenServiceCountQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Count of open + claimed service requests
+ */
+
+export function useGetOpenServiceCount<
+  TData = Awaited<ReturnType<typeof getOpenServiceCount>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOpenServiceCount>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOpenServiceCountQueryOptions(venueCode, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Claim an open service request for the current handler
+ */
+export const getClaimServiceRequestUrl = (venueCode: string, id: string) => {
+  return `/api/venues/${venueCode}/services/${id}/claim`;
+};
+
+export const claimServiceRequest = async (
+  venueCode: string,
+  id: string,
+  options?: RequestInit,
+): Promise<ServiceRequest> => {
+  return customFetch<ServiceRequest>(getClaimServiceRequestUrl(venueCode, id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getClaimServiceRequestMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof claimServiceRequest>>,
+    TError,
+    { venueCode: string; id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof claimServiceRequest>>,
+  TError,
+  { venueCode: string; id: string },
+  TContext
+> => {
+  const mutationKey = ["claimServiceRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof claimServiceRequest>>,
+    { venueCode: string; id: string }
+  > = (props) => {
+    const { venueCode, id } = props ?? {};
+
+    return claimServiceRequest(venueCode, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClaimServiceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof claimServiceRequest>>
+>;
+
+export type ClaimServiceRequestMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Claim an open service request for the current handler
+ */
+export const useClaimServiceRequest = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof claimServiceRequest>>,
+    TError,
+    { venueCode: string; id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof claimServiceRequest>>,
+  TError,
+  { venueCode: string; id: string },
+  TContext
+> => {
+  return useMutation(getClaimServiceRequestMutationOptions(options));
+};
+
+/**
+ * @summary Mark a service request as completed
+ */
+export const getCompleteServiceRequestUrl = (venueCode: string, id: string) => {
+  return `/api/venues/${venueCode}/services/${id}/complete`;
+};
+
+export const completeServiceRequest = async (
+  venueCode: string,
+  id: string,
+  options?: RequestInit,
+): Promise<ServiceRequest> => {
+  return customFetch<ServiceRequest>(
+    getCompleteServiceRequestUrl(venueCode, id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCompleteServiceRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeServiceRequest>>,
+    TError,
+    { venueCode: string; id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeServiceRequest>>,
+  TError,
+  { venueCode: string; id: string },
+  TContext
+> => {
+  const mutationKey = ["completeServiceRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeServiceRequest>>,
+    { venueCode: string; id: string }
+  > = (props) => {
+    const { venueCode, id } = props ?? {};
+
+    return completeServiceRequest(venueCode, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteServiceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeServiceRequest>>
+>;
+
+export type CompleteServiceRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark a service request as completed
+ */
+export const useCompleteServiceRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeServiceRequest>>,
+    TError,
+    { venueCode: string; id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeServiceRequest>>,
+  TError,
+  { venueCode: string; id: string },
+  TContext
+> => {
+  return useMutation(getCompleteServiceRequestMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a service request
+ */
+export const getCancelServiceRequestUrl = (venueCode: string, id: string) => {
+  return `/api/venues/${venueCode}/services/${id}/cancel`;
+};
+
+export const cancelServiceRequest = async (
+  venueCode: string,
+  id: string,
+  options?: RequestInit,
+): Promise<ServiceRequest> => {
+  return customFetch<ServiceRequest>(
+    getCancelServiceRequestUrl(venueCode, id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCancelServiceRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelServiceRequest>>,
+    TError,
+    { venueCode: string; id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelServiceRequest>>,
+  TError,
+  { venueCode: string; id: string },
+  TContext
+> => {
+  const mutationKey = ["cancelServiceRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelServiceRequest>>,
+    { venueCode: string; id: string }
+  > = (props) => {
+    const { venueCode, id } = props ?? {};
+
+    return cancelServiceRequest(venueCode, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelServiceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelServiceRequest>>
+>;
+
+export type CancelServiceRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a service request
+ */
+export const useCancelServiceRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelServiceRequest>>,
+    TError,
+    { venueCode: string; id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelServiceRequest>>,
+  TError,
+  { venueCode: string; id: string },
+  TContext
+> => {
+  return useMutation(getCancelServiceRequestMutationOptions(options));
+};
+
+/**
+ * @summary List recent venue chat messages (oldest-first)
+ */
+export const getListMessagesUrl = (
+  venueCode: string,
+  params?: ListMessagesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/venues/${venueCode}/messages?${stringifiedParams}`
+    : `/api/venues/${venueCode}/messages`;
+};
+
+export const listMessages = async (
+  venueCode: string,
+  params?: ListMessagesParams,
+  options?: RequestInit,
+): Promise<ChatMessage[]> => {
+  return customFetch<ChatMessage[]>(getListMessagesUrl(venueCode, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMessagesQueryKey = (
+  venueCode: string,
+  params?: ListMessagesParams,
+) => {
+  return [
+    `/api/venues/${venueCode}/messages`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMessages>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListMessagesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListMessagesQueryKey(venueCode, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMessages>>> = ({
+    signal,
+  }) => listMessages(venueCode, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMessages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMessagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMessages>>
+>;
+export type ListMessagesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List recent venue chat messages (oldest-first)
+ */
+
+export function useListMessages<
+  TData = Awaited<ReturnType<typeof listMessages>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListMessagesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMessagesQueryOptions(venueCode, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Post a message to the venue chat
+ */
+export const getPostMessageUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/messages`;
+};
+
+export const postMessage = async (
+  venueCode: string,
+  postMessageRequest: PostMessageRequest,
+  options?: RequestInit,
+): Promise<ChatMessage> => {
+  return customFetch<ChatMessage>(getPostMessageUrl(venueCode), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(postMessageRequest),
+  });
+};
+
+export const getPostMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postMessage>>,
+    TError,
+    { venueCode: string; data: BodyType<PostMessageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof postMessage>>,
+  TError,
+  { venueCode: string; data: BodyType<PostMessageRequest> },
+  TContext
+> => {
+  const mutationKey = ["postMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof postMessage>>,
+    { venueCode: string; data: BodyType<PostMessageRequest> }
+  > = (props) => {
+    const { venueCode, data } = props ?? {};
+
+    return postMessage(venueCode, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PostMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postMessage>>
+>;
+export type PostMessageMutationBody = BodyType<PostMessageRequest>;
+export type PostMessageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Post a message to the venue chat
+ */
+export const usePostMessage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postMessage>>,
+    TError,
+    { venueCode: string; data: BodyType<PostMessageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof postMessage>>,
+  TError,
+  { venueCode: string; data: BodyType<PostMessageRequest> },
+  TContext
+> => {
+  return useMutation(getPostMessageMutationOptions(options));
+};
+
+/**
+ * @summary Mark all messages up to now as read
+ */
+export const getMarkMessagesReadUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/messages/read`;
+};
+
+export const markMessagesRead = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<MarkReadResponse> => {
+  return customFetch<MarkReadResponse>(getMarkMessagesReadUrl(venueCode), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkMessagesReadMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markMessagesRead>>,
+    TError,
+    { venueCode: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markMessagesRead>>,
+  TError,
+  { venueCode: string },
+  TContext
+> => {
+  const mutationKey = ["markMessagesRead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markMessagesRead>>,
+    { venueCode: string }
+  > = (props) => {
+    const { venueCode } = props ?? {};
+
+    return markMessagesRead(venueCode, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkMessagesReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markMessagesRead>>
+>;
+
+export type MarkMessagesReadMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark all messages up to now as read
+ */
+export const useMarkMessagesRead = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markMessagesRead>>,
+    TError,
+    { venueCode: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markMessagesRead>>,
+  TError,
+  { venueCode: string },
+  TContext
+> => {
+  return useMutation(getMarkMessagesReadMutationOptions(options));
+};
+
+/**
+ * @summary Count of messages newer than this handler's last read
+ */
+export const getGetUnreadMessageCountUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/messages/unread-count`;
+};
+
+export const getUnreadMessageCount = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<CountResponse> => {
+  return customFetch<CountResponse>(getGetUnreadMessageCountUrl(venueCode), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUnreadMessageCountQueryKey = (venueCode: string) => {
+  return [`/api/venues/${venueCode}/messages/unread-count`] as const;
+};
+
+export const getGetUnreadMessageCountQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUnreadMessageCount>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUnreadMessageCount>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetUnreadMessageCountQueryKey(venueCode);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getUnreadMessageCount>>
+  > = ({ signal }) =>
+    getUnreadMessageCount(venueCode, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUnreadMessageCount>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetUnreadMessageCountQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUnreadMessageCount>>
+>;
+export type GetUnreadMessageCountQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Count of messages newer than this handler's last read
+ */
+
+export function useGetUnreadMessageCount<
+  TData = Awaited<ReturnType<typeof getUnreadMessageCount>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUnreadMessageCount>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUnreadMessageCountQueryOptions(venueCode, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Join (or heartbeat) the venue intercom channel
+ */
+export const getJoinIntercomUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/intercom/join`;
+};
+
+export const joinIntercom = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<JoinIntercomResponse> => {
+  return customFetch<JoinIntercomResponse>(getJoinIntercomUrl(venueCode), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getJoinIntercomMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinIntercom>>,
+    TError,
+    { venueCode: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinIntercom>>,
+  TError,
+  { venueCode: string },
+  TContext
+> => {
+  const mutationKey = ["joinIntercom"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinIntercom>>,
+    { venueCode: string }
+  > = (props) => {
+    const { venueCode } = props ?? {};
+
+    return joinIntercom(venueCode, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinIntercomMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinIntercom>>
+>;
+
+export type JoinIntercomMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Join (or heartbeat) the venue intercom channel
+ */
+export const useJoinIntercom = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinIntercom>>,
+    TError,
+    { venueCode: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinIntercom>>,
+  TError,
+  { venueCode: string },
+  TContext
+> => {
+  return useMutation(getJoinIntercomMutationOptions(options));
+};
+
+/**
+ * @summary Leave the venue intercom channel
+ */
+export const getLeaveIntercomUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/intercom/leave`;
+};
+
+export const leaveIntercom = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getLeaveIntercomUrl(venueCode), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLeaveIntercomMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveIntercom>>,
+    TError,
+    { venueCode: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof leaveIntercom>>,
+  TError,
+  { venueCode: string },
+  TContext
+> => {
+  const mutationKey = ["leaveIntercom"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof leaveIntercom>>,
+    { venueCode: string }
+  > = (props) => {
+    const { venueCode } = props ?? {};
+
+    return leaveIntercom(venueCode, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LeaveIntercomMutationResult = NonNullable<
+  Awaited<ReturnType<typeof leaveIntercom>>
+>;
+
+export type LeaveIntercomMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Leave the venue intercom channel
+ */
+export const useLeaveIntercom = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveIntercom>>,
+    TError,
+    { venueCode: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof leaveIntercom>>,
+  TError,
+  { venueCode: string },
+  TContext
+> => {
+  return useMutation(getLeaveIntercomMutationOptions(options));
+};
+
+/**
+ * @summary List handlers currently on the intercom channel
+ */
+export const getListIntercomPresenceUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/intercom/presence`;
+};
+
+export const listIntercomPresence = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<IntercomPresence[]> => {
+  return customFetch<IntercomPresence[]>(
+    getListIntercomPresenceUrl(venueCode),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListIntercomPresenceQueryKey = (venueCode: string) => {
+  return [`/api/venues/${venueCode}/intercom/presence`] as const;
+};
+
+export const getListIntercomPresenceQueryOptions = <
+  TData = Awaited<ReturnType<typeof listIntercomPresence>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listIntercomPresence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListIntercomPresenceQueryKey(venueCode);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listIntercomPresence>>
+  > = ({ signal }) =>
+    listIntercomPresence(venueCode, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listIntercomPresence>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListIntercomPresenceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listIntercomPresence>>
+>;
+export type ListIntercomPresenceQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List handlers currently on the intercom channel
+ */
+
+export function useListIntercomPresence<
+  TData = Awaited<ReturnType<typeof listIntercomPresence>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listIntercomPresence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListIntercomPresenceQueryOptions(venueCode, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Push-to-talk transmission (base64-encoded audio clip)
+ */
+export const getTransmitIntercomUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/intercom/transmit`;
+};
+
+export const transmitIntercom = async (
+  venueCode: string,
+  transmitIntercomRequest: TransmitIntercomRequest,
+  options?: RequestInit,
+): Promise<IntercomTransmission> => {
+  return customFetch<IntercomTransmission>(getTransmitIntercomUrl(venueCode), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(transmitIntercomRequest),
+  });
+};
+
+export const getTransmitIntercomMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transmitIntercom>>,
+    TError,
+    { venueCode: string; data: BodyType<TransmitIntercomRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transmitIntercom>>,
+  TError,
+  { venueCode: string; data: BodyType<TransmitIntercomRequest> },
+  TContext
+> => {
+  const mutationKey = ["transmitIntercom"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transmitIntercom>>,
+    { venueCode: string; data: BodyType<TransmitIntercomRequest> }
+  > = (props) => {
+    const { venueCode, data } = props ?? {};
+
+    return transmitIntercom(venueCode, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TransmitIntercomMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transmitIntercom>>
+>;
+export type TransmitIntercomMutationBody = BodyType<TransmitIntercomRequest>;
+export type TransmitIntercomMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Push-to-talk transmission (base64-encoded audio clip)
+ */
+export const useTransmitIntercom = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transmitIntercom>>,
+    TError,
+    { venueCode: string; data: BodyType<TransmitIntercomRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof transmitIntercom>>,
+  TError,
+  { venueCode: string; data: BodyType<TransmitIntercomRequest> },
+  TContext
+> => {
+  return useMutation(getTransmitIntercomMutationOptions(options));
+};
+
+/**
+ * @summary Recent push-to-talk transmissions on the venue channel
+ */
+export const getListIntercomTransmissionsUrl = (
+  venueCode: string,
+  params?: ListIntercomTransmissionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/venues/${venueCode}/intercom/transmissions?${stringifiedParams}`
+    : `/api/venues/${venueCode}/intercom/transmissions`;
+};
+
+export const listIntercomTransmissions = async (
+  venueCode: string,
+  params?: ListIntercomTransmissionsParams,
+  options?: RequestInit,
+): Promise<IntercomTransmission[]> => {
+  return customFetch<IntercomTransmission[]>(
+    getListIntercomTransmissionsUrl(venueCode, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListIntercomTransmissionsQueryKey = (
+  venueCode: string,
+  params?: ListIntercomTransmissionsParams,
+) => {
+  return [
+    `/api/venues/${venueCode}/intercom/transmissions`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListIntercomTransmissionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listIntercomTransmissions>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListIntercomTransmissionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listIntercomTransmissions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListIntercomTransmissionsQueryKey(venueCode, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listIntercomTransmissions>>
+  > = ({ signal }) =>
+    listIntercomTransmissions(venueCode, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listIntercomTransmissions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListIntercomTransmissionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listIntercomTransmissions>>
+>;
+export type ListIntercomTransmissionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Recent push-to-talk transmissions on the venue channel
+ */
+
+export function useListIntercomTransmissions<
+  TData = Awaited<ReturnType<typeof listIntercomTransmissions>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListIntercomTransmissionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listIntercomTransmissions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListIntercomTransmissionsQueryOptions(
+    venueCode,
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -14,6 +14,12 @@ tags:
     description: Custody assets
   - name: shifts
     description: Handler work shifts
+  - name: services
+    description: Patron service requests tied to a ticket
+  - name: messages
+    description: Per-venue team chat
+  - name: intercom
+    description: Push-to-talk channels per venue
 paths:
   /healthz:
     get:
@@ -270,6 +276,325 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Shift"
+  /venues/{venueCode}/services:
+    get:
+      operationId: listServiceRequests
+      tags: [services]
+      summary: List service requests for a venue
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/ServiceRequestStatus"
+      responses:
+        "200":
+          description: Service requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceRequest"
+    post:
+      operationId: createServiceRequest
+      tags: [services]
+      summary: Create a service request tied to a ticket
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+  /venues/{venueCode}/services/open-count:
+    get:
+      operationId: getOpenServiceCount
+      tags: [services]
+      summary: Count of open + claimed service requests
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountResponse"
+  /venues/{venueCode}/services/{id}/claim:
+    post:
+      operationId: claimServiceRequest
+      tags: [services]
+      summary: Claim an open service request for the current handler
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+        "409":
+          description: Already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+  /venues/{venueCode}/services/{id}/complete:
+    post:
+      operationId: completeServiceRequest
+      tags: [services]
+      summary: Mark a service request as completed
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+  /venues/{venueCode}/services/{id}/cancel:
+    post:
+      operationId: cancelServiceRequest
+      tags: [services]
+      summary: Cancel a service request
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+  /venues/{venueCode}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List recent venue chat messages (oldest-first)
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+    post:
+      operationId: postMessage
+      tags: [messages]
+      summary: Post a message to the venue chat
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostMessageRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+  /venues/{venueCode}/messages/read:
+    post:
+      operationId: markMessagesRead
+      tags: [messages]
+      summary: Mark all messages up to now as read
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkReadResponse"
+  /venues/{venueCode}/messages/unread-count:
+    get:
+      operationId: getUnreadMessageCount
+      tags: [messages]
+      summary: Count of messages newer than this handler's last read
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountResponse"
+  /venues/{venueCode}/intercom/join:
+    post:
+      operationId: joinIntercom
+      tags: [intercom]
+      summary: Join (or heartbeat) the venue intercom channel
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinIntercomResponse"
+  /venues/{venueCode}/intercom/leave:
+    post:
+      operationId: leaveIntercom
+      tags: [intercom]
+      summary: Leave the venue intercom channel
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Left
+  /venues/{venueCode}/intercom/presence:
+    get:
+      operationId: listIntercomPresence
+      tags: [intercom]
+      summary: List handlers currently on the intercom channel
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Presence
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IntercomPresence"
+  /venues/{venueCode}/intercom/transmit:
+    post:
+      operationId: transmitIntercom
+      tags: [intercom]
+      summary: Push-to-talk transmission (base64-encoded audio clip)
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransmitIntercomRequest"
+      responses:
+        "201":
+          description: Transmitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntercomTransmission"
+  /venues/{venueCode}/intercom/transmissions:
+    get:
+      operationId: listIntercomTransmissions
+      tags: [intercom]
+      summary: Recent push-to-talk transmissions on the venue channel
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+        - in: query
+          name: since
+          required: false
+          description: Epoch ms; only return transmissions newer than this.
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Transmissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IntercomTransmission"
 components:
   schemas:
     Shift:
@@ -464,6 +789,142 @@ components:
         - photos
         - handlerEmail
         - handlerName
+    CountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+        - count
+    ServiceRequestStatus:
+      type: string
+      enum: [open, claimed, done, cancelled]
+    ServiceRequestKind:
+      type: string
+      enum:
+        - bring_my_car
+        - fetch_my_coat
+        - repack_my_bag
+        - deliver_to_table
+        - other
+    ServiceRequest:
+      type: object
+      properties:
+        id: { type: string }
+        venueCode: { type: string }
+        ticketId: { type: string }
+        assetId:
+          type: ["string", "null"]
+        kind:
+          $ref: "#/components/schemas/ServiceRequestKind"
+        notes: { type: string }
+        status:
+          $ref: "#/components/schemas/ServiceRequestStatus"
+        requestedByName: { type: string }
+        claimedByUserId:
+          type: ["string", "null"]
+        claimedByName:
+          type: ["string", "null"]
+        createdAt: { type: integer }
+        claimedAt:
+          type: ["integer", "null"]
+        completedAt:
+          type: ["integer", "null"]
+      required:
+        - id
+        - venueCode
+        - ticketId
+        - kind
+        - notes
+        - status
+        - requestedByName
+        - createdAt
+    CreateServiceRequest:
+      type: object
+      properties:
+        ticketId: { type: string }
+        kind:
+          $ref: "#/components/schemas/ServiceRequestKind"
+        notes: { type: string }
+        requestedByName: { type: string }
+      required:
+        - ticketId
+        - kind
+    ChatMessage:
+      type: object
+      properties:
+        id: { type: string }
+        venueCode: { type: string }
+        authorUserId: { type: string }
+        authorName: { type: string }
+        body: { type: string }
+        createdAt: { type: integer }
+      required:
+        - id
+        - venueCode
+        - authorUserId
+        - authorName
+        - body
+        - createdAt
+    PostMessageRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+        - body
+    MarkReadResponse:
+      type: object
+      properties:
+        lastReadAt: { type: integer }
+      required:
+        - lastReadAt
+    JoinIntercomResponse:
+      type: object
+      properties:
+        joinedAt: { type: integer }
+      required:
+        - joinedAt
+    IntercomPresence:
+      type: object
+      properties:
+        handlerUserId: { type: string }
+        handlerName: { type: string }
+        joinedAt: { type: integer }
+      required:
+        - handlerUserId
+        - handlerName
+        - joinedAt
+    IntercomTransmission:
+      type: object
+      properties:
+        id: { type: string }
+        venueCode: { type: string }
+        senderUserId: { type: string }
+        senderName: { type: string }
+        audioBase64: { type: string }
+        mimeType: { type: string }
+        durationMs: { type: integer }
+        createdAt: { type: integer }
+      required:
+        - id
+        - venueCode
+        - senderUserId
+        - senderName
+        - audioBase64
+        - mimeType
+        - durationMs
+        - createdAt
+    TransmitIntercomRequest:
+      type: object
+      properties:
+        audioBase64: { type: string }
+        mimeType: { type: string }
+        durationMs: { type: integer }
+      required:
+        - audioBase64
     ReleaseAssetRequest:
       type: object
       properties:

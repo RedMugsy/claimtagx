@@ -356,3 +356,291 @@ export const ListActiveVenueShiftsResponseItem = zod.object({
 export const ListActiveVenueShiftsResponse = zod.array(
   ListActiveVenueShiftsResponseItem,
 );
+
+/**
+ * @summary List service requests for a venue
+ */
+export const ListServiceRequestsParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListServiceRequestsQueryParams = zod.object({
+  status: zod.enum(["open", "claimed", "done", "cancelled"]).optional(),
+});
+
+export const ListServiceRequestsResponseItem = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  ticketId: zod.string(),
+  assetId: zod.string().nullish(),
+  kind: zod.enum([
+    "bring_my_car",
+    "fetch_my_coat",
+    "repack_my_bag",
+    "deliver_to_table",
+    "other",
+  ]),
+  notes: zod.string(),
+  status: zod.enum(["open", "claimed", "done", "cancelled"]),
+  requestedByName: zod.string(),
+  claimedByUserId: zod.string().nullish(),
+  claimedByName: zod.string().nullish(),
+  createdAt: zod.number(),
+  claimedAt: zod.number().nullish(),
+  completedAt: zod.number().nullish(),
+});
+export const ListServiceRequestsResponse = zod.array(
+  ListServiceRequestsResponseItem,
+);
+
+/**
+ * @summary Create a service request tied to a ticket
+ */
+export const CreateServiceRequestParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const CreateServiceRequestBody = zod.object({
+  ticketId: zod.string(),
+  kind: zod.enum([
+    "bring_my_car",
+    "fetch_my_coat",
+    "repack_my_bag",
+    "deliver_to_table",
+    "other",
+  ]),
+  notes: zod.string().optional(),
+  requestedByName: zod.string().optional(),
+});
+
+/**
+ * @summary Count of open + claimed service requests
+ */
+export const GetOpenServiceCountParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const GetOpenServiceCountResponse = zod.object({
+  count: zod.number(),
+});
+
+/**
+ * @summary Claim an open service request for the current handler
+ */
+export const ClaimServiceRequestParams = zod.object({
+  venueCode: zod.coerce.string(),
+  id: zod.coerce.string(),
+});
+
+export const ClaimServiceRequestResponse = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  ticketId: zod.string(),
+  assetId: zod.string().nullish(),
+  kind: zod.enum([
+    "bring_my_car",
+    "fetch_my_coat",
+    "repack_my_bag",
+    "deliver_to_table",
+    "other",
+  ]),
+  notes: zod.string(),
+  status: zod.enum(["open", "claimed", "done", "cancelled"]),
+  requestedByName: zod.string(),
+  claimedByUserId: zod.string().nullish(),
+  claimedByName: zod.string().nullish(),
+  createdAt: zod.number(),
+  claimedAt: zod.number().nullish(),
+  completedAt: zod.number().nullish(),
+});
+
+/**
+ * @summary Mark a service request as completed
+ */
+export const CompleteServiceRequestParams = zod.object({
+  venueCode: zod.coerce.string(),
+  id: zod.coerce.string(),
+});
+
+export const CompleteServiceRequestResponse = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  ticketId: zod.string(),
+  assetId: zod.string().nullish(),
+  kind: zod.enum([
+    "bring_my_car",
+    "fetch_my_coat",
+    "repack_my_bag",
+    "deliver_to_table",
+    "other",
+  ]),
+  notes: zod.string(),
+  status: zod.enum(["open", "claimed", "done", "cancelled"]),
+  requestedByName: zod.string(),
+  claimedByUserId: zod.string().nullish(),
+  claimedByName: zod.string().nullish(),
+  createdAt: zod.number(),
+  claimedAt: zod.number().nullish(),
+  completedAt: zod.number().nullish(),
+});
+
+/**
+ * @summary Cancel a service request
+ */
+export const CancelServiceRequestParams = zod.object({
+  venueCode: zod.coerce.string(),
+  id: zod.coerce.string(),
+});
+
+export const CancelServiceRequestResponse = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  ticketId: zod.string(),
+  assetId: zod.string().nullish(),
+  kind: zod.enum([
+    "bring_my_car",
+    "fetch_my_coat",
+    "repack_my_bag",
+    "deliver_to_table",
+    "other",
+  ]),
+  notes: zod.string(),
+  status: zod.enum(["open", "claimed", "done", "cancelled"]),
+  requestedByName: zod.string(),
+  claimedByUserId: zod.string().nullish(),
+  claimedByName: zod.string().nullish(),
+  createdAt: zod.number(),
+  claimedAt: zod.number().nullish(),
+  completedAt: zod.number().nullish(),
+});
+
+/**
+ * @summary List recent venue chat messages (oldest-first)
+ */
+export const ListMessagesParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListMessagesQueryParams = zod.object({
+  limit: zod.coerce.number().optional(),
+});
+
+export const ListMessagesResponseItem = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  authorUserId: zod.string(),
+  authorName: zod.string(),
+  body: zod.string(),
+  createdAt: zod.number(),
+});
+export const ListMessagesResponse = zod.array(ListMessagesResponseItem);
+
+/**
+ * @summary Post a message to the venue chat
+ */
+export const PostMessageParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const postMessageBodyBodyMax = 2000;
+
+export const PostMessageBody = zod.object({
+  body: zod.string().min(1).max(postMessageBodyBodyMax),
+});
+
+/**
+ * @summary Mark all messages up to now as read
+ */
+export const MarkMessagesReadParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const MarkMessagesReadResponse = zod.object({
+  lastReadAt: zod.number(),
+});
+
+/**
+ * @summary Count of messages newer than this handler's last read
+ */
+export const GetUnreadMessageCountParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const GetUnreadMessageCountResponse = zod.object({
+  count: zod.number(),
+});
+
+/**
+ * @summary Join (or heartbeat) the venue intercom channel
+ */
+export const JoinIntercomParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const JoinIntercomResponse = zod.object({
+  joinedAt: zod.number(),
+});
+
+/**
+ * @summary Leave the venue intercom channel
+ */
+export const LeaveIntercomParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+/**
+ * @summary List handlers currently on the intercom channel
+ */
+export const ListIntercomPresenceParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListIntercomPresenceResponseItem = zod.object({
+  handlerUserId: zod.string(),
+  handlerName: zod.string(),
+  joinedAt: zod.number(),
+});
+export const ListIntercomPresenceResponse = zod.array(
+  ListIntercomPresenceResponseItem,
+);
+
+/**
+ * @summary Push-to-talk transmission (base64-encoded audio clip)
+ */
+export const TransmitIntercomParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const TransmitIntercomBody = zod.object({
+  audioBase64: zod.string(),
+  mimeType: zod.string().optional(),
+  durationMs: zod.number().optional(),
+});
+
+/**
+ * @summary Recent push-to-talk transmissions on the venue channel
+ */
+export const ListIntercomTransmissionsParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListIntercomTransmissionsQueryParams = zod.object({
+  since: zod.coerce
+    .number()
+    .optional()
+    .describe("Epoch ms; only return transmissions newer than this."),
+});
+
+export const ListIntercomTransmissionsResponseItem = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  senderUserId: zod.string(),
+  senderName: zod.string(),
+  audioBase64: zod.string(),
+  mimeType: zod.string(),
+  durationMs: zod.number(),
+  createdAt: zod.number(),
+});
+export const ListIntercomTransmissionsResponse = zod.array(
+  ListIntercomTransmissionsResponseItem,
+);

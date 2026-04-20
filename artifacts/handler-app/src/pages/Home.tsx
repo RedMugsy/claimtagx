@@ -22,7 +22,11 @@ import {
   endShift,
   getActiveShift,
   getGetActiveShiftQueryKey,
+  getGetOpenServiceCountQueryKey,
+  getGetUnreadMessageCountQueryKey,
   getListActiveVenueShiftsQueryKey,
+  getOpenServiceCount,
+  getUnreadMessageCount,
   listActiveVenueShifts,
   startShift,
   type Shift,
@@ -114,6 +118,25 @@ export default function Home() {
   });
   const venueShifts = venueShiftsQuery.data ?? [];
 
+  // Live counts for the secondary tile badges. Lightweight scalar endpoints
+  // so we can poll them without paying for full list fetches.
+  const openServicesQuery = useQuery({
+    queryKey: getGetOpenServiceCountQueryKey(venueCode),
+    queryFn: () => getOpenServiceCount(venueCode),
+    enabled: Boolean(venueCode),
+    staleTime: 15_000,
+    refetchInterval: 20_000,
+  });
+  const unreadMessagesQuery = useQuery({
+    queryKey: getGetUnreadMessageCountQueryKey(venueCode),
+    queryFn: () => getUnreadMessageCount(venueCode),
+    enabled: Boolean(venueCode),
+    staleTime: 15_000,
+    refetchInterval: 20_000,
+  });
+  const openServicesCount = openServicesQuery.data?.count ?? 0;
+  const unreadMessagesCount = unreadMessagesQuery.data?.count ?? 0;
+
   const startMutation = useMutation({
     mutationFn: () => startShift({ venueCode }),
     onSuccess: (shift) => {
@@ -199,12 +222,14 @@ export default function Home() {
       label: "Services",
       Icon: ConciergeBell,
       tone: "violet",
+      badge: openServicesCount > 0 ? String(openServicesCount) : undefined,
     },
     {
       to: "/messages",
       label: "Messages",
       Icon: MessageSquare,
       tone: "amber",
+      badge: unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined,
     },
     {
       to: "/intercom",
