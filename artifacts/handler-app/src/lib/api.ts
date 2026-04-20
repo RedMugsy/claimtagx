@@ -141,3 +141,13 @@ export const revokeVenueMember = (
     `/api/venues/${encodeURIComponent(code)}/members/${encodeURIComponent(userId)}`,
     { method: "DELETE" },
   );
+
+// Owner-only: rotate this venue's QR signing secret. Any QR tags that were
+// printed/issued before the call will fail signature checks afterwards;
+// handlers can still release items via manual typed entry until tags are
+// reprinted.
+export const rotateVenueSigningSecret = (code: string): Promise<null> =>
+  jsonFetch<null>(
+    `/api/venues/${encodeURIComponent(code)}/signing-secret/rotate`,
+    { method: "POST" },
+  );

@@ -1,15 +1,27 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, Shield, Trash2, UserPlus, Tag } from "lucide-react";
+import { KeyRound, Mail, Shield, Trash2, UserPlus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 import {
   createVenueInvitation,
   fetchVenueInvitations,
   fetchVenueMembers,
   revokeVenueInvitation,
   revokeVenueMember,
+  rotateVenueSigningSecret,
   updateVenueMemberRole,
   updateVenueSettings,
 } from "@/lib/api";
@@ -113,6 +125,25 @@ export function VenueAdminPanel({ venue }: Props) {
     },
   });
 
+  const [rotateOpen, setRotateOpen] = useState(false);
+  const rotateSecret = useMutation({
+    mutationFn: () => rotateVenueSigningSecret(venue.code),
+    onSuccess: () => {
+      setRotateOpen(false);
+      toast({
+        title: "Tag security key rotated",
+        description:
+          "Previously printed QR tags will no longer scan. Reprint tags and use manual entry in the meantime.",
+      });
+    },
+    onError: (err) =>
+      toast({
+        title: "Could not rotate key",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      }),
+  });
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -191,6 +222,67 @@ export function VenueAdminPanel({ venue }: Props) {
           </div>
         )}
       </div>
+
+      {actorIsOwner && (
+        <div
+          className="mb-5 rounded-2xl border border-white/10 bg-obsidian/40 p-4"
+          data-testid={`rotate-secret-card-${venue.code}`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Label className="text-xs font-mono uppercase tracking-wide text-slate flex items-center gap-2 mb-1">
+                <KeyRound className="w-3 h-3" /> Tag security key
+              </Label>
+              <p className="text-xs text-slate leading-snug">
+                Rotate if you suspect a printed QR sheet has leaked. Already
+                printed tags will stop scanning until you reprint them —
+                handlers can keep working by typing claim numbers manually.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRotateOpen(true)}
+              disabled={rotateSecret.isPending}
+              className="shrink-0 border-red-500/30 text-red-300 hover:text-red-200"
+              data-testid={`button-rotate-secret-${venue.code}`}
+            >
+              <KeyRound className="w-4 h-4" /> Rotate key
+            </Button>
+          </div>
+          <AlertDialog open={rotateOpen} onOpenChange={setRotateOpen}>
+            <AlertDialogContent data-testid={`rotate-secret-dialog-${venue.code}`}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Rotate this venue's tag security key?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Every QR tag printed before now will <strong>stop scanning</strong>.
+                  Handlers will need to fall back to typing claim numbers manually
+                  until you reprint and reattach new tags. This can't be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  disabled={rotateSecret.isPending}
+                  data-testid={`button-rotate-cancel-${venue.code}`}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    rotateSecret.mutate();
+                  }}
+                  disabled={rotateSecret.isPending}
+                  className="bg-red-500/90 text-white hover:bg-red-500"
+                  data-testid={`button-rotate-confirm-${venue.code}`}
+                >
+                  {rotateSecret.isPending ? "Rotating…" : "Yes, rotate key"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-end mb-4">
         <div className="space-y-1.5">
