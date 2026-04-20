@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { MODE_BY_ID, MODE_ICONS, MODES } from "@/lib/modes";
-import { ChevronDown, ClipboardList, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid } from "lucide-react";
+import { ChevronDown, ClipboardList, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,7 @@ const tabs = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { session, mode, setMode, signOut, assets, venues, activeVenue, setActiveVenue } = useStore();
+  const { session, mode, setMode, signOut, assets, venues, activeVenue, setActiveVenue, streamStatus } = useStore();
   const [location, navigate] = useLocation();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
@@ -160,6 +160,22 @@ export function Shell({ children }: { children: ReactNode }) {
           </DropdownMenu>
         </div>
       </header>
+
+      {streamStatus === "disconnected" && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-amber-500/15 border-b border-amber-500/40 text-amber-200"
+          data-testid="banner-stream-disconnected"
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-2 text-xs sm:text-sm">
+            <WifiOff className="w-4 h-4 shrink-0" />
+            <span>
+              Live updates paused — reconnecting. Your list may be out of date until the connection comes back.
+            </span>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 pb-28 sm:pb-10">
         {children}

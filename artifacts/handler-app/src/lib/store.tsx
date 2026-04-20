@@ -76,6 +76,7 @@ interface StoreCtx {
     opts?: { signature?: string; source?: "scan" | "manual" },
   ) => Promise<CustodyAsset | null>;
   findByTicket: (ticketId: string) => Promise<CustodyAsset | undefined>;
+  streamStatus: "idle" | "connecting" | "connected" | "disconnected";
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
@@ -174,15 +175,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     enabled: Boolean(venueCode),
   });
 
+  const [streamStatus, setStreamStatus] = useState<
+    "idle" | "connecting" | "connected" | "disconnected"
+  >("idle");
+
   // Subscribe to a server-sent event stream so a release or intake on one
   // handler device shows up on every other device immediately, instead of
   // waiting for the next React Query refresh. The stream is scoped to the
   // active venue and re-opens when the venue changes.
   useEffect(() => {
-    if (!venueCode || !isSignedIn) return;
+    if (!venueCode || !isSignedIn) {
+      setStreamStatus("idle");
+      return;
+    }
     const url = `/api/venues/${encodeURIComponent(venueCode)}/events`;
     const es = new EventSource(url, { withCredentials: true });
     const queryKey = getListAssetsQueryKey(venueCode);
+    setStreamStatus("connecting");
+    let hasConnected = false;
 
     const applyAsset = (incoming: ApiCustodyAsset) => {
       const local = toLocal(incoming);
@@ -249,13 +259,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     es.addEventListener("asset.created", handle as EventListener);
     es.addEventListener("asset.released", handle as EventListener);
     es.addEventListener("signature.invalid", handleTamper as EventListener);
+    es.onopen = () => {
+      // If we're recovering from a dropped connection, refetch the active
+      // custody list once so we reconcile any events missed during the gap.
+      if (hasConnected) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      hasConnected = true;
+      setStreamStatus("connected");
+    };
     es.onerror = () => {
-      // EventSource auto-reconnects; nothing to do here. If the stream is
-      // truly broken we still have the React Query refetch as a fallback.
+      // EventSource auto-reconnects; surface the disconnected state so the
+      // UI can warn handlers their list may be stale until reconnect.
+      if (es.readyState === EventSource.CLOSED) {
+        setStreamStatus("disconnected");
+      } else if (es.readyState === EventSource.CONNECTING) {
+        setStreamStatus(hasConnected ? "disconnected" : "connecting");
+      }
     };
 
     return () => {
       es.close();
+      setStreamStatus("idle");
     };
   }, [venueCode, isSignedIn, queryClient, email]);
 
@@ -393,6 +418,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       intake,
       release,
       findByTicket,
+      streamStatus,
     }),
     [
       ready,
@@ -411,6 +437,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       intake,
       release,
       findByTicket,
+      streamStatus,
     ],
   );
 
