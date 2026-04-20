@@ -247,3 +247,112 @@ export const ReleaseAssetResponse = zod.object({
       "HMAC signature of the ticket id, used by handler-issued QR codes",
     ),
 });
+
+/**
+ * @summary Get the signed-in handler's currently active shift, if any
+ */
+export const GetActiveShiftResponse = zod.object({
+  shift: zod.union([
+    zod.object({
+      id: zod.string(),
+      venueCode: zod.string(),
+      handlerUserId: zod.string(),
+      handlerEmail: zod.string(),
+      handlerName: zod.string(),
+      role: zod.string(),
+      targetMinutes: zod
+        .number()
+        .describe(
+          "Planned shift length in minutes; used to compute remaining time.",
+        ),
+      startedAt: zod
+        .number()
+        .describe("Epoch milliseconds when the shift started."),
+      endedAt: zod
+        .number()
+        .nullish()
+        .describe(
+          "Epoch milliseconds when the shift ended, or null if still active.",
+        ),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * @summary Start a new shift for the signed-in handler
+ */
+export const startShiftBodyTargetMinutesMin = 30;
+export const startShiftBodyTargetMinutesMax = 1440;
+
+export const StartShiftBody = zod.object({
+  venueCode: zod.string(),
+  targetMinutes: zod
+    .number()
+    .min(startShiftBodyTargetMinutesMin)
+    .max(startShiftBodyTargetMinutesMax)
+    .optional(),
+});
+
+/**
+ * @summary End an active shift owned by the signed-in handler
+ */
+export const EndShiftParams = zod.object({
+  shiftId: zod.coerce.string(),
+});
+
+export const EndShiftResponse = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  handlerUserId: zod.string(),
+  handlerEmail: zod.string(),
+  handlerName: zod.string(),
+  role: zod.string(),
+  targetMinutes: zod
+    .number()
+    .describe(
+      "Planned shift length in minutes; used to compute remaining time.",
+    ),
+  startedAt: zod
+    .number()
+    .describe("Epoch milliseconds when the shift started."),
+  endedAt: zod
+    .number()
+    .nullish()
+    .describe(
+      "Epoch milliseconds when the shift ended, or null if still active.",
+    ),
+});
+
+/**
+ * @summary List currently active shifts at a venue (visible to all members)
+ */
+export const ListActiveVenueShiftsParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListActiveVenueShiftsResponseItem = zod.object({
+  id: zod.string(),
+  venueCode: zod.string(),
+  handlerUserId: zod.string(),
+  handlerEmail: zod.string(),
+  handlerName: zod.string(),
+  role: zod.string(),
+  targetMinutes: zod
+    .number()
+    .describe(
+      "Planned shift length in minutes; used to compute remaining time.",
+    ),
+  startedAt: zod
+    .number()
+    .describe("Epoch milliseconds when the shift started."),
+  endedAt: zod
+    .number()
+    .nullish()
+    .describe(
+      "Epoch milliseconds when the shift ended, or null if still active.",
+    ),
+});
+export const ListActiveVenueShiftsResponse = zod.array(
+  ListActiveVenueShiftsResponseItem,
+);

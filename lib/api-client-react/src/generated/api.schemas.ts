@@ -5,6 +5,37 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface Shift {
+  id: string;
+  venueCode: string;
+  handlerUserId: string;
+  handlerEmail: string;
+  handlerName: string;
+  role: string;
+  /** Planned shift length in minutes; used to compute remaining time. */
+  targetMinutes: number;
+  /** Epoch milliseconds when the shift started. */
+  startedAt: number;
+  /**
+   * Epoch milliseconds when the shift ended, or null if still active.
+   * @nullable
+   */
+  endedAt?: number | null;
+}
+
+export interface ActiveShiftResponse {
+  shift: Shift | null;
+}
+
+export interface StartShiftRequest {
+  venueCode: string;
+  /**
+   * @minimum 30
+   * @maximum 1440
+   */
+  targetMinutes?: number;
+}
+
 export interface HealthStatus {
   status: string;
 }

@@ -13,10 +13,24 @@ import {
   Radio,
   ConciergeBell,
   ChevronRight,
+  Play,
+  Square,
+  Users,
 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  endShift,
+  getActiveShift,
+  getGetActiveShiftQueryKey,
+  getListActiveVenueShiftsQueryKey,
+  listActiveVenueShifts,
+  startShift,
+  type Shift,
+} from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
 import { MODES, MODE_ICONS } from "@/lib/modes";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -41,8 +55,6 @@ function greeting(d: Date) {
 function shiftLabel(start: Date) {
   return start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
-
-const SHIFT_TARGET_HOURS = 8;
 
 const WEEKDAYS: Array<{ key: number; short: string; long: string; icon: string }> = [
   { key: 1, short: "Mon", long: "Monday", icon: "☀️" },
@@ -72,32 +84,63 @@ const toneClasses: Record<Tile["tone"], string> = {
 
 export default function Home() {
   const { session, assets, activeVenue } = useStore();
+  const queryClient = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
-
-  // Establish a stable check-in time per browser session so the timer reads naturally.
-  const [checkedInAt] = useState<number>(() => {
-    try {
-      const raw = sessionStorage.getItem("ctx_checked_in_at");
-      if (raw) {
-        const n = parseInt(raw, 10);
-        if (Number.isFinite(n)) return n;
-      }
-    } catch {
-      // ignore
-    }
-    const t = Date.now();
-    try {
-      sessionStorage.setItem("ctx_checked_in_at", String(t));
-    } catch {
-      // ignore
-    }
-    return t;
-  });
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000 * 30);
     return () => window.clearInterval(id);
   }, []);
+
+  // Active shift for the signed-in handler (across all venues — there can
+  // only be one). Survives refresh and follows the handler to other devices
+  // because it lives in the database, not sessionStorage.
+  const activeShiftQuery = useQuery({
+    queryKey: getGetActiveShiftQueryKey(),
+    queryFn: () => getActiveShift(),
+    enabled: Boolean(session),
+    staleTime: 30_000,
+  });
+  const myShift: Shift | null = activeShiftQuery.data?.shift ?? null;
+
+  // Other handlers currently on shift at this venue, so the team can see
+  // who's covering without asking.
+  const venueCode = activeVenue?.code ?? "";
+  const venueShiftsQuery = useQuery({
+    queryKey: getListActiveVenueShiftsQueryKey(venueCode),
+    queryFn: () => listActiveVenueShifts(venueCode),
+    enabled: Boolean(venueCode),
+    staleTime: 30_000,
+  });
+  const venueShifts = venueShiftsQuery.data ?? [];
+
+  const startMutation = useMutation({
+    mutationFn: () => startShift({ venueCode }),
+    onSuccess: (shift) => {
+      queryClient.setQueryData(getGetActiveShiftQueryKey(), { shift });
+      queryClient.invalidateQueries({
+        queryKey: getListActiveVenueShiftsQueryKey(venueCode),
+      });
+      toast({ title: "Shift started", description: `Clocked in at ${shiftLabel(new Date(shift.startedAt))}.` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Could not start shift", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const endMutation = useMutation({
+    mutationFn: (id: string) => endShift(id),
+    onSuccess: (shift) => {
+      queryClient.setQueryData(getGetActiveShiftQueryKey(), { shift: null });
+      queryClient.invalidateQueries({
+        queryKey: getListActiveVenueShiftsQueryKey(shift.venueCode),
+      });
+      toast({ title: "Shift ended", description: `Worked ${formatHm(now - shift.startedAt)}.` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Could not end shift", description: err.message, variant: "destructive" });
+    },
+  });
 
   const counts = useMemo(() => {
     const active = assets.filter((a) => a.status === "active");
@@ -110,11 +153,17 @@ export default function Home() {
     return { active: active.length, released: released.length, byMode };
   }, [assets]);
 
-  const checkedInDate = new Date(checkedInAt);
-  const elapsed = Math.max(0, now - checkedInAt);
-  const target = SHIFT_TARGET_HOURS * 3600 * 1000;
-  const remaining = Math.max(0, target - elapsed);
-  const overtime = Math.max(0, elapsed - target);
+  const myShiftHere =
+    myShift && venueCode && myShift.venueCode === venueCode ? myShift : null;
+  const teammatesOnShift = venueShifts.filter(
+    (s) => !myShiftHere || s.id !== myShiftHere.id,
+  );
+
+  const checkedInDate = myShiftHere ? new Date(myShiftHere.startedAt) : null;
+  const elapsed = myShiftHere ? Math.max(0, now - myShiftHere.startedAt) : 0;
+  const target = (myShiftHere?.targetMinutes ?? 480) * 60 * 1000;
+  const remaining = myShiftHere ? Math.max(0, target - elapsed) : 0;
+  const overtime = myShiftHere ? Math.max(0, elapsed - target) : 0;
 
   const today = new Date(now);
   const todayWeekdayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1; // Mon-first
@@ -172,6 +221,15 @@ export default function Home() {
     },
   ];
 
+  const shiftLoading = activeShiftQuery.isLoading;
+  const startBusy = startMutation.isPending;
+  const endBusy = endMutation.isPending;
+
+  // If the user has an active shift at a different venue, surface that so
+  // they understand why "Start shift" is unavailable here.
+  const shiftElsewhere =
+    myShift && venueCode && myShift.venueCode !== venueCode ? myShift : null;
+
   return (
     <div className="space-y-5">
       {/* Top action row */}
@@ -219,9 +277,27 @@ export default function Home() {
             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">
               {handlerName}
             </h1>
-            <div className="mt-1 text-xs text-slate">
-              You checked in at{" "}
-              <span className="text-paper font-semibold">{shiftLabel(checkedInDate)}</span>
+            <div className="mt-1 text-xs text-slate" data-testid="text-shift-status">
+              {shiftLoading ? (
+                "Checking your shift…"
+              ) : myShiftHere && checkedInDate ? (
+                <>
+                  You started this shift at{" "}
+                  <span className="text-paper font-semibold">
+                    {shiftLabel(checkedInDate)}
+                  </span>
+                </>
+              ) : shiftElsewhere ? (
+                <>
+                  You're on shift at{" "}
+                  <span className="text-paper font-semibold">
+                    {shiftElsewhere.venueCode}
+                  </span>{" "}
+                  — end it there to start one here.
+                </>
+              ) : (
+                "You're not on shift yet."
+              )}
             </div>
           </div>
 
@@ -246,15 +322,85 @@ export default function Home() {
 
         {/* Shift stats */}
         <div className="mt-4 grid grid-cols-3 rounded-2xl border border-white/10 bg-obsidian/40 overflow-hidden">
-          <ShiftStat label="Time worked" value={formatHm(elapsed)} tone="lime" />
-          <ShiftStat label="Remaining" value={formatHm(remaining)} tone="paper" />
+          <ShiftStat
+            label="Time worked"
+            value={myShiftHere ? formatHm(elapsed) : "--:--"}
+            tone={myShiftHere ? "lime" : "slate"}
+          />
+          <ShiftStat
+            label="Remaining"
+            value={myShiftHere ? formatHm(remaining) : "--:--"}
+            tone={myShiftHere ? "paper" : "slate"}
+          />
           <ShiftStat
             label="Over time"
-            value={formatHm(overtime)}
-            tone={overtime > 0 ? "rose" : "slate"}
+            value={myShiftHere ? formatHm(overtime) : "--:--"}
+            tone={myShiftHere && overtime > 0 ? "rose" : "slate"}
             last
           />
         </div>
+
+        {/* Start / end shift control */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            {myShiftHere
+              ? `Role: ${myShiftHere.role}`
+              : "No active shift"}
+          </div>
+          {myShiftHere ? (
+            <button
+              type="button"
+              onClick={() => endMutation.mutate(myShiftHere.id)}
+              disabled={endBusy}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 px-3 py-1.5 text-xs font-semibold hover-elevate disabled:opacity-60"
+              data-testid="button-end-shift"
+            >
+              <Square className="w-3.5 h-3.5" />
+              {endBusy ? "Ending…" : "End shift"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => startMutation.mutate()}
+              disabled={startBusy || !venueCode || Boolean(shiftElsewhere)}
+              className="inline-flex items-center gap-2 rounded-xl border border-lime/40 bg-lime/15 text-lime px-3 py-1.5 text-xs font-semibold hover-elevate disabled:opacity-60"
+              data-testid="button-start-shift"
+            >
+              <Play className="w-3.5 h-3.5" />
+              {startBusy ? "Starting…" : "Start shift"}
+            </button>
+          )}
+        </div>
+
+        {/* Teammates currently on shift here */}
+        {teammatesOnShift.length > 0 && (
+          <div
+            className="mt-3 rounded-2xl border border-white/10 bg-obsidian/40 p-3"
+            data-testid="card-teammates-on-shift"
+          >
+            <div className="flex items-center gap-2 mb-2 text-[10px] font-mono uppercase tracking-wider text-slate">
+              <Users className="w-3.5 h-3.5 text-lime" />
+              On shift now ({teammatesOnShift.length})
+            </div>
+            <ul className="space-y-1">
+              {teammatesOnShift.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between text-xs text-paper"
+                  data-testid={`row-teammate-${s.handlerUserId}`}
+                >
+                  <span className="truncate">
+                    <span className="font-semibold">{s.handlerName}</span>{" "}
+                    <span className="text-slate">· {s.role}</span>
+                  </span>
+                  <span className="font-mono text-slate">
+                    since {shiftLabel(new Date(s.startedAt))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </motion.div>
 
       {/* Mode counter strip */}
@@ -406,4 +552,3 @@ function ActionTile({
     </motion.div>
   );
 }
-

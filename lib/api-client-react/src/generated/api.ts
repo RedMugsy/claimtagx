@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ActiveShiftResponse,
   ApiErrorMessage,
   CreateAssetRequest,
   CustodyAsset,
@@ -24,6 +25,8 @@ import type {
   ListAssetsParams,
   ListTamperEventsParams,
   ReleaseAssetRequest,
+  Shift,
+  StartShiftRequest,
   TamperEvent,
 } from "./api.schemas";
 
@@ -625,3 +628,337 @@ export const useReleaseAsset = <
 > => {
   return useMutation(getReleaseAssetMutationOptions(options));
 };
+
+/**
+ * @summary Get the signed-in handler's currently active shift, if any
+ */
+export const getGetActiveShiftUrl = () => {
+  return `/api/me/shift/active`;
+};
+
+export const getActiveShift = async (
+  options?: RequestInit,
+): Promise<ActiveShiftResponse> => {
+  return customFetch<ActiveShiftResponse>(getGetActiveShiftUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetActiveShiftQueryKey = () => {
+  return [`/api/me/shift/active`] as const;
+};
+
+export const getGetActiveShiftQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActiveShift>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveShift>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetActiveShiftQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveShift>>> = ({
+    signal,
+  }) => getActiveShift({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveShift>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetActiveShiftQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActiveShift>>
+>;
+export type GetActiveShiftQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the signed-in handler's currently active shift, if any
+ */
+
+export function useGetActiveShift<
+  TData = Awaited<ReturnType<typeof getActiveShift>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveShift>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActiveShiftQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Start a new shift for the signed-in handler
+ */
+export const getStartShiftUrl = () => {
+  return `/api/me/shifts/start`;
+};
+
+export const startShift = async (
+  startShiftRequest: StartShiftRequest,
+  options?: RequestInit,
+): Promise<Shift> => {
+  return customFetch<Shift>(getStartShiftUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(startShiftRequest),
+  });
+};
+
+export const getStartShiftMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startShift>>,
+    TError,
+    { data: BodyType<StartShiftRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startShift>>,
+  TError,
+  { data: BodyType<StartShiftRequest> },
+  TContext
+> => {
+  const mutationKey = ["startShift"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startShift>>,
+    { data: BodyType<StartShiftRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startShift(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartShiftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startShift>>
+>;
+export type StartShiftMutationBody = BodyType<StartShiftRequest>;
+export type StartShiftMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Start a new shift for the signed-in handler
+ */
+export const useStartShift = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startShift>>,
+    TError,
+    { data: BodyType<StartShiftRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startShift>>,
+  TError,
+  { data: BodyType<StartShiftRequest> },
+  TContext
+> => {
+  return useMutation(getStartShiftMutationOptions(options));
+};
+
+/**
+ * @summary End an active shift owned by the signed-in handler
+ */
+export const getEndShiftUrl = (shiftId: string) => {
+  return `/api/me/shifts/${shiftId}/end`;
+};
+
+export const endShift = async (
+  shiftId: string,
+  options?: RequestInit,
+): Promise<Shift> => {
+  return customFetch<Shift>(getEndShiftUrl(shiftId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getEndShiftMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof endShift>>,
+    TError,
+    { shiftId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof endShift>>,
+  TError,
+  { shiftId: string },
+  TContext
+> => {
+  const mutationKey = ["endShift"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof endShift>>,
+    { shiftId: string }
+  > = (props) => {
+    const { shiftId } = props ?? {};
+
+    return endShift(shiftId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EndShiftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof endShift>>
+>;
+
+export type EndShiftMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary End an active shift owned by the signed-in handler
+ */
+export const useEndShift = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof endShift>>,
+    TError,
+    { shiftId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof endShift>>,
+  TError,
+  { shiftId: string },
+  TContext
+> => {
+  return useMutation(getEndShiftMutationOptions(options));
+};
+
+/**
+ * @summary List currently active shifts at a venue (visible to all members)
+ */
+export const getListActiveVenueShiftsUrl = (venueCode: string) => {
+  return `/api/venues/${venueCode}/shifts/active`;
+};
+
+export const listActiveVenueShifts = async (
+  venueCode: string,
+  options?: RequestInit,
+): Promise<Shift[]> => {
+  return customFetch<Shift[]>(getListActiveVenueShiftsUrl(venueCode), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListActiveVenueShiftsQueryKey = (venueCode: string) => {
+  return [`/api/venues/${venueCode}/shifts/active`] as const;
+};
+
+export const getListActiveVenueShiftsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listActiveVenueShifts>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listActiveVenueShifts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListActiveVenueShiftsQueryKey(venueCode);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listActiveVenueShifts>>
+  > = ({ signal }) =>
+    listActiveVenueShifts(venueCode, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listActiveVenueShifts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListActiveVenueShiftsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listActiveVenueShifts>>
+>;
+export type ListActiveVenueShiftsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List currently active shifts at a venue (visible to all members)
+ */
+
+export function useListActiveVenueShifts<
+  TData = Awaited<ReturnType<typeof listActiveVenueShifts>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listActiveVenueShifts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListActiveVenueShiftsQueryOptions(venueCode, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

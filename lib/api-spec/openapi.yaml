@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: assets
     description: Custody assets
+  - name: shifts
+    description: Handler work shifts
 paths:
   /healthz:
     get:
@@ -184,8 +186,145 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorMessage"
+  /me/shift/active:
+    get:
+      operationId: getActiveShift
+      tags: [shifts]
+      summary: Get the signed-in handler's currently active shift, if any
+      responses:
+        "200":
+          description: Active shift or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveShiftResponse"
+  /me/shifts/start:
+    post:
+      operationId: startShift
+      tags: [shifts]
+      summary: Start a new shift for the signed-in handler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartShiftRequest"
+      responses:
+        "201":
+          description: Shift started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+        "409":
+          description: Already on shift at this venue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+  /me/shifts/{shiftId}/end:
+    post:
+      operationId: endShift
+      tags: [shifts]
+      summary: End an active shift owned by the signed-in handler
+      parameters:
+        - in: path
+          name: shiftId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Ended shift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+  /venues/{venueCode}/shifts/active:
+    get:
+      operationId: listActiveVenueShifts
+      tags: [shifts]
+      summary: List currently active shifts at a venue (visible to all members)
+      parameters:
+        - in: path
+          name: venueCode
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Active shifts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shift"
 components:
   schemas:
+    Shift:
+      type: object
+      properties:
+        id:
+          type: string
+        venueCode:
+          type: string
+        handlerUserId:
+          type: string
+        handlerEmail:
+          type: string
+        handlerName:
+          type: string
+        role:
+          type: string
+        targetMinutes:
+          type: integer
+          description: Planned shift length in minutes; used to compute remaining time.
+        startedAt:
+          type: integer
+          description: Epoch milliseconds when the shift started.
+        endedAt:
+          type: ["integer", "null"]
+          description: Epoch milliseconds when the shift ended, or null if still active.
+      required:
+        - id
+        - venueCode
+        - handlerUserId
+        - handlerEmail
+        - handlerName
+        - role
+        - targetMinutes
+        - startedAt
+    ActiveShiftResponse:
+      type: object
+      properties:
+        shift:
+          oneOf:
+            - $ref: "#/components/schemas/Shift"
+            - type: "null"
+      required:
+        - shift
+    StartShiftRequest:
+      type: object
+      properties:
+        venueCode:
+          type: string
+        targetMinutes:
+          type: integer
+          minimum: 30
+          maximum: 1440
+      required:
+        - venueCode
     HealthStatus:
       type: object
       properties:
