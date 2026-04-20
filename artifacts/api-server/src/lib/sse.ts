@@ -1,9 +1,14 @@
 import type { Response } from "express";
-import type { SerializedAsset } from "./assets";
+import type { SerializedAsset, SerializedTamperEvent } from "./assets";
 
 export type AssetEvent =
   | { type: "asset.created"; asset: SerializedAsset; actorEmail: string | null }
-  | { type: "asset.released"; asset: SerializedAsset; actorEmail: string | null };
+  | { type: "asset.released"; asset: SerializedAsset; actorEmail: string | null }
+  | {
+      type: "signature.invalid";
+      tamper: SerializedTamperEvent;
+      actorEmail: string | null;
+    };
 
 type Subscriber = {
   res: Response;

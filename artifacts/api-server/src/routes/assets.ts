@@ -10,6 +10,7 @@ import {
   rotateVenueSigningSecret,
   seedVenueIfEmpty,
   serializeAsset,
+  serializeTamperEvent,
 } from "../lib/assets";
 import { verifyTicket } from "../lib/signing";
 import { publish, subscribe } from "../lib/sse";
@@ -36,6 +37,32 @@ router.get("/venues/:venueCode/events", async (req, res, next) => {
         // ignore
       }
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/venues/:venueCode/tamper-events", async (req, res, next) => {
+  try {
+    const venueCode = req.params.venueCode.toUpperCase();
+    await ensureVenue(venueCode);
+    const limitRaw = Number(req.query.limit);
+    const limit =
+      Number.isFinite(limitRaw) && limitRaw > 0
+        ? Math.min(200, Math.floor(limitRaw))
+        : 50;
+    const rows = await db
+      .select()
+      .from(eventsTable)
+      .where(
+        and(
+          eq(eventsTable.venueId, venueCode),
+          eq(eventsTable.type, "signature_invalid"),
+        ),
+      )
+      .orderBy(desc(eventsTable.at))
+      .limit(limit);
+    res.json(rows.map((row) => serializeTamperEvent(row)));
   } catch (err) {
     next(err);
   }
@@ -213,17 +240,61 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
     const handlerEmail = req.userEmail || body.handlerEmail;
     const handlerName = req.userName || body.handlerName;
     const venueSecret = await getVenueSigningSecret(venueCode);
+
+    const recordTamper = async (reason: string, source: "scan" | "manual") => {
+      let handlerId: string | null = null;
+      if (handlerEmail && handlerName) {
+        try {
+          handlerId = await ensureHandler(venueCode, handlerEmail, handlerName);
+        } catch {
+          // ignore — we still want to log the attempt
+        }
+      }
+      const [matchingAsset] = await db
+        .select({ id: assetsTable.id })
+        .from(assetsTable)
+        .where(
+          and(
+            eq(assetsTable.venueId, venueCode),
+            sql`upper(${assetsTable.ticketId}) = upper(${ticketId})`,
+          ),
+        )
+        .limit(1);
+      const [inserted] = await db
+        .insert(eventsTable)
+        .values({
+          venueId: venueCode,
+          assetId: matchingAsset?.id ?? null,
+          handlerId,
+          type: "signature_invalid",
+          meta: { ticketId, source, reason },
+        })
+        .returning();
+      if (inserted) {
+        publish(venueCode, {
+          type: "signature.invalid",
+          tamper: serializeTamperEvent(inserted),
+          actorEmail: handlerEmail ?? null,
+        });
+      }
+    };
+
     // Releases originating from a QR scan MUST present a valid signature.
     // Manual typed entry (`source: "manual"` or omitted with no signature)
     // is the explicit fallback and bypasses signature verification.
     const hasSignature = typeof body.signature === "string" && body.signature.length > 0;
     if (body.source === "scan") {
       if (!hasSignature || !verifyTicket(venueSecret, venueCode, ticketId, body.signature!)) {
+        await recordTamper(
+          hasSignature ? "Signature did not match this venue" : "Scan missing signature",
+          "scan",
+        );
         res.status(403).json({ error: "Invalid or missing tag signature" });
         return;
       }
     } else if (hasSignature) {
       if (!verifyTicket(venueSecret, venueCode, ticketId, body.signature!)) {
+        await recordTamper("Signature did not match this venue", "manual");
         res.status(403).json({ error: "Invalid tag signature" });
         return;
       }

@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { MODE_BY_ID, MODE_ICONS } from "@/lib/modes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { QrTag } from "@/components/handler/QrTag";
+import { TamperAlerts } from "@/components/handler/TamperAlerts";
 import type { CustodyAsset } from "@/lib/types";
 
 function fmtAge(ts: number) {
@@ -19,7 +20,7 @@ function fmtAge(ts: number) {
 }
 
 export default function Custody() {
-  const { mode, assets } = useStore();
+  const { mode, assets, activeVenue } = useStore();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
   const [q, setQ] = useState("");
@@ -84,6 +85,11 @@ export default function Custody() {
             {list.length}
           </Badge>
         </div>
+        {activeVenue ? (
+          <div className="mt-3 flex items-center justify-end">
+            <TamperAlerts venueCode={activeVenue.code} />
+          </div>
+        ) : null}
       </header>
 
       <div className="relative mb-3">

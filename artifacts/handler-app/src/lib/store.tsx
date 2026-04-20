@@ -13,9 +13,11 @@ import {
   createAsset,
   getAssetByTicket,
   getListAssetsQueryKey,
+  getListTamperEventsQueryKey,
   listAssets,
   releaseAsset,
   type CustodyAsset as ApiCustodyAsset,
+  type TamperEvent,
 } from "@workspace/api-client-react";
 import type {
   AssetModeId,
@@ -222,8 +224,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const handleTamper = (raw: MessageEvent) => {
+      try {
+        const data = JSON.parse(raw.data) as {
+          type: "signature.invalid";
+          tamper: TamperEvent;
+          actorEmail: string | null;
+        };
+        const tamperKey = getListTamperEventsQueryKey(venueCode);
+        queryClient.setQueryData<TamperEvent[] | undefined>(tamperKey, (prev) =>
+          prev ? [data.tamper, ...prev] : [data.tamper],
+        );
+        queryClient.invalidateQueries({ queryKey: tamperKey });
+        toast({
+          title: `Tamper attempt on ${data.tamper.ticketId ?? "unknown tag"}`,
+          description: data.tamper.reason,
+          variant: "destructive",
+        });
+      } catch {
+        // ignore malformed payloads
+      }
+    };
+
     es.addEventListener("asset.created", handle as EventListener);
     es.addEventListener("asset.released", handle as EventListener);
+    es.addEventListener("signature.invalid", handleTamper as EventListener);
     es.onerror = () => {
       // EventSource auto-reconnects; nothing to do here. If the stream is
       // truly broken we still have the React Query refetch as a fallback.

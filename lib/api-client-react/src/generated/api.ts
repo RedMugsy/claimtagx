@@ -22,7 +22,9 @@ import type {
   CustodyAsset,
   HealthStatus,
   ListAssetsParams,
+  ListTamperEventsParams,
   ReleaseAssetRequest,
+  TamperEvent,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -401,6 +403,123 @@ export function useGetAssetByTicket<
   const queryOptions = getGetAssetByTicketQueryOptions(
     venueCode,
     ticketId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List recent failed signature verification attempts for a venue
+ */
+export const getListTamperEventsUrl = (
+  venueCode: string,
+  params?: ListTamperEventsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/venues/${venueCode}/tamper-events?${stringifiedParams}`
+    : `/api/venues/${venueCode}/tamper-events`;
+};
+
+export const listTamperEvents = async (
+  venueCode: string,
+  params?: ListTamperEventsParams,
+  options?: RequestInit,
+): Promise<TamperEvent[]> => {
+  return customFetch<TamperEvent[]>(getListTamperEventsUrl(venueCode, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTamperEventsQueryKey = (
+  venueCode: string,
+  params?: ListTamperEventsParams,
+) => {
+  return [
+    `/api/venues/${venueCode}/tamper-events`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListTamperEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTamperEvents>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListTamperEventsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTamperEvents>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTamperEventsQueryKey(venueCode, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listTamperEvents>>
+  > = ({ signal }) =>
+    listTamperEvents(venueCode, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!venueCode,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTamperEvents>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTamperEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTamperEvents>>
+>;
+export type ListTamperEventsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List recent failed signature verification attempts for a venue
+ */
+
+export function useListTamperEvents<
+  TData = Awaited<ReturnType<typeof listTamperEvents>>,
+  TError = ErrorType<unknown>,
+>(
+  venueCode: string,
+  params?: ListTamperEventsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTamperEvents>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTamperEventsQueryOptions(
+    venueCode,
+    params,
     options,
   );
 

@@ -8,9 +8,9 @@ export const eventsTable = pgTable("events", {
   venueId: text("venue_id")
     .notNull()
     .references(() => venuesTable.id, { onDelete: "cascade" }),
-  assetId: uuid("asset_id")
-    .notNull()
-    .references(() => assetsTable.id, { onDelete: "cascade" }),
+  assetId: uuid("asset_id").references(() => assetsTable.id, {
+    onDelete: "cascade",
+  }),
   handlerId: uuid("handler_id").references(() => handlersTable.id, {
     onDelete: "set null",
   }),

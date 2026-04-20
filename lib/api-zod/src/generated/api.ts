@@ -148,6 +148,50 @@ export const GetAssetByTicketResponse = zod.object({
 });
 
 /**
+ * @summary List recent failed signature verification attempts for a venue
+ */
+export const ListTamperEventsParams = zod.object({
+  venueCode: zod.coerce.string(),
+});
+
+export const ListTamperEventsQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .optional()
+    .describe("Maximum number of events to return (default 50, max 200)."),
+});
+
+export const ListTamperEventsResponseItem = zod
+  .object({
+    id: zod.string(),
+    venueCode: zod.string(),
+    ticketId: zod
+      .string()
+      .nullish()
+      .describe("Ticket id presented by the scanner, when known."),
+    assetId: zod
+      .string()
+      .nullish()
+      .describe(
+        "Matching asset id, when the ticket id corresponds to a real asset.",
+      ),
+    source: zod
+      .union([zod.literal("scan"), zod.literal("manual"), zod.literal(null)])
+      .nullish()
+      .describe("Where the request originated."),
+    reason: zod
+      .string()
+      .describe("Short description of why the verification failed."),
+    at: zod
+      .number()
+      .describe("Epoch milliseconds when the attempt was logged."),
+  })
+  .describe(
+    "A failed signature verification attempt logged when someone tries to release a tag with an invalid or missing signature.",
+  );
+export const ListTamperEventsResponse = zod.array(ListTamperEventsResponseItem);
+
+/**
  * @summary Release a held asset
  */
 export const ReleaseAssetParams = zod.object({

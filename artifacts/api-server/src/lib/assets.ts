@@ -1,11 +1,41 @@
 import { randomBytes } from "node:crypto";
 import { db, assetsTable, venuesTable, handlersTable, eventsTable } from "@workspace/db";
-import type { AssetRow } from "@workspace/db";
+import type { AssetRow, EventRow } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 import { buildSeedAssets, VENUE_DEFAULTS } from "./seed";
 import { signTicket } from "./signing";
 
 const DEMO_VENUE_CODES = new Set(Object.keys(VENUE_DEFAULTS));
+
+export interface SerializedTamperEvent {
+  id: string;
+  venueCode: string;
+  ticketId: string | null;
+  assetId: string | null;
+  source: "scan" | "manual" | null;
+  reason: string;
+  at: number;
+}
+
+export function serializeTamperEvent(row: EventRow): SerializedTamperEvent {
+  const meta = (row.meta ?? {}) as Record<string, unknown>;
+  const ticketIdRaw = meta.ticketId;
+  const sourceRaw = meta.source;
+  const reasonRaw = meta.reason;
+  return {
+    id: row.id,
+    venueCode: row.venueId,
+    ticketId: typeof ticketIdRaw === "string" ? ticketIdRaw : null,
+    assetId: row.assetId ?? null,
+    source:
+      sourceRaw === "scan" || sourceRaw === "manual" ? sourceRaw : null,
+    reason:
+      typeof reasonRaw === "string" && reasonRaw.length > 0
+        ? reasonRaw
+        : "Invalid tag signature",
+    at: row.at.getTime(),
+  };
+}
 
 export interface SerializedAsset {
   id: string;

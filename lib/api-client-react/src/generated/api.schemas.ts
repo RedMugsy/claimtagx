@@ -64,6 +64,46 @@ export interface CustodyAsset {
   signature: string;
 }
 
+/**
+ * Where the request originated.
+ * @nullable
+ */
+export type TamperEventSource =
+  | (typeof TamperEventSource)[keyof typeof TamperEventSource]
+  | null;
+
+export const TamperEventSource = {
+  scan: "scan",
+  manual: "manual",
+} as const;
+
+/**
+ * A failed signature verification attempt logged when someone tries to release a tag with an invalid or missing signature.
+ */
+export interface TamperEvent {
+  id: string;
+  venueCode: string;
+  /**
+   * Ticket id presented by the scanner, when known.
+   * @nullable
+   */
+  ticketId?: string | null;
+  /**
+   * Matching asset id, when the ticket id corresponds to a real asset.
+   * @nullable
+   */
+  assetId?: string | null;
+  /**
+   * Where the request originated.
+   * @nullable
+   */
+  source?: TamperEventSource;
+  /** Short description of why the verification failed. */
+  reason: string;
+  /** Epoch milliseconds when the attempt was logged. */
+  at: number;
+}
+
 export type CreateAssetRequestFields = { [key: string]: AssetFieldValue };
 
 export interface CreateAssetRequest {
@@ -117,4 +157,11 @@ export type ListAssetsParams = {
    * Upper bound (epoch ms). Filters on releasedAt when status=released, otherwise intakeAt.
    */
   to?: number;
+};
+
+export type ListTamperEventsParams = {
+  /**
+   * Maximum number of events to return (default 50, max 200).
+   */
+  limit?: number;
 };
