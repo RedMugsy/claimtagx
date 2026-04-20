@@ -14,6 +14,7 @@ import {
   listVenueMembers,
   revokeInvitation,
   revokeMember,
+  updateMemberRole,
   updateVenueType,
 } from "../lib/memberships";
 import {
@@ -355,6 +356,55 @@ router.patch(
         return;
       }
       res.json({ venueCode: code, venueType: result.venueType });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const MemberRoleBody = z.object({
+  role: z.enum(["handler", "supervisor", "owner"]),
+});
+
+router.patch(
+  "/venues/:venueCode/members/:userId",
+  requireAuth,
+  ownerOnly,
+  async (req, res, next) => {
+    try {
+      const code = String(req.params.venueCode).toUpperCase();
+      const parsed = MemberRoleBody.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res
+          .status(400)
+          .json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+        return;
+      }
+      // Only existing owners can mint new owners. Mirrors the same guard on
+      // the invitation-create path so supervisors can't promote past their
+      // own role.
+      const actorRole =
+        req.venues?.find((v) => v.code === code)?.role ?? "";
+      if (parsed.data.role === "owner" && actorRole !== "owner") {
+        res.status(403).json({
+          error: "Only an owner can grant the owner role",
+        });
+        return;
+      }
+      const result = await updateMemberRole({
+        venueCode: code,
+        targetUserId: String(req.params.userId),
+        newRole: parsed.data.role,
+      });
+      if (!result.ok) {
+        res.status(result.status).json({ error: result.error });
+        return;
+      }
+      res.json({
+        venueCode: code,
+        userId: String(req.params.userId),
+        role: result.role,
+      });
     } catch (err) {
       next(err);
     }

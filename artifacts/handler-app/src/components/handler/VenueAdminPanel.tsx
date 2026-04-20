@@ -10,6 +10,7 @@ import {
   fetchVenueMembers,
   revokeVenueInvitation,
   revokeVenueMember,
+  updateVenueMemberRole,
   updateVenueSettings,
 } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -72,6 +73,24 @@ export function VenueAdminPanel({ venue }: Props) {
     mutationFn: (userId: string) => revokeVenueMember(venue.code, userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: membersKey }),
   });
+
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const changeRole = useMutation({
+    mutationFn: (vars: { userId: string; role: Role }) =>
+      updateVenueMemberRole(venue.code, vars.userId, vars.role),
+    onSuccess: () => {
+      setMemberError(null);
+      qc.invalidateQueries({ queryKey: membersKey });
+    },
+    onError: (err) =>
+      setMemberError(err instanceof Error ? err.message : "Could not change role"),
+  });
+
+  const ownerCount =
+    members.data?.filter((m) => m.role === "owner").length ?? 0;
+  const isLastOwner = (m: { role: string }) =>
+    m.role === "owner" && ownerCount <= 1;
+  const actorIsOwner = venue.role === "owner";
 
   const venueTypeMut = useMutation({
     mutationFn: (next: VenueType) =>
@@ -267,9 +286,33 @@ export function VenueAdminPanel({ venue }: Props) {
                 <div className="text-xs font-mono text-slate truncate">{m.email}</div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate">
-                  {m.role}
-                </span>
+                <select
+                  value={m.role}
+                  disabled={changeRole.isPending}
+                  onChange={(e) => {
+                    const next = e.target.value as Role;
+                    if (next === m.role) return;
+                    changeRole.mutate({ userId: m.userId, role: next });
+                  }}
+                  className="h-8 rounded-lg bg-obsidian/40 border border-white/10 text-white px-2 text-xs font-mono uppercase tracking-wider"
+                  data-testid={`select-member-role-${m.userId}`}
+                >
+                  <option
+                    value="handler"
+                    disabled={isLastOwner(m) && m.role === "owner"}
+                  >
+                    handler
+                  </option>
+                  <option
+                    value="supervisor"
+                    disabled={isLastOwner(m) && m.role === "owner"}
+                  >
+                    supervisor
+                  </option>
+                  <option value="owner" disabled={!actorIsOwner}>
+                    owner
+                  </option>
+                </select>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -283,6 +326,14 @@ export function VenueAdminPanel({ venue }: Props) {
               </div>
             </div>
           ))}
+          {memberError && (
+            <div
+              className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+              data-testid={`member-role-error-${venue.code}`}
+            >
+              {memberError}
+            </div>
+          )}
           {members.data?.length === 0 && !members.isLoading && (
             <div className="text-xs text-slate">No members yet.</div>
           )}

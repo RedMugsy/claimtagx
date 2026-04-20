@@ -123,6 +123,16 @@ export const updateVenueSettings = (
     { method: "PATCH", body: JSON.stringify(body) },
   );
 
+export const updateVenueMemberRole = (
+  code: string,
+  userId: string,
+  role: "handler" | "supervisor" | "owner",
+): Promise<{ venueCode: string; userId: string; role: string }> =>
+  jsonFetch<{ venueCode: string; userId: string; role: string }>(
+    `/api/venues/${encodeURIComponent(code)}/members/${encodeURIComponent(userId)}`,
+    { method: "PATCH", body: JSON.stringify({ role }) },
+  );
+
 export const revokeVenueMember = (
   code: string,
   userId: string,

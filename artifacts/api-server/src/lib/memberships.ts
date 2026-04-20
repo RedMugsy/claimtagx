@@ -554,6 +554,67 @@ export async function revokeInvitation(params: {
   return { ok: true };
 }
 
+export async function updateMemberRole(params: {
+  venueCode: string;
+  targetUserId: string;
+  newRole: string;
+}): Promise<
+  | { ok: true; role: string }
+  | { ok: false; status: number; error: string }
+> {
+  if (!["handler", "supervisor", "owner"].includes(params.newRole)) {
+    return { ok: false, status: 400, error: "Unknown role" };
+  }
+  const [target] = await db
+    .select({ role: handlerVenuesTable.role })
+    .from(handlerVenuesTable)
+    .where(
+      and(
+        eq(handlerVenuesTable.handlerUserId, params.targetUserId),
+        eq(handlerVenuesTable.venueCode, params.venueCode),
+      ),
+    )
+    .limit(1);
+  if (!target) {
+    return { ok: false, status: 404, error: "Member not found" };
+  }
+  if (target.role === params.newRole) {
+    return { ok: true, role: target.role };
+  }
+  // Mirror the last-owner safeguard from revokeMember: if we're demoting an
+  // owner, make sure another owner exists to keep administering the venue.
+  if (target.role === "owner" && params.newRole !== "owner") {
+    const [{ otherOwners }] = await db
+      .select({ otherOwners: sql<number>`count(*)::int` })
+      .from(handlerVenuesTable)
+      .where(
+        and(
+          eq(handlerVenuesTable.venueCode, params.venueCode),
+          eq(handlerVenuesTable.role, "owner"),
+          ne(handlerVenuesTable.handlerUserId, params.targetUserId),
+        ),
+      );
+    if (otherOwners === 0) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Cannot demote the last owner of the venue",
+      };
+    }
+  }
+  const [updated] = await db
+    .update(handlerVenuesTable)
+    .set({ role: params.newRole })
+    .where(
+      and(
+        eq(handlerVenuesTable.handlerUserId, params.targetUserId),
+        eq(handlerVenuesTable.venueCode, params.venueCode),
+      ),
+    )
+    .returning({ role: handlerVenuesTable.role });
+  return { ok: true, role: updated.role };
+}
+
 export async function revokeMember(params: {
   venueCode: string;
   targetUserId: string;
