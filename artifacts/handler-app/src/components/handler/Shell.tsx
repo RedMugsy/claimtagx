@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
-import { MODE_BY_ID, MODE_ICONS, MODES } from "@/lib/modes";
+import { VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
 import { ChevronDown, ClipboardList, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,10 +21,16 @@ const tabs = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { session, mode, setMode, signOut, assets, venues, activeVenue, setActiveVenue, streamStatus } = useStore();
+  const { session, mode, signOut, assets, venues, activeVenue, setActiveVenue, streamStatus } = useStore();
   const [location, navigate] = useLocation();
-  const cfg = MODE_BY_ID[mode];
-  const ModeIcon = MODE_ICONS[mode];
+  // The header chip used to be a dropdown letting handlers pick an asset
+  // mode. The mode now follows the venue's classification — set by the
+  // owner once in settings — so the chip becomes a passive label that
+  // tells handlers what kind of venue they're working in and how many
+  // items are currently in custody.
+  const venueType = activeVenue?.venueType ?? "other";
+  const venueTypeLabel = VENUE_TYPE_LABEL[venueType];
+  const VenueTypeIcon = VENUE_TYPE_ICON[venueType];
   const activeCount = assets.filter((a) => a.status === "active" && a.mode === mode).length;
 
   return (
@@ -38,37 +44,15 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="ml-2 text-xs font-mono uppercase tracking-wider text-slate">handler</span>
           </Link>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 hover-elevate text-sm"
-                data-testid="button-mode-switcher"
-              >
-                <ModeIcon className="w-4 h-4 text-lime" />
-                <span className="font-semibold text-white">{cfg.label}</span>
-                <span className="font-mono text-xs text-slate">{activeCount}</span>
-                <ChevronDown className="w-4 h-4 text-slate" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-56">
-              <DropdownMenuLabel>Switch asset mode</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {MODES.map((m) => {
-                const Icon = MODE_ICONS[m.id];
-                return (
-                  <DropdownMenuItem
-                    key={m.id}
-                    onSelect={() => setMode(m.id)}
-                    data-testid={`menuitem-mode-${m.id}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="font-medium">{m.label}</span>
-                    <span className="ml-auto text-xs text-slate">{m.short}</span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 text-sm"
+            data-testid="badge-venue-type"
+            title={`Venue type: ${venueTypeLabel}`}
+          >
+            <VenueTypeIcon className="w-4 h-4 text-lime" />
+            <span className="font-semibold text-white">{venueTypeLabel}</span>
+            <span className="font-mono text-xs text-slate">{activeCount}</span>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

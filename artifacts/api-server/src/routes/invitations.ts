@@ -14,13 +14,19 @@ import {
   listVenueMembers,
   revokeInvitation,
   revokeMember,
+  updateVenueType,
 } from "../lib/memberships";
+import { VENUE_TYPES } from "@workspace/db";
 
 const router: IRouter = Router();
 
 const InviteBody = z.object({
   email: z.string().trim().min(3).max(254),
   role: z.enum(["handler", "supervisor", "owner"]).optional(),
+});
+
+const VenueSettingsBody = z.object({
+  venueType: z.enum(VENUE_TYPES),
 });
 
 // ---------------------------------------------------------------------------
@@ -192,6 +198,32 @@ router.get(
         }),
       );
       res.json(enriched);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  "/venues/:venueCode",
+  requireAuth,
+  ownerOnly,
+  async (req, res, next) => {
+    try {
+      const code = String(req.params.venueCode).toUpperCase();
+      const parsed = VenueSettingsBody.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        res
+          .status(400)
+          .json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+        return;
+      }
+      const result = await updateVenueType(code, parsed.data.venueType);
+      if (!result.ok) {
+        res.status(result.status).json({ error: result.error });
+        return;
+      }
+      res.json({ venueCode: code, venueType: result.venueType });
     } catch (err) {
       next(err);
     }

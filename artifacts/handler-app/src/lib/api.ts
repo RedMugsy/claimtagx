@@ -3,6 +3,7 @@ import type {
   PendingInvitation,
   VenueMemberInfo,
   VenueMembership,
+  VenueType,
 } from "./types";
 
 export interface MeResponse {
@@ -107,6 +108,19 @@ export const fetchVenueMembers = (
 ): Promise<VenueMemberInfo[]> =>
   jsonFetch<VenueMemberInfo[]>(
     `/api/venues/${encodeURIComponent(code)}/members`,
+  );
+
+// Update a venue's classification (valet/baggage/cloakroom/retail). The
+// server enforces owner-only access; the handler app uses the response to
+// re-skin Command Center, intake, and aging bands without a manual mode
+// toggle.
+export const updateVenueSettings = (
+  code: string,
+  body: { venueType: VenueType },
+): Promise<{ venueCode: string; venueType: VenueType }> =>
+  jsonFetch<{ venueCode: string; venueType: VenueType }>(
+    `/api/venues/${encodeURIComponent(code)}`,
+    { method: "PATCH", body: JSON.stringify(body) },
   );
 
 export const revokeVenueMember = (

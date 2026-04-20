@@ -1,5 +1,12 @@
-import type { AssetModeConfig, AssetModeId } from "./types";
-import { Car, Luggage, Shirt, ShoppingBag, type LucideIcon } from "lucide-react";
+import type { AssetModeConfig, AssetModeId, VenueType } from "./types";
+import {
+  Car,
+  Luggage,
+  Shirt,
+  ShoppingBag,
+  Building2,
+  type LucideIcon,
+} from "lucide-react";
 
 export const MODE_ICONS: Record<AssetModeId, LucideIcon> = {
   vehicles: Car,
@@ -93,3 +100,150 @@ export const MODE_BY_ID: Record<AssetModeId, AssetModeConfig> = MODES.reduce(
   },
   {} as Record<AssetModeId, AssetModeConfig>
 );
+
+// ---------------------------------------------------------------------------
+// Venue-type adaptation
+//
+// A venue's `venueType` drives which AssetMode is the default and how the
+// app presents itself. The app used to require handlers to pick a mode from
+// a dropdown, which meant a valet stand and a coat check saw identical
+// screens until somebody remembered to switch. By keying off venueType we
+// can re-skin tiles, headings, and aging thresholds the moment a handler
+// switches venues — no per-handler config needed.
+// ---------------------------------------------------------------------------
+
+export const VENUE_TYPE_LABEL: Record<VenueType, string> = {
+  valet: "Valet stand",
+  baggage: "Baggage room",
+  cloakroom: "Cloakroom",
+  retail: "Retail hold",
+  other: "Custody desk",
+};
+
+export const VENUE_TYPE_BLURB: Record<VenueType, string> = {
+  valet: "Park, retrieve, and hand over keys",
+  baggage: "Multi-piece luggage stored by stay",
+  cloakroom: "Fast scan-and-go for coats and bags",
+  retail: "Shopping bags and parcels held in lockers",
+  other: "General custody and tagging",
+};
+
+export const VENUE_TYPE_ICON: Record<VenueType, LucideIcon> = {
+  valet: Car,
+  baggage: Luggage,
+  cloakroom: Shirt,
+  retail: ShoppingBag,
+  other: Building2,
+};
+
+// Maps a venue type to the AssetMode whose intake fields, ticket columns,
+// and ticket-id prefix are the right defaults for that kind of venue.
+// `other` falls back to vehicles to preserve the historical default — but
+// the owner can switch types from settings to re-skin everything.
+export const VENUE_TYPE_TO_MODE: Record<VenueType, AssetModeId> = {
+  valet: "vehicles",
+  baggage: "baggage",
+  cloakroom: "cloakrooms",
+  retail: "bags",
+  other: "vehicles",
+};
+
+// Aging band thresholds, in minutes. Each venue type runs at a different
+// pace: valet retrievals turn over in minutes, hotel left-luggage in hours,
+// retail holds usually settle within an afternoon. The bands let the
+// custody screen highlight what's stale relative to the venue's tempo,
+// instead of using one global "<1h vs ≥1h" rule.
+export interface AgingBands {
+  watchAfterMin: number; // amber once an asset has been in custody this long
+  overdueAfterMin: number; // red once it crosses this threshold
+  pace: string; // short label for the venue's tempo, shown to handlers
+}
+
+export const VENUE_AGING_BANDS: Record<VenueType, AgingBands> = {
+  valet: { watchAfterMin: 15, overdueAfterMin: 45, pace: "minutes" },
+  baggage: {
+    watchAfterMin: 60 * 4,
+    overdueAfterMin: 60 * 12,
+    pace: "hours",
+  },
+  cloakroom: { watchAfterMin: 90, overdueAfterMin: 240, pace: "tonight" },
+  retail: { watchAfterMin: 60 * 2, overdueAfterMin: 60 * 6, pace: "today" },
+  other: { watchAfterMin: 60, overdueAfterMin: 240, pace: "hours" },
+};
+
+// Page-specific copy keyed by venue type. Defining it here means each page
+// can stay generic and just look up the right wording for the active venue.
+export interface VenueCopy {
+  homeTitle: string; // headline at the top of Command Center
+  intakeAction: string; // primary tile verb ("Park & tag" vs "Check-in")
+  releaseAction: string; // primary tile verb ("Retrieve" vs "Check-out")
+  custodyHeading: string; // heading on the custody page
+  custodyTileLabel: string; // short label for the count tile
+  intakeVerb: string; // intake page heading verb
+}
+
+export const VENUE_COPY: Record<VenueType, VenueCopy> = {
+  valet: {
+    homeTitle: "Retrieval queue",
+    intakeAction: "Park & tag",
+    releaseAction: "Retrieve",
+    custodyHeading: "Vehicles parked",
+    custodyTileLabel: "Parked",
+    intakeVerb: "Park new vehicle",
+  },
+  baggage: {
+    homeTitle: "Baggage room",
+    intakeAction: "Stow bags",
+    releaseAction: "Return bags",
+    custodyHeading: "Bags stored",
+    custodyTileLabel: "Stored",
+    intakeVerb: "Stow new luggage",
+  },
+  cloakroom: {
+    homeTitle: "Cloakroom",
+    intakeAction: "Hang & tag",
+    releaseAction: "Return",
+    custodyHeading: "On the racks",
+    custodyTileLabel: "Hanging",
+    intakeVerb: "Hang new garment",
+  },
+  retail: {
+    homeTitle: "Retail hold",
+    intakeAction: "Hold bags",
+    releaseAction: "Hand back",
+    custodyHeading: "Holds in lockers",
+    custodyTileLabel: "Holding",
+    intakeVerb: "Hold new bags",
+  },
+  other: {
+    homeTitle: "Command Center",
+    intakeAction: "Check-in",
+    releaseAction: "Check-out",
+    custodyHeading: "In custody",
+    custodyTileLabel: "Custody",
+    intakeVerb: "Intake new asset",
+  },
+};
+
+export type AgingBand = "fresh" | "watch" | "overdue";
+
+export function classifyAge(
+  intakeAt: number,
+  bands: AgingBands,
+  now: number = Date.now(),
+): AgingBand {
+  const ageMin = (now - intakeAt) / 60_000;
+  if (ageMin >= bands.overdueAfterMin) return "overdue";
+  if (ageMin >= bands.watchAfterMin) return "watch";
+  return "fresh";
+}
+
+export function formatBandThreshold(min: number): string {
+  if (min < 60) return `${Math.round(min)}m`;
+  const hours = min / 60;
+  if (hours < 24) {
+    return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+  }
+  const days = hours / 24;
+  return Number.isInteger(days) ? `${days}d` : `${days.toFixed(1)}d`;
+}

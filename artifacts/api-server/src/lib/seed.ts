@@ -1,4 +1,4 @@
-import type { InsertAssetRow } from "@workspace/db";
+import type { InsertAssetRow, VenueType } from "@workspace/db";
 
 export const VENUE_DEFAULTS: Record<string, string> = {
   "VLT-001": "Hotel Meridian — Valet",
@@ -6,6 +6,18 @@ export const VENUE_DEFAULTS: Record<string, string> = {
   "CLK-003": "Théâtre Lumière Cloakroom",
   "RET-004": "Marche Verre Retail Hold",
   DEMO: "ClaimTagX Demo Venue",
+};
+
+// Default venue type for each demo venue so the handler app can re-skin its
+// tiles, intake flow, and aging bands the moment a new operator joins one of
+// these demos. Real (non-demo) venues default to "other" until the owner
+// picks a type from settings.
+export const VENUE_TYPE_DEFAULTS: Record<string, VenueType> = {
+  "VLT-001": "valet",
+  "BAG-002": "baggage",
+  "CLK-003": "cloakroom",
+  "RET-004": "retail",
+  DEMO: "other",
 };
 
 export const DEMO_INVITE_TOKENS: Record<string, string> = {

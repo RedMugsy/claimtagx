@@ -4,15 +4,42 @@ import {
   venueInvitationsTable,
   venueInvitesTable,
   venuesTable,
+  VENUE_TYPES,
+  type VenueType,
 } from "@workspace/db";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { ensureVenue } from "./assets";
-import { DEMO_INVITE_TOKENS, VENUE_DEFAULTS } from "./seed";
+import { DEMO_INVITE_TOKENS, VENUE_DEFAULTS, VENUE_TYPE_DEFAULTS } from "./seed";
 
 export interface MembershipRow {
   code: string;
   name: string;
   role: string;
+  venueType: VenueType;
+}
+
+function asVenueType(raw: string | null | undefined): VenueType {
+  return (VENUE_TYPES as readonly string[]).includes(raw ?? "")
+    ? (raw as VenueType)
+    : "other";
+}
+
+export async function updateVenueType(
+  venueCode: string,
+  venueType: VenueType,
+): Promise<{ ok: true; venueType: VenueType } | { ok: false; status: number; error: string }> {
+  if (!(VENUE_TYPES as readonly string[]).includes(venueType)) {
+    return { ok: false, status: 400, error: "Unknown venue type" };
+  }
+  const updated = await db
+    .update(venuesTable)
+    .set({ venueType })
+    .where(eq(venuesTable.id, venueCode))
+    .returning({ venueType: venuesTable.venueType });
+  if (updated.length === 0) {
+    return { ok: false, status: 404, error: "Venue not found" };
+  }
+  return { ok: true, venueType: asVenueType(updated[0].venueType) };
 }
 
 export const OWNER_ROLES = ["owner", "supervisor"] as const;
@@ -30,11 +57,17 @@ export async function listMemberships(
       code: handlerVenuesTable.venueCode,
       role: handlerVenuesTable.role,
       name: venuesTable.name,
+      venueType: venuesTable.venueType,
     })
     .from(handlerVenuesTable)
     .innerJoin(venuesTable, eq(venuesTable.id, handlerVenuesTable.venueCode))
     .where(eq(handlerVenuesTable.handlerUserId, userId));
-  return rows.map((r) => ({ code: r.code, name: r.name, role: r.role }));
+  return rows.map((r) => ({
+    code: r.code,
+    name: r.name,
+    role: r.role,
+    venueType: asVenueType(r.venueType),
+  }));
 }
 
 export async function isMember(
@@ -120,14 +153,19 @@ export async function redeemInvite(
   }
 
   const [venue] = await db
-    .select({ name: venuesTable.name })
+    .select({ name: venuesTable.name, venueType: venuesTable.venueType })
     .from(venuesTable)
     .where(eq(venuesTable.id, venueCode))
     .limit(1);
 
   return {
     ok: true,
-    venue: { code: venueCode, name: venue?.name ?? venueCode, role },
+    venue: {
+      code: venueCode,
+      name: venue?.name ?? venueCode,
+      role,
+      venueType: asVenueType(venue?.venueType),
+    },
   };
 }
 
@@ -137,6 +175,21 @@ export async function ensureDemoInvitesSeeded(): Promise<void> {
   if (demoInvitesSeeded) return;
   for (const [code, name] of Object.entries(VENUE_DEFAULTS)) {
     await ensureVenue(code, name);
+    // Backfill demo venue types for venues that already existed in the DB
+    // before the venue_type column was added. Without this an existing demo
+    // tenant would render as "other" until somebody manually re-set the type.
+    const desired = VENUE_TYPE_DEFAULTS[code];
+    if (desired) {
+      await db
+        .update(venuesTable)
+        .set({ venueType: desired })
+        .where(
+          and(
+            eq(venuesTable.id, code),
+            eq(venuesTable.venueType, "other"),
+          ),
+        );
+    }
   }
   const rows = Object.entries(DEMO_INVITE_TOKENS).map(([code, token]) => ({
     token,
@@ -203,6 +256,7 @@ export async function getMembership(
       code: handlerVenuesTable.venueCode,
       role: handlerVenuesTable.role,
       name: venuesTable.name,
+      venueType: venuesTable.venueType,
     })
     .from(handlerVenuesTable)
     .innerJoin(venuesTable, eq(venuesTable.id, handlerVenuesTable.venueCode))
@@ -213,7 +267,14 @@ export async function getMembership(
       ),
     )
     .limit(1);
-  return row ? { code: row.code, name: row.name, role: row.role } : null;
+  return row
+    ? {
+        code: row.code,
+        name: row.name,
+        role: row.role,
+        venueType: asVenueType(row.venueType),
+      }
+    : null;
 }
 
 export async function listPendingInvitationsForEmail(
@@ -422,7 +483,7 @@ export async function acceptInvitation(params: {
     })
     .where(eq(venueInvitationsTable.id, invite.id));
   const [venue] = await db
-    .select({ name: venuesTable.name })
+    .select({ name: venuesTable.name, venueType: venuesTable.venueType })
     .from(venuesTable)
     .where(eq(venuesTable.id, invite.venueCode))
     .limit(1);
@@ -432,6 +493,7 @@ export async function acceptInvitation(params: {
       code: invite.venueCode,
       name: venue?.name ?? invite.venueCode,
       role: invite.role || "handler",
+      venueType: asVenueType(venue?.venueType),
     },
   };
 }

@@ -4,7 +4,15 @@ import { Search, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/lib/store";
-import { MODE_BY_ID, MODE_ICONS } from "@/lib/modes";
+import {
+  MODE_BY_ID,
+  MODE_ICONS,
+  VENUE_AGING_BANDS,
+  VENUE_COPY,
+  classifyAge,
+  formatBandThreshold,
+  type AgingBand,
+} from "@/lib/modes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { QrTag } from "@/components/handler/QrTag";
 import { TamperAlerts } from "@/components/handler/TamperAlerts";
@@ -23,9 +31,15 @@ export default function Custody() {
   const { mode, assets, activeVenue } = useStore();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
+  // Aging bands and headings come from the venue's classification, not from
+  // a global "<1h vs ≥1h" rule — a valet stand cares about minutes, a hotel
+  // baggage room cares about hours.
+  const venueType = activeVenue?.venueType ?? "other";
+  const bands = VENUE_AGING_BANDS[venueType];
+  const copy = VENUE_COPY[venueType];
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<CustodyAsset | null>(null);
-  const [ageFilter, setAgeFilter] = useState<"all" | "recent" | "stale">("all");
+  const [ageFilter, setAgeFilter] = useState<"all" | AgingBand>("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [loading, setLoading] = useState(true);
 
@@ -39,10 +53,9 @@ export default function Custody() {
     let active = assets.filter((a) => a.mode === mode && a.status === "active");
     if (ageFilter !== "all") {
       const now = Date.now();
-      active = active.filter((a) => {
-        const ageMin = (now - a.intakeAt) / 60000;
-        return ageFilter === "recent" ? ageMin < 60 : ageMin >= 60;
-      });
+      active = active.filter(
+        (a) => classifyAge(a.intakeAt, bands, now) === ageFilter,
+      );
     }
     if (q.trim()) {
       const needle = q.toLowerCase();
@@ -56,17 +69,18 @@ export default function Custody() {
       sort === "newest" ? b.intakeAt - a.intakeAt : a.intakeAt - b.intakeAt
     );
     return active;
-  }, [assets, mode, q, ageFilter, sort]);
+  }, [assets, mode, q, ageFilter, sort, bands]);
 
   const allActive = useMemo(
     () => assets.filter((a) => a.mode === mode && a.status === "active"),
     [assets, mode]
   );
-  const recentCount = useMemo(
-    () => allActive.filter((a) => (Date.now() - a.intakeAt) / 60000 < 60).length,
-    [allActive]
-  );
-  const staleCount = allActive.length - recentCount;
+  const bandCounts = useMemo(() => {
+    const now = Date.now();
+    const c = { fresh: 0, watch: 0, overdue: 0 };
+    for (const a of allActive) c[classifyAge(a.intakeAt, bands, now)] += 1;
+    return c;
+  }, [allActive, bands]);
 
   return (
     <div>
@@ -78,7 +92,7 @@ export default function Custody() {
           <div>
             <div className="text-xs font-mono uppercase tracking-wider text-slate">Active custody</div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {cfg.label} on hand
+              {copy.custodyHeading}
             </h1>
           </div>
           <Badge variant="outline" className="ml-auto border-lime/30 text-lime font-mono">
@@ -105,18 +119,40 @@ export default function Custody() {
 
       <div className="flex flex-wrap items-center gap-2 mb-5">
         {([
-          { id: "all", label: "All", count: allActive.length },
-          { id: "recent", label: "< 1h", count: recentCount },
-          { id: "stale", label: "≥ 1h", count: staleCount },
+          { id: "all", label: "All", count: allActive.length, tone: "" },
+          {
+            id: "fresh",
+            label: `Fresh · <${formatBandThreshold(bands.watchAfterMin)}`,
+            count: bandCounts.fresh,
+            tone: "lime",
+          },
+          {
+            id: "watch",
+            label: `Watch · ${formatBandThreshold(bands.watchAfterMin)}+`,
+            count: bandCounts.watch,
+            tone: "amber",
+          },
+          {
+            id: "overdue",
+            label: `Overdue · ${formatBandThreshold(bands.overdueAfterMin)}+`,
+            count: bandCounts.overdue,
+            tone: "rose",
+          },
         ] as const).map((f) => {
           const active = ageFilter === f.id;
+          const activeTone =
+            f.tone === "amber"
+              ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
+              : f.tone === "rose"
+                ? "border-rose-400/40 bg-rose-500/15 text-rose-200"
+                : "border-lime/40 bg-lime/15 text-lime";
           return (
             <button
               key={f.id}
-              onClick={() => setAgeFilter(f.id)}
+              onClick={() => setAgeFilter(f.id as "all" | AgingBand)}
               className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono uppercase tracking-wider hover-elevate ${
                 active
-                  ? "border-lime/40 bg-lime/15 text-lime"
+                  ? activeTone
                   : "border-white/10 bg-steel/40 text-slate"
               }`}
               data-testid={`filter-age-${f.id}`}
@@ -178,20 +214,41 @@ export default function Custody() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {list.map((a, i) => (
+          {list.map((a, i) => {
+            const band = classifyAge(a.intakeAt, bands);
+            const cardBorder =
+              band === "overdue"
+                ? "border-rose-400/40 bg-rose-500/5"
+                : band === "watch"
+                  ? "border-amber-400/40 bg-amber-500/5"
+                  : "border-white/10 bg-steel/40";
+            const badgeCls =
+              band === "overdue"
+                ? "bg-rose-500/15 text-rose-200 border border-rose-400/30"
+                : band === "watch"
+                  ? "bg-amber-500/15 text-amber-200 border border-amber-400/30"
+                  : "bg-lime/10 text-lime border border-lime/20";
+            const badgeLabel =
+              band === "overdue"
+                ? "OVERDUE"
+                : band === "watch"
+                  ? "WATCH"
+                  : "FRESH";
+            return (
             <motion.button
               key={a.id}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: i * 0.02 }}
               onClick={() => setSelected(a)}
-              className="text-left rounded-2xl border border-white/10 bg-steel/40 p-4 hover-elevate"
+              className={`text-left rounded-2xl border p-4 hover-elevate ${cardBorder}`}
               data-testid={`card-asset-${a.ticketId}`}
+              data-band={band}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="font-mono text-sm text-lime tracking-wider">{a.ticketId}</div>
-                <Badge variant="secondary" className="font-mono text-[10px] bg-lime/10 text-lime border border-lime/20">
-                  ACTIVE
+                <Badge variant="secondary" className={`font-mono text-[10px] ${badgeCls}`}>
+                  {badgeLabel}
                 </Badge>
               </div>
               <div className="text-white font-semibold mb-1">{a.patron.name}</div>
@@ -209,7 +266,8 @@ export default function Custody() {
                 <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)} · {a.handler}
               </div>
             </motion.button>
-          ))}
+            );
+          })}
         </div>
       )}
 

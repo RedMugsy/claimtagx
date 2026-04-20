@@ -35,8 +35,7 @@ function extractScannedTag(raw: string): ScannedTag {
 type Stage = "scan" | "confirm" | "released" | "missing" | "tampered";
 
 export default function Release() {
-  const { findByTicket, release, mode } = useStore();
-  const modeCfg = MODE_BY_ID[mode];
+  const { findByTicket, release } = useStore();
   const [stage, setStage] = useState<Stage>("scan");
   const [code, setCode] = useState("");
   const [scannedSignature, setScannedSignature] = useState<string | undefined>(undefined);
@@ -48,21 +47,18 @@ export default function Release() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
 
-  const [missingReason, setMissingReason] = useState<"unknown" | "wrong-mode">("unknown");
-
   const lookup = useCallback(
     async (ticket: string) => {
       const a = await findByTicket(ticket.trim());
-      if (a && a.status === "active" && a.mode === mode) {
+      if (a && a.status === "active") {
         setMatch(a);
         setStage("confirm");
         return true;
       }
-      setMissingReason(a && a.status === "active" && a.mode !== mode ? "wrong-mode" : "unknown");
       setStage("missing");
       return false;
     },
-    [findByTicket, mode]
+    [findByTicket]
   );
 
   useEffect(() => {
@@ -321,19 +317,9 @@ export default function Release() {
             <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-extrabold text-white mb-1">
-              {missingReason === "wrong-mode" ? "Tag belongs to a different mode" : "No active tag found"}
-            </h2>
+            <h2 className="text-2xl font-extrabold text-white mb-1">No active tag found</h2>
             <p className="text-slate mb-6">
-              {missingReason === "wrong-mode" ? (
-                <>
-                  <span className="font-mono">{code || "—"}</span> isn't a {modeCfg.label.toLowerCase()} tag. Switch modes from the top bar to release it.
-                </>
-              ) : (
-                <>
-                  <span className="font-mono">{code || "—"}</span> isn't in active custody. Check the code and try again.
-                </>
-              )}
+              <span className="font-mono">{code || "—"}</span> isn't in active custody. Check the code and try again.
             </p>
             <Button onClick={reset} className="bg-lime text-obsidian hover:bg-lime-hover font-bold rounded-xl" data-testid="button-try-again">
               Try again

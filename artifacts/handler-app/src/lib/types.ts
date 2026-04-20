@@ -1,5 +1,17 @@
 export type AssetModeId = "vehicles" | "baggage" | "cloakrooms" | "bags";
 
+// Venue type drives the handler app's defaults — intake fields, aging
+// thresholds, and tile copy all key off this. "other" is the fallback when
+// an owner hasn't picked a type yet.
+export type VenueType = "valet" | "baggage" | "cloakroom" | "retail" | "other";
+export const VENUE_TYPES: VenueType[] = [
+  "valet",
+  "baggage",
+  "cloakroom",
+  "retail",
+  "other",
+];
+
 export type FieldType = "text" | "number" | "select" | "textarea" | "checkbox";
 
 export interface FieldDef {
@@ -48,6 +60,7 @@ export interface VenueMembership {
   code: string;
   name: string;
   role?: string;
+  venueType?: VenueType;
 }
 
 export interface AvailableVenue {

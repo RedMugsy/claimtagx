@@ -25,7 +25,7 @@ import type {
   HandlerSession,
   VenueMembership,
 } from "./types";
-import { MODES } from "./modes";
+import { VENUE_TYPE_TO_MODE } from "./modes";
 import {
   fetchMe,
   joinVenue as apiJoinVenue,
@@ -34,7 +34,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 
 const ACTIVE_VENUE_KEY = "ctx_active_venue";
-const MODE_KEY = "ctx_handler_mode";
 
 function toLocal(a: ApiCustodyAsset): CustodyAsset {
   return {
@@ -64,8 +63,11 @@ interface StoreCtx {
   leaveVenue: (code: string) => Promise<VenueMembership[]>;
   refreshMe: () => Promise<void>;
   signOut: () => Promise<void>;
+  // Asset mode is derived from the active venue's `venueType`. The owner
+  // picks the venue type once in settings and the handler app re-skins
+  // intake fields, ticket columns, tile copy, and aging bands automatically
+  // — so handlers never see a manual asset-mode toggle.
   mode: AssetModeId;
-  setMode: (m: AssetModeId) => void;
   assets: CustodyAsset[];
   loading: boolean;
   intake: (
@@ -95,20 +97,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const clerk = useClerk();
   const queryClient = useQueryClient();
 
-  const [mode, setModeState] = useState<AssetModeId>(() => {
-    try {
-      const raw = localStorage.getItem(MODE_KEY);
-      if (raw && MODES.some((m) => m.id === raw)) return raw as AssetModeId;
-    } catch {}
-    return "vehicles";
-  });
   const [activeVenueCode, setActiveVenueCodeState] = useState<string | null>(
     () => readStoredVenue(),
   );
-
-  useEffect(() => {
-    localStorage.setItem(MODE_KEY, mode);
-  }, [mode]);
 
   useEffect(() => {
     try {
@@ -155,6 +146,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const activeVenue = useMemo<VenueMembership | null>(
     () => venues.find((v) => v.code === activeVenueCode) ?? null,
     [venues, activeVenueCode],
+  );
+
+  // Drive the asset mode straight from the venue's classification. Default
+  // to "other" → vehicles when an owner hasn't picked a type yet, so the
+  // app stays usable instead of going blank on a fresh tenant.
+  const mode: AssetModeId = useMemo(
+    () => VENUE_TYPE_TO_MODE[activeVenue?.venueType ?? "other"],
+    [activeVenue?.venueType],
   );
 
   const session = useMemo<HandlerSession | null>(() => {
@@ -412,7 +411,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refreshMe,
       signOut: signOutFn,
       mode,
-      setMode: (m) => setModeState(m),
       assets,
       loading: assetsLoading,
       intake,

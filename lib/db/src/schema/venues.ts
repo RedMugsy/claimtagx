@@ -5,6 +5,13 @@ import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 export const venuesTable = pgTable("venues", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  // What kind of venue this is — drives the handler app's defaults
+  // (intake fields, aging thresholds, tile copy). One of:
+  //   valet | baggage | cloakroom | retail | other
+  // Stored on the venue (not the handler) so a handler who works at both a
+  // valet stand and a coat check sees the right UI as soon as they switch
+  // venues, without re-picking a "mode" each time.
+  venueType: text("venue_type").notNull().default("other"),
   // Per-venue secret used to HMAC-sign claim-tag QR codes. Storing it on the
   // venue (instead of using one global server secret) means a leaked or
   // suspected-leaked key only invalidates that one venue's outstanding tags
@@ -20,3 +27,6 @@ export const venuesTable = pgTable("venues", {
 
 export type Venue = typeof venuesTable.$inferSelect;
 export type InsertVenue = typeof venuesTable.$inferInsert;
+
+export const VENUE_TYPES = ["valet", "baggage", "cloakroom", "retail", "other"] as const;
+export type VenueType = (typeof VENUE_TYPES)[number];

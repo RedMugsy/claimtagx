@@ -32,7 +32,7 @@ import {
   type Shift,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
-import { MODES, MODE_ICONS } from "@/lib/modes";
+import { MODES, MODE_ICONS, VENUE_COPY } from "@/lib/modes";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
@@ -87,7 +87,9 @@ const toneClasses: Record<Tile["tone"], string> = {
 };
 
 export default function Home() {
-  const { session, assets, activeVenue } = useStore();
+  const { session, assets, activeVenue, mode } = useStore();
+  const venueType = activeVenue?.venueType ?? "other";
+  const copy = VENUE_COPY[venueType];
   const queryClient = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
 
@@ -197,19 +199,19 @@ export default function Home() {
   const primaryTiles: Tile[] = [
     {
       to: "/intake",
-      label: "Check-in",
+      label: copy.intakeAction,
       Icon: PackagePlus,
       tone: "lime",
     },
     {
       to: "/release",
-      label: "Check-out",
+      label: copy.releaseAction,
       Icon: ScanLine,
       tone: "rose",
     },
     {
       to: "/custody",
-      label: "In custody",
+      label: copy.custodyHeading,
       Icon: ClipboardList,
       tone: "indigo",
       badge: counts.active > 0 ? String(counts.active) : undefined,
@@ -261,7 +263,7 @@ export default function Home() {
       <div className="flex items-center justify-between">
         <div className="leading-tight">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
-            Command Center
+            {copy.homeTitle}
           </div>
           <div className="text-sm font-semibold text-white truncate max-w-[14rem]">
             {venueName}
@@ -428,23 +430,31 @@ export default function Home() {
         )}
       </motion.div>
 
-      {/* Mode counter strip */}
+      {/* Mode counter strip — highlight the venue's own mode tile so the
+          count for "this kind of asset" is the most prominent number on
+          the screen. The other tiles stay visible for handlers covering
+          mixed venues, but they're dimmed. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {counts.byMode.map((row, i) => {
           const Icon = MODE_ICONS[row.mode.id];
+          const isVenueMode = row.mode.id === mode;
           return (
             <motion.div
               key={row.mode.id}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: i * 0.03 }}
-              className="rounded-2xl border border-white/10 bg-steel/40 p-3"
+              className={`rounded-2xl border p-3 ${
+                isVenueMode
+                  ? "border-lime/40 bg-lime/10"
+                  : "border-white/10 bg-steel/40 opacity-70"
+              }`}
               data-testid={`tile-count-${row.mode.id}`}
             >
               <div className="flex items-center justify-between mb-1">
-                <Icon className="w-4 h-4 text-lime" />
+                <Icon className={`w-4 h-4 ${isVenueMode ? "text-lime" : "text-slate"}`} />
                 <span className="text-[10px] font-mono uppercase tracking-wider text-slate">
-                  {row.mode.short}
+                  {isVenueMode ? copy.custodyTileLabel : row.mode.short}
                 </span>
               </div>
               <div className="text-2xl font-extrabold text-white leading-tight">
@@ -492,11 +502,11 @@ export default function Home() {
         <div className="text-xs text-slate leading-snug">
           Tip — tap{" "}
           <Link href="/intake" className="text-paper font-semibold underline">
-            Check-in
+            {copy.intakeAction}
           </Link>{" "}
           to log a new asset, or{" "}
           <Link href="/release" className="text-paper font-semibold underline">
-            Check-out
+            {copy.releaseAction}
           </Link>{" "}
           to scan a tag and return one.
         </div>

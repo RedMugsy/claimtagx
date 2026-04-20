@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, Shield, Trash2, UserPlus } from "lucide-react";
+import { Mail, Shield, Trash2, UserPlus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,11 @@ import {
   fetchVenueMembers,
   revokeVenueInvitation,
   revokeVenueMember,
+  updateVenueSettings,
 } from "@/lib/api";
-import type { VenueMembership } from "@/lib/types";
+import { useStore } from "@/lib/store";
+import { VENUE_TYPE_BLURB, VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
+import { VENUE_TYPES, type VenueMembership, type VenueType } from "@/lib/types";
 
 type Role = "handler" | "supervisor" | "owner";
 
@@ -21,9 +24,21 @@ interface Props {
 
 export function VenueAdminPanel({ venue }: Props) {
   const qc = useQueryClient();
+  const { refreshMe } = useStore();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("handler");
   const [error, setError] = useState<string | null>(null);
+  // Track the venue type locally so the picker reflects in-flight updates
+  // immediately, without waiting for /api/me to refetch and reseat the
+  // membership list. We resync when the prop changes (e.g. another owner
+  // changed it from a different device).
+  const [venueType, setVenueType] = useState<VenueType>(
+    venue.venueType ?? "other",
+  );
+  useEffect(() => {
+    setVenueType(venue.venueType ?? "other");
+  }, [venue.venueType]);
+  const [typeError, setTypeError] = useState<string | null>(null);
 
   const invitationsKey = ["venue-invitations", venue.code];
   const membersKey = ["venue-members", venue.code];
@@ -58,6 +73,27 @@ export function VenueAdminPanel({ venue }: Props) {
     onSuccess: () => qc.invalidateQueries({ queryKey: membersKey }),
   });
 
+  const venueTypeMut = useMutation({
+    mutationFn: (next: VenueType) =>
+      updateVenueSettings(venue.code, { venueType: next }),
+    onMutate: (next) => {
+      setTypeError(null);
+      const previous = venueType;
+      setVenueType(next);
+      return { previous };
+    },
+    onError: (err, _next, ctx) => {
+      if (ctx?.previous) setVenueType(ctx.previous);
+      setTypeError(err instanceof Error ? err.message : "Could not update venue type");
+    },
+    onSuccess: async (data) => {
+      setVenueType(data.venueType);
+      // Refetch /api/me so the rest of the app — Shell badge, Home tiles,
+      // Custody bands — re-skins to match the new venue type.
+      await refreshMe();
+    },
+  });
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -76,6 +112,65 @@ export function VenueAdminPanel({ venue }: Props) {
         <span className="text-[10px] font-mono uppercase tracking-wider text-lime">
           {venue.role}
         </span>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-white/10 bg-obsidian/40 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <Label className="text-xs font-mono uppercase tracking-wide text-slate flex items-center gap-2">
+            <Tag className="w-3 h-3" /> Venue type
+          </Label>
+          {venueTypeMut.isPending && (
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate">
+              Saving…
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate mb-3">
+          Pick what this venue handles. Tiles, intake fields, and the
+          fresh/watch/overdue thresholds all adjust to match — no per-handler
+          setup needed.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {VENUE_TYPES.map((t) => {
+            const active = t === venueType;
+            const Icon = VENUE_TYPE_ICON[t];
+            return (
+              <button
+                key={t}
+                type="button"
+                disabled={venueTypeMut.isPending && !active}
+                onClick={() => {
+                  if (t === venueType) return;
+                  venueTypeMut.mutate(t);
+                }}
+                className={`text-left rounded-xl border p-3 hover-elevate transition-colors ${
+                  active
+                    ? "border-lime/40 bg-lime/10"
+                    : "border-white/10 bg-steel/40"
+                }`}
+                data-testid={`button-venue-type-${t}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className={`w-4 h-4 ${active ? "text-lime" : "text-slate"}`} />
+                  <span className="font-bold text-white text-sm">
+                    {VENUE_TYPE_LABEL[t]}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate leading-snug">
+                  {VENUE_TYPE_BLURB[t]}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {typeError && (
+          <div
+            className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+            data-testid={`venue-type-error-${venue.code}`}
+          >
+            {typeError}
+          </div>
+        )}
       </div>
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-end mb-4">

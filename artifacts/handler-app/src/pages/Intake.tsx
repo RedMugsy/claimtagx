@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, CheckCircle2, RotateCcw, ClipboardCheck } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { MODE_BY_ID, MODE_ICONS } from "@/lib/modes";
+import { MODE_BY_ID, MODE_ICONS, VENUE_COPY } from "@/lib/modes";
 import { CameraCapture } from "@/components/handler/CameraCapture";
 import { ModeField } from "@/components/handler/Field";
 import { QrTag } from "@/components/handler/QrTag";
@@ -14,9 +14,10 @@ import type { CustodyAsset } from "@/lib/types";
 type Step = "details" | "review" | "done";
 
 export default function Intake() {
-  const { mode, intake } = useStore();
+  const { mode, intake, activeVenue } = useStore();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
+  const copy = VENUE_COPY[activeVenue?.venueType ?? "other"];
 
   const [step, setStep] = useState<Step>("details");
   const [patron, setPatron] = useState({ name: "", phone: "" });
@@ -68,7 +69,7 @@ export default function Intake() {
           <div>
             <div className="text-xs font-mono uppercase tracking-wider text-slate">{cfg.short}</div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Intake new {cfg.label.toLowerCase()}
+              {copy.intakeVerb}
             </h1>
           </div>
         </div>

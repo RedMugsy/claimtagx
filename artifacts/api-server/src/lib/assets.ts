@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { db, assetsTable, venuesTable, handlersTable, eventsTable } from "@workspace/db";
 import type { AssetRow, EventRow } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
-import { buildSeedAssets, VENUE_DEFAULTS } from "./seed";
+import { buildSeedAssets, VENUE_DEFAULTS, VENUE_TYPE_DEFAULTS } from "./seed";
 import { signTicket } from "./signing";
 
 const DEMO_VENUE_CODES = new Set(Object.keys(VENUE_DEFAULTS));
@@ -81,9 +81,18 @@ function newSigningSecret(): string {
 
 export async function ensureVenue(code: string, name?: string): Promise<void> {
   const displayName = name ?? VENUE_DEFAULTS[code] ?? code;
+  // Demo venues come with a known type so the handler app shows the right
+  // tiles immediately. Unknown venues fall back to the schema default ("other")
+  // and the owner picks a type from settings.
+  const venueType = VENUE_TYPE_DEFAULTS[code];
   await db
     .insert(venuesTable)
-    .values({ id: code, name: displayName, signingSecret: newSigningSecret() })
+    .values({
+      id: code,
+      name: displayName,
+      signingSecret: newSigningSecret(),
+      ...(venueType ? { venueType } : {}),
+    })
     .onConflictDoNothing({ target: venuesTable.id });
 }
 

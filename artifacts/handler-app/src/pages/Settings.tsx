@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
-import { MODES, MODE_ICONS } from "@/lib/modes";
 import { fetchAvailableVenues } from "@/lib/api";
 import type { AvailableVenue } from "@/lib/types";
 import { InvitationsInbox } from "@/components/handler/InvitationsInbox";
@@ -24,8 +23,6 @@ const OWNER_ROLES = new Set(["owner", "supervisor"]);
 export default function Settings() {
   const {
     session,
-    mode,
-    setMode,
     signOut,
     venues,
     activeVenue,
@@ -241,33 +238,6 @@ export default function Settings() {
           <VenueAdminPanel key={v.code} venue={v} />
         ))}
 
-        <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
-          <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4">Asset mode</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {MODES.map((m) => {
-              const Icon = MODE_ICONS[m.id];
-              const active = m.id === mode;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setMode(m.id)}
-                  className={`text-left rounded-2xl border p-4 hover-elevate transition-colors ${
-                    active
-                      ? "border-lime/40 bg-lime/10"
-                      : "border-white/10 bg-obsidian/40"
-                  }`}
-                  data-testid={`button-mode-${m.id}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon className={`w-5 h-5 ${active ? "text-lime" : "text-slate"}`} />
-                    <span className="font-bold text-white">{m.label}</span>
-                  </div>
-                  <div className="text-xs text-slate">{m.blurb}</div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
 
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
           <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4 flex items-center gap-2">
