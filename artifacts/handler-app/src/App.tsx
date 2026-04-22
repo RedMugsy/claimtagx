@@ -25,9 +25,7 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
-}
+const hasClerkConfig = Boolean(clerkPubKey);
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
@@ -94,6 +92,32 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full bg-obsidian text-paper font-sans bg-gradient-mesh flex items-center justify-center px-4 py-12">
       <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
       <div className="relative w-full max-w-md">{children}</div>
+    </div>
+  );
+}
+
+function MissingConfigScreen() {
+  return (
+    <div className="min-h-screen w-full bg-obsidian text-paper font-sans flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-2xl rounded-2xl border border-red-400/30 bg-steel/40 p-6 md:p-8 shadow-2xl">
+        <h1 className="text-xl md:text-2xl font-bold text-red-300 mb-3">
+          Handler app configuration missing
+        </h1>
+        <p className="text-slate leading-relaxed mb-4">
+          This deployment is missing <code>VITE_CLERK_PUBLISHABLE_KEY</code>,
+          so sign-in cannot be initialized.
+        </p>
+        <ol className="list-decimal pl-5 space-y-2 text-slate text-sm md:text-base">
+          <li>
+            Open Cloudflare Pages project settings for this site.
+          </li>
+          <li>
+            Add environment variable <code>VITE_CLERK_PUBLISHABLE_KEY</code>
+            for Production (and Preview if needed).
+          </li>
+          <li>Redeploy the latest commit.</li>
+        </ol>
+      </div>
     </div>
   );
 }
@@ -250,6 +274,10 @@ function ClerkProviderWithRoutes() {
 }
 
 function App() {
+  if (!hasClerkConfig) {
+    return <MissingConfigScreen />;
+  }
+
   return (
     <TooltipProvider>
       <WouterRouter base={basePath}>
