@@ -12,6 +12,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ReactNode } from "react";
 
+type StreamStatus = "idle" | "connecting" | "connected" | "disconnected";
+
+function StreamStatusDot({ status }: { status: StreamStatus }) {
+  const meta: Record<StreamStatus, { label: string; dot: string; ring: string; pulse: boolean }> = {
+    connected: { label: "Live", dot: "bg-lime", ring: "bg-lime/40", pulse: true },
+    connecting: { label: "Reconnecting…", dot: "bg-amber-400", ring: "bg-amber-400/40", pulse: true },
+    disconnected: { label: "Reconnecting…", dot: "bg-amber-400", ring: "bg-amber-400/40", pulse: true },
+    idle: { label: "Paused", dot: "bg-slate", ring: "bg-slate/30", pulse: false },
+  };
+  const { label, dot, ring, pulse } = meta[status];
+  return (
+    <span
+      className="relative inline-flex items-center justify-center w-6 h-6 shrink-0"
+      title={label}
+      aria-label={`Live updates: ${label}`}
+      data-testid="indicator-stream-status"
+      data-status={status}
+    >
+      {pulse && (
+        <span className={`absolute inline-flex h-3 w-3 rounded-full opacity-60 animate-ping ${ring}`} />
+      )}
+      <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dot}`} />
+    </span>
+  );
+}
+
 const tabs = [
   { path: "/", label: "Home", icon: LayoutGrid, exact: true },
   { path: "/custody", label: "Custody", icon: ClipboardList },
@@ -43,6 +69,8 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="font-extrabold text-lg tracking-tight text-lime">TagX</span>
             <span className="ml-2 text-xs font-mono uppercase tracking-wider text-slate">handler</span>
           </Link>
+
+          <StreamStatusDot status={streamStatus} />
 
           <div
             className="flex items-center gap-2 rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 text-sm"
