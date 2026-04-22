@@ -722,6 +722,12 @@ export const ListIntercomTransmissionsQueryParams = zod.object({
     .number()
     .optional()
     .describe("Epoch ms; only return transmissions newer than this."),
+  excludeSelf: zod.coerce
+    .boolean()
+    .optional()
+    .describe(
+      "When true, omit transmissions authored by the calling handler so they don't hear themselves echoed back.",
+    ),
 });
 
 export const ListIntercomTransmissionsResponseItem = zod.object({

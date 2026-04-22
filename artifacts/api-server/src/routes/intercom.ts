@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, ne, sql } from "drizzle-orm";
 import {
   db,
   intercomPresenceTable,
@@ -184,6 +184,12 @@ router.get(
       const since = Number.isFinite(sinceRaw) && sinceRaw > 0
         ? new Date(sinceRaw)
         : new Date(Date.now() - TRANSMISSION_RETENTION_MS);
+      // Server-side self-filter. We match on Clerk user id (req.userId)
+      // rather than display name so two handlers with the same first name
+      // don't accidentally mute each other.
+      const excludeSelfRaw = String(req.query.excludeSelf ?? "").toLowerCase();
+      const excludeSelf =
+        excludeSelfRaw === "true" || excludeSelfRaw === "1";
 
       // Prune anything beyond the retention window.
       await db
@@ -195,15 +201,19 @@ router.get(
           ),
         );
 
+      const conditions = [
+        eq(intercomTransmissionsTable.venueCode, venueCode),
+        gt(intercomTransmissionsTable.createdAt, since),
+      ];
+      if (excludeSelf && req.userId) {
+        conditions.push(
+          ne(intercomTransmissionsTable.senderUserId, req.userId),
+        );
+      }
       const rows = await db
         .select()
         .from(intercomTransmissionsTable)
-        .where(
-          and(
-            eq(intercomTransmissionsTable.venueCode, venueCode),
-            gt(intercomTransmissionsTable.createdAt, since),
-          ),
-        )
+        .where(and(...conditions))
         .orderBy(desc(intercomTransmissionsTable.createdAt))
         .limit(50);
       rows.reverse();

@@ -56,7 +56,7 @@ function pickSupportedMime(): string {
 }
 
 export default function IntercomPage() {
-  const { activeVenue, session } = useStore();
+  const { activeVenue } = useStore();
   const venueCode = activeVenue?.code ?? "";
   const queryClient = useQueryClient();
   const [joined, setJoined] = useState(false);
@@ -76,10 +76,17 @@ export default function IntercomPage() {
     refetchInterval: 8_000,
   });
 
+  // Keep the query key venue-scoped (excludeSelf only) so the cache key
+  // stays stable as `since` advances; `since` is passed at fetch time.
   const transmissions = useQuery({
-    queryKey: getListIntercomTransmissionsQueryKey(venueCode),
+    queryKey: getListIntercomTransmissionsQueryKey(venueCode, {
+      excludeSelf: true,
+    }),
     queryFn: () =>
-      listIntercomTransmissions(venueCode, { since: lastSeenRef.current }),
+      listIntercomTransmissions(venueCode, {
+        since: lastSeenRef.current,
+        excludeSelf: true,
+      }),
     enabled: Boolean(venueCode) && joined,
     refetchInterval: 3_000,
   });
@@ -130,8 +137,9 @@ export default function IntercomPage() {
     };
   }, [venueCode, queryClient]);
 
-  // Auto-play new transmissions. Skip ones authored by this handler so they
-  // don't hear themselves echoed back.
+  // Auto-play new transmissions. The server already filters out our own
+  // transmissions (excludeSelf=true) by Clerk user id, so this loop just
+  // plays whatever it gets without any name-based heuristic.
   useEffect(() => {
     const list = transmissions.data ?? [];
     if (list.length === 0) return;
@@ -140,9 +148,6 @@ export default function IntercomPage() {
       if (tx.createdAt > lastTs) lastTs = tx.createdAt;
       if (playedIdsRef.current.has(tx.id)) continue;
       playedIdsRef.current.add(tx.id);
-      // Heuristic: skip our own. The server tags by Clerk user id and we
-      // don't have that on the client, so fall back to display-name match.
-      if (tx.senderName === (session?.handlerName ?? "")) continue;
       try {
         const audio = new Audio(`data:${tx.mimeType};base64,${tx.audioBase64}`);
         audio.play().catch(() => {
@@ -153,7 +158,7 @@ export default function IntercomPage() {
       }
     }
     lastSeenRef.current = lastTs;
-  }, [transmissions.data, session?.handlerName]);
+  }, [transmissions.data]);
 
   const transmitMut = useMutation({
     mutationFn: ({
@@ -172,7 +177,9 @@ export default function IntercomPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: getListIntercomTransmissionsQueryKey(venueCode),
+        queryKey: getListIntercomTransmissionsQueryKey(venueCode, {
+          excludeSelf: true,
+        }),
       });
     },
     onError: (e: Error) =>

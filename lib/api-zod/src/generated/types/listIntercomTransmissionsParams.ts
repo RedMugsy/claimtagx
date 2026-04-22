@@ -11,4 +11,8 @@ export type ListIntercomTransmissionsParams = {
    * Epoch ms; only return transmissions newer than this.
    */
   since?: number;
+  /**
+   * When true, omit transmissions authored by the calling handler so they don't hear themselves echoed back.
+   */
+  excludeSelf?: boolean;
 };

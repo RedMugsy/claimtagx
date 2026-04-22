@@ -640,6 +640,11 @@ paths:
           required: false
           description: Epoch ms; only return transmissions newer than this.
           schema: { type: integer }
+        - in: query
+          name: excludeSelf
+          required: false
+          description: When true, omit transmissions authored by the calling handler so they don't hear themselves echoed back.
+          schema: { type: boolean }
       responses:
         "200":
           description: Transmissions
