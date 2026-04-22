@@ -28,6 +28,7 @@ import {
 import { useStore } from "@/lib/store";
 import { VENUE_TYPE_BLURB, VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
 import { VENUE_TYPES, type VenueMembership, type VenueType } from "@/lib/types";
+import { WeeklyShiftReport } from "./WeeklyShiftReport";
 
 type Role = "handler" | "supervisor" | "owner";
 
@@ -163,6 +164,8 @@ export function VenueAdminPanel({ venue }: Props) {
           {venue.role}
         </span>
       </div>
+
+      <WeeklyShiftReport venueCode={venue.code} />
 
       <div className="mb-5 rounded-2xl border border-white/10 bg-obsidian/40 p-4">
         <div className="flex items-center justify-between mb-3">

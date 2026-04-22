@@ -151,3 +151,30 @@ export const rotateVenueSigningSecret = (code: string): Promise<null> =>
     `/api/venues/${encodeURIComponent(code)}/signing-secret/rotate`,
     { method: "POST" },
   );
+
+// Owner-only: per-handler weekly hours for the current week,
+// computed from the existing shifts table on the server. Handlers in
+// overtime are flagged so the UI can highlight them.
+export interface VenueShiftReportEntry {
+  handlerUserId: string;
+  handlerName: string;
+  handlerEmail: string;
+  role: string;
+  minutes: number;
+  overtime: boolean;
+  overtimeMinutes: number;
+  activeShiftId: string | null;
+}
+export interface VenueShiftReport {
+  venueCode: string;
+  weekStart: number;
+  weekEnd: number;
+  overtimeThresholdMinutes: number;
+  handlers: VenueShiftReportEntry[];
+}
+export const fetchVenueShiftReport = (
+  code: string,
+): Promise<VenueShiftReport> =>
+  jsonFetch<VenueShiftReport>(
+    `/api/venues/${encodeURIComponent(code)}/shifts/report`,
+  );

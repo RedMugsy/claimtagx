@@ -1,10 +1,30 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, or } from "drizzle-orm";
 import { db, shiftsTable, type Shift } from "@workspace/db";
-import { requireAuth, requireVenueMembership } from "../middlewares/requireAuth";
+import {
+  requireAuth,
+  requireVenueMembership,
+  requireVenueRole,
+} from "../middlewares/requireAuth";
 import { ensureVenue } from "../lib/assets";
 import { getMembership } from "../lib/memberships";
+
+// Owners are typically interested in a Mon–Sun calendar week. We compute it
+// in UTC so the boundary is deterministic regardless of where the API server
+// happens to be running.
+const OVERTIME_MINUTES = 40 * 60;
+
+function startOfIsoWeekUtc(now: Date): Date {
+  const d = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  // getUTCDay: 0 = Sunday, 1 = Monday, ... 6 = Saturday. We want Monday.
+  const dow = d.getUTCDay();
+  const back = dow === 0 ? 6 : dow - 1;
+  d.setUTCDate(d.getUTCDate() - back);
+  return d;
+}
 
 const router: IRouter = Router();
 
@@ -145,6 +165,99 @@ router.get(
         )
         .orderBy(desc(shiftsTable.startedAt));
       res.json(rows.map(serialize));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Per-handler weekly hours for a venue. Reads straight from the existing
+// `shifts` table — no new entities. Shifts that span the week boundary are
+// clipped to the week range; shifts still in progress count up to "now".
+router.get(
+  "/venues/:venueCode/shifts/report",
+  requireAuth,
+  requireVenueRole(["owner"]),
+  async (req, res, next) => {
+    try {
+      const venueCode = String(req.params.venueCode).toUpperCase();
+      const now = new Date();
+      const weekStart = startOfIsoWeekUtc(now);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+      // Any shift that overlaps [weekStart, weekEnd) qualifies. That means
+      // startedAt < weekEnd AND (endedAt IS NULL OR endedAt >= weekStart).
+      const rows = await db
+        .select()
+        .from(shiftsTable)
+        .where(
+          and(
+            eq(shiftsTable.venueCode, venueCode),
+            lt(shiftsTable.startedAt, weekEnd),
+            or(
+              isNull(shiftsTable.endedAt),
+              gte(shiftsTable.endedAt, weekStart),
+            ),
+          ),
+        );
+
+      type Bucket = {
+        handlerUserId: string;
+        handlerName: string;
+        handlerEmail: string;
+        role: string;
+        minutes: number;
+        activeShiftId: string | null;
+      };
+      const buckets = new Map<string, Bucket>();
+      const weekStartMs = weekStart.getTime();
+      const weekEndMs = weekEnd.getTime();
+      const nowMs = now.getTime();
+
+      for (const row of rows) {
+        const startMs = Math.max(row.startedAt.getTime(), weekStartMs);
+        const endMs = Math.min(
+          row.endedAt ? row.endedAt.getTime() : nowMs,
+          weekEndMs,
+        );
+        const minutes = Math.max(0, Math.round((endMs - startMs) / 60000));
+        const existing = buckets.get(row.handlerUserId);
+        if (existing) {
+          existing.minutes += minutes;
+          // Refresh display fields with the most recent shift's values so
+          // renames/role changes show up.
+          existing.handlerName = row.handlerName;
+          existing.handlerEmail = row.handlerEmail;
+          existing.role = row.role;
+          if (!row.endedAt) existing.activeShiftId = row.id;
+        } else {
+          buckets.set(row.handlerUserId, {
+            handlerUserId: row.handlerUserId,
+            handlerName: row.handlerName,
+            handlerEmail: row.handlerEmail,
+            role: row.role,
+            minutes,
+            activeShiftId: row.endedAt ? null : row.id,
+          });
+        }
+      }
+
+      const handlers = [...buckets.values()]
+        .map((b) => ({
+          ...b,
+          overtime: b.minutes > OVERTIME_MINUTES,
+          overtimeMinutes: Math.max(0, b.minutes - OVERTIME_MINUTES),
+        }))
+        .sort((a, b) => b.minutes - a.minutes);
+
+      res.json({
+        venueCode,
+        weekStart: weekStart.getTime(),
+        weekEnd: weekEnd.getTime(),
+        overtimeThresholdMinutes: OVERTIME_MINUTES,
+        handlers,
+      });
     } catch (err) {
       next(err);
     }
