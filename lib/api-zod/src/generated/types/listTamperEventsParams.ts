@@ -5,10 +5,31 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ListTamperEventsSource } from "./listTamperEventsSource";
 
 export type ListTamperEventsParams = {
   /**
    * Maximum number of events to return (default 50, max 200).
    */
   limit?: number;
+  /**
+   * Lower bound (epoch ms) on attempt time.
+   */
+  from?: number;
+  /**
+   * Upper bound (epoch ms) on attempt time.
+   */
+  to?: number;
+  /**
+   * Filter by ticket id (case-insensitive substring match).
+   */
+  ticketId?: string;
+  /**
+   * Filter by where the request originated.
+   */
+  source?: ListTamperEventsSource;
+  /**
+   * When false, only unreviewed attempts are returned. When true, only reviewed attempts. Omit to return both.
+   */
+  acknowledged?: boolean;
 };

@@ -133,6 +133,11 @@ export interface TamperEvent {
   reason: string;
   /** Epoch milliseconds when the attempt was logged. */
   at: number;
+  /**
+   * Epoch milliseconds when an owner marked the attempt as reviewed, or null if still unread.
+   * @nullable
+   */
+  acknowledgedAt?: number | null;
 }
 
 export type CreateAssetRequestFields = { [key: string]: AssetFieldValue };
@@ -296,7 +301,35 @@ export type ListTamperEventsParams = {
    * Maximum number of events to return (default 50, max 200).
    */
   limit?: number;
+  /**
+   * Lower bound (epoch ms) on attempt time.
+   */
+  from?: number;
+  /**
+   * Upper bound (epoch ms) on attempt time.
+   */
+  to?: number;
+  /**
+   * Filter by ticket id (case-insensitive substring match).
+   */
+  ticketId?: string;
+  /**
+   * Filter by where the request originated.
+   */
+  source?: ListTamperEventsSource;
+  /**
+   * When false, only unreviewed attempts are returned. When true, only reviewed attempts. Omit to return both.
+   */
+  acknowledged?: boolean;
 };
+
+export type ListTamperEventsSource =
+  (typeof ListTamperEventsSource)[keyof typeof ListTamperEventsSource];
+
+export const ListTamperEventsSource = {
+  scan: "scan",
+  manual: "manual",
+} as const;
 
 export type ListServiceRequestsParams = {
   status?: ServiceRequestStatus;

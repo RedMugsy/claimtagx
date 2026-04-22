@@ -32,4 +32,9 @@ export interface TamperEvent {
   reason: string;
   /** Epoch milliseconds when the attempt was logged. */
   at: number;
+  /**
+   * Epoch milliseconds when an owner marked the attempt as reviewed, or null if still unread.
+   * @nullable
+   */
+  acknowledgedAt?: number | null;
 }

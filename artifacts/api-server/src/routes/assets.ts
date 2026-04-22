@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, assetsTable, eventsTable, handlersTable } from "@workspace/db";
-import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { CreateAssetBody, ReleaseAssetBody } from "@workspace/api-zod";
 import {
   createTicketId,
@@ -52,15 +52,45 @@ router.get("/venues/:venueCode/tamper-events", async (req, res, next) => {
       Number.isFinite(limitRaw) && limitRaw > 0
         ? Math.min(200, Math.floor(limitRaw))
         : 50;
+
+    const fromDate = parseEpochMs(req.query.from);
+    const toDate = parseEpochMs(req.query.to);
+    const ticketIdParam =
+      typeof req.query.ticketId === "string" && req.query.ticketId.trim().length > 0
+        ? req.query.ticketId.trim()
+        : null;
+    const sourceParam =
+      typeof req.query.source === "string" ? req.query.source : null;
+    if (sourceParam && sourceParam !== "scan" && sourceParam !== "manual") {
+      res.status(400).json({ error: "Invalid source filter" });
+      return;
+    }
+    const ackRaw = req.query.acknowledged;
+    let ackFilter: boolean | null = null;
+    if (ackRaw === "true") ackFilter = true;
+    else if (ackRaw === "false") ackFilter = false;
+
+    const conditions = [
+      eq(eventsTable.venueId, venueCode),
+      eq(eventsTable.type, "signature_invalid"),
+    ];
+    if (fromDate) conditions.push(gte(eventsTable.at, fromDate));
+    if (toDate) conditions.push(lte(eventsTable.at, toDate));
+    if (ticketIdParam) {
+      conditions.push(
+        sql`upper(${eventsTable.meta} ->> 'ticketId') like upper(${"%" + ticketIdParam + "%"})`,
+      );
+    }
+    if (sourceParam) {
+      conditions.push(sql`${eventsTable.meta} ->> 'source' = ${sourceParam}`);
+    }
+    if (ackFilter === true) conditions.push(isNotNull(eventsTable.acknowledgedAt));
+    else if (ackFilter === false) conditions.push(isNull(eventsTable.acknowledgedAt));
+
     const rows = await db
       .select()
       .from(eventsTable)
-      .where(
-        and(
-          eq(eventsTable.venueId, venueCode),
-          eq(eventsTable.type, "signature_invalid"),
-        ),
-      )
+      .where(and(...conditions))
       .orderBy(desc(eventsTable.at))
       .limit(limit);
     res.json(rows.map((row) => serializeTamperEvent(row)));
@@ -68,6 +98,36 @@ router.get("/venues/:venueCode/tamper-events", async (req, res, next) => {
     next(err);
   }
 });
+
+router.post(
+  "/venues/:venueCode/tamper-events/:eventId/acknowledge",
+  requireVenueRole(["owner"]),
+  async (req, res, next) => {
+    try {
+      const venueCode = String(req.params.venueCode).toUpperCase();
+      const eventId = String(req.params.eventId);
+      await ensureVenue(venueCode);
+      const [updated] = await db
+        .update(eventsTable)
+        .set({ acknowledgedAt: new Date() })
+        .where(
+          and(
+            eq(eventsTable.id, eventId),
+            eq(eventsTable.venueId, venueCode),
+            eq(eventsTable.type, "signature_invalid"),
+          ),
+        )
+        .returning();
+      if (!updated) {
+        res.status(404).json({ error: "Tamper event not found" });
+        return;
+      }
+      res.json(serializeTamperEvent(updated));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 const ALLOWED_STATUSES = new Set(["active", "released"]);
 const ALLOWED_MODES = new Set(["vehicles", "baggage", "cloakrooms", "bags"]);

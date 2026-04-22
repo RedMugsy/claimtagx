@@ -113,7 +113,10 @@ export default function Custody() {
         </div>
         {activeVenue ? (
           <div className="mt-3 flex items-center justify-end">
-            <TamperAlerts venueCode={activeVenue.code} />
+            <TamperAlerts
+              venueCode={activeVenue.code}
+              canAcknowledge={activeVenue.role === "owner"}
+            />
           </div>
         ) : null}
       </header>

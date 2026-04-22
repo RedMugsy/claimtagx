@@ -547,6 +547,97 @@ export function useListTamperEvents<
 }
 
 /**
+ * @summary Mark a tamper attempt as reviewed so it drops out of the unread badge
+ */
+export const getAcknowledgeTamperEventUrl = (
+  venueCode: string,
+  eventId: string,
+) => {
+  return `/api/venues/${venueCode}/tamper-events/${eventId}/acknowledge`;
+};
+
+export const acknowledgeTamperEvent = async (
+  venueCode: string,
+  eventId: string,
+  options?: RequestInit,
+): Promise<TamperEvent> => {
+  return customFetch<TamperEvent>(
+    getAcknowledgeTamperEventUrl(venueCode, eventId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getAcknowledgeTamperEventMutationOptions = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeTamperEvent>>,
+    TError,
+    { venueCode: string; eventId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledgeTamperEvent>>,
+  TError,
+  { venueCode: string; eventId: string },
+  TContext
+> => {
+  const mutationKey = ["acknowledgeTamperEvent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledgeTamperEvent>>,
+    { venueCode: string; eventId: string }
+  > = (props) => {
+    const { venueCode, eventId } = props ?? {};
+
+    return acknowledgeTamperEvent(venueCode, eventId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcknowledgeTamperEventMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acknowledgeTamperEvent>>
+>;
+
+export type AcknowledgeTamperEventMutationError = ErrorType<ApiErrorMessage>;
+
+/**
+ * @summary Mark a tamper attempt as reviewed so it drops out of the unread badge
+ */
+export const useAcknowledgeTamperEvent = <
+  TError = ErrorType<ApiErrorMessage>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeTamperEvent>>,
+    TError,
+    { venueCode: string; eventId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledgeTamperEvent>>,
+  TError,
+  { venueCode: string; eventId: string },
+  TContext
+> => {
+  return useMutation(getAcknowledgeTamperEventMutationOptions(options));
+};
+
+/**
  * @summary Release a held asset
  */
 export const getReleaseAssetUrl = (venueCode: string, ticketId: string) => {

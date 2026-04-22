@@ -15,6 +15,7 @@ export interface SerializedTamperEvent {
   source: "scan" | "manual" | null;
   reason: string;
   at: number;
+  acknowledgedAt: number | null;
 }
 
 export function serializeTamperEvent(row: EventRow): SerializedTamperEvent {
@@ -34,6 +35,7 @@ export function serializeTamperEvent(row: EventRow): SerializedTamperEvent {
         ? reasonRaw
         : "Invalid tag signature",
     at: row.at.getTime(),
+    acknowledgedAt: row.acknowledgedAt ? row.acknowledgedAt.getTime() : null,
   };
 }
 

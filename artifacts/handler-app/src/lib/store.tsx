@@ -240,11 +240,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           tamper: TamperEvent;
           actorEmail: string | null;
         };
-        const tamperKey = getListTamperEventsQueryKey(venueCode);
-        queryClient.setQueryData<TamperEvent[] | undefined>(tamperKey, (prev) =>
+        const unreadKey = getListTamperEventsQueryKey(venueCode, {
+          acknowledged: false,
+        });
+        queryClient.setQueryData<TamperEvent[] | undefined>(unreadKey, (prev) =>
           prev ? [data.tamper, ...prev] : [data.tamper],
         );
-        queryClient.invalidateQueries({ queryKey: tamperKey });
+        // New attempts may also belong in any currently-open filtered view —
+        // refetch any tamper-events query for this venue. Generated query
+        // keys are URL-prefixed (e.g. `/api/venues/<code>/tamper-events`),
+        // so match by URL substring rather than a separate name token.
+        queryClient.invalidateQueries({
+          predicate: (q) => {
+            const key = q.queryKey as readonly unknown[];
+            return (
+              typeof key[0] === "string" &&
+              key[0].includes(`/venues/${venueCode}/tamper-events`)
+            );
+          },
+        });
         toast({
           title: `Tamper attempt on ${data.tamper.ticketId ?? "unknown tag"}`,
           description: data.tamper.reason,

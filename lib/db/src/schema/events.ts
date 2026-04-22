@@ -17,6 +17,7 @@ export const eventsTable = pgTable("events", {
   type: text("type").notNull(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   meta: jsonb("meta").$type<Record<string, unknown>>(),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
 });
 
 export type EventRow = typeof eventsTable.$inferSelect;

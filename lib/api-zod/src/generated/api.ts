@@ -159,6 +159,28 @@ export const ListTamperEventsQueryParams = zod.object({
     .number()
     .optional()
     .describe("Maximum number of events to return (default 50, max 200)."),
+  from: zod.coerce
+    .number()
+    .optional()
+    .describe("Lower bound (epoch ms) on attempt time."),
+  to: zod.coerce
+    .number()
+    .optional()
+    .describe("Upper bound (epoch ms) on attempt time."),
+  ticketId: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter by ticket id (case-insensitive substring match)."),
+  source: zod
+    .enum(["scan", "manual"])
+    .optional()
+    .describe("Filter by where the request originated."),
+  acknowledged: zod.coerce
+    .boolean()
+    .optional()
+    .describe(
+      "When false, only unreviewed attempts are returned. When true, only reviewed attempts. Omit to return both.",
+    ),
 });
 
 export const ListTamperEventsResponseItem = zod
@@ -185,11 +207,60 @@ export const ListTamperEventsResponseItem = zod
     at: zod
       .number()
       .describe("Epoch milliseconds when the attempt was logged."),
+    acknowledgedAt: zod
+      .number()
+      .nullish()
+      .describe(
+        "Epoch milliseconds when an owner marked the attempt as reviewed, or null if still unread.",
+      ),
   })
   .describe(
     "A failed signature verification attempt logged when someone tries to release a tag with an invalid or missing signature.",
   );
 export const ListTamperEventsResponse = zod.array(ListTamperEventsResponseItem);
+
+/**
+ * @summary Mark a tamper attempt as reviewed so it drops out of the unread badge
+ */
+export const AcknowledgeTamperEventParams = zod.object({
+  venueCode: zod.coerce.string(),
+  eventId: zod.coerce.string(),
+});
+
+export const AcknowledgeTamperEventResponse = zod
+  .object({
+    id: zod.string(),
+    venueCode: zod.string(),
+    ticketId: zod
+      .string()
+      .nullish()
+      .describe("Ticket id presented by the scanner, when known."),
+    assetId: zod
+      .string()
+      .nullish()
+      .describe(
+        "Matching asset id, when the ticket id corresponds to a real asset.",
+      ),
+    source: zod
+      .union([zod.literal("scan"), zod.literal("manual"), zod.literal(null)])
+      .nullish()
+      .describe("Where the request originated."),
+    reason: zod
+      .string()
+      .describe("Short description of why the verification failed."),
+    at: zod
+      .number()
+      .describe("Epoch milliseconds when the attempt was logged."),
+    acknowledgedAt: zod
+      .number()
+      .nullish()
+      .describe(
+        "Epoch milliseconds when an owner marked the attempt as reviewed, or null if still unread.",
+      ),
+  })
+  .describe(
+    "A failed signature verification attempt logged when someone tries to release a tag with an invalid or missing signature.",
+  );
 
 /**
  * @summary Release a held asset
