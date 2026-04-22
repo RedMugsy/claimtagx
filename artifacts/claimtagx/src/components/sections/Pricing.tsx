@@ -304,7 +304,6 @@ export default function Pricing() {
                 <h3 className={`font-mono font-bold text-xs tracking-widest uppercase mb-3 ${plan.primary ? 'text-lime' : 'text-slate'}`}>
                   {plan.name}
                 </h3>
-                <div className="flex items-baseline gap-1 mb-3">
                 {plan.discountLabel && billing === 'annual' && (
                   <div className="inline-flex items-center gap-1 bg-lime/20 text-lime px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide mb-2">
                     ⚡ LIMITED TIME · {plan.discountLabel}
