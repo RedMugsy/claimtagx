@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Minus } from 'lucide-react';
 
@@ -7,7 +7,9 @@ type Tier = 'free' | 'basic' | 'essential' | 'advanced' | 'enterprise';
 const plans: {
   key: Tier;
   name: string;
-  price: string;
+  pricing: { monthly: string; annual: string };
+  originalAnnualPrice?: string;
+  discountLabel?: string;
   period: string;
   description: string;
   highlights: string[];
@@ -19,7 +21,7 @@ const plans: {
   {
     key: 'free',
     name: 'FREE',
-    price: '$0',
+    pricing: { monthly: '$0', annual: '$0' },
     period: '/month',
     description: 'Try the platform with a single station.',
     highlights: ['1 station', '1 staff member', '15 tickets / month', 'Text-only tickets', 'Cloud only'],
@@ -29,7 +31,7 @@ const plans: {
   {
     key: 'basic',
     name: 'BASIC',
-    price: '$25',
+    pricing: { monthly: '$30', annual: '$25' },
     period: '/month',
     description: 'For small operators getting started with digital tags.',
     highlights: ['1 station', 'Up to 5 staff', '250 tickets / month', 'OOTB ticket template', 'Static QR + optional PIN', 'Logo branding'],
@@ -39,7 +41,7 @@ const plans: {
   {
     key: 'essential',
     name: 'ESSENTIAL',
-    price: '$50',
+    pricing: { monthly: '$65', annual: '$50' },
     period: '/month',
     description: 'For growing operations needing workflow and validation.',
     highlights: ['Up to 5 stations', 'Up to 25 staff', '1,000 tickets / month', 'Configurable tickets', 'Dynamic QR + OTP', 'Shift management', 'Marketplace access (buy)'],
@@ -51,17 +53,19 @@ const plans: {
   {
     key: 'advanced',
     name: 'ADVANCED',
-    price: '$100',
+    pricing: { monthly: '$120', annual: '$70' },
+    originalAnnualPrice: '$100',
+    discountLabel: '30% OFF',
     period: '/month',
     description: 'For multi-station operators needing full control.',
-    highlights: ['Unlimited stations', 'Unlimited staff', '2,500 tickets / month', 'Multi-template per station', 'NFC / BLE validation', 'Supervisor controls', 'Marketplace buy + sell', 'Limited API access'],
+    highlights: ['Unlimited stations', 'Unlimited staff', '2,000 tickets / month', 'Multi-template per station', 'NFC / BLE validation', 'Supervisor controls', 'Marketplace buy + sell', 'Limited API access'],
     cta: 'Start free trial',
     url: 'https://app.claimtagx.com/signup',
   },
   {
     key: 'enterprise',
     name: 'ENTERPRISE',
-    price: 'Custom',
+    pricing: { monthly: 'Custom', annual: 'Custom' },
     period: '',
     description: 'For large operators with security and sovereignty needs.',
     highlights: ['Unlimited stations', 'Unlimited staff', 'Unlimited tickets', 'Fully customizable tickets', 'Biometric validation', 'White label', 'Cloud or on-prem', 'Multi-region / sovereign'],
@@ -80,7 +84,7 @@ const matrix: Group[] = [
     rows: [
       { feature: 'Stations', values: { free: '1', basic: '1', essential: '5', advanced: 'Unlimited', enterprise: 'Unlimited' } },
       { feature: 'Staff', values: { free: '1', basic: '5', essential: '25', advanced: 'Unlimited', enterprise: 'Unlimited' } },
-      { feature: 'Tickets / month', values: { free: '15', basic: '250', essential: '1,000', advanced: '2,500', enterprise: 'Unlimited' } },
+      { feature: 'Tickets / month', values: { free: '15', basic: '250', essential: '1,000', advanced: '2,000', enterprise: 'Unlimited' } },
       { feature: 'Ticket type', values: { free: 'Text only', basic: 'OOTB template', essential: 'Configurable (shared)', advanced: 'Multi-template per station', enterprise: 'Fully customizable' } },
     ],
   },
@@ -221,6 +225,8 @@ function CellContent({ value, highlighted }: { value: Cell; highlighted?: boolea
 }
 
 export default function Pricing() {
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('annual');
+
   return (
     <section id="pricing" className="py-24 md:py-32 bg-obsidian border-t border-white/5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[radial-gradient(circle_at_center,_rgba(198,242,78,0.03),_transparent_60%)] pointer-events-none" />
@@ -246,6 +252,27 @@ export default function Pricing() {
           <motion.p variants={itemVariants} className="text-lg text-slate max-w-2xl">
             Start free. Upgrade when you outgrow it. No per-ticket fees, no surprises.
           </motion.p>
+
+          {/* Billing toggle */}
+          <motion.div variants={itemVariants} className="flex items-center gap-4 mt-10">
+            <span className={`text-sm font-medium transition-colors ${billing === 'monthly' ? 'text-white' : 'text-slate'}`}>Monthly</span>
+            <button
+              onClick={() => setBilling(billing === 'monthly' ? 'annual' : 'monthly')}
+              aria-label="Toggle billing period"
+              className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime ${
+                billing === 'annual' ? 'bg-lime' : 'bg-white/20'
+              }`}
+            >
+              <span
+                className={`absolute top-1 w-5 h-5 rounded-full transition-transform duration-300 ${
+                  billing === 'annual' ? 'translate-x-8 bg-obsidian' : 'translate-x-1 bg-white'
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-medium transition-colors ${billing === 'annual' ? 'text-white' : 'text-slate'}`}>
+              Annual <span className="text-lime text-xs font-bold ml-1">Save up to 23%</span>
+            </span>
+          </motion.div>
         </motion.div>
 
         {/* Tier cards */}
@@ -278,7 +305,16 @@ export default function Pricing() {
                   {plan.name}
                 </h3>
                 <div className="flex items-baseline gap-1 mb-3">
-                  <span className="text-4xl font-extrabold text-white tracking-tight">{plan.price}</span>
+                {plan.discountLabel && billing === 'annual' && (
+                  <div className="inline-flex items-center gap-1 bg-lime/20 text-lime px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide mb-2">
+                    ⚡ LIMITED TIME · {plan.discountLabel}
+                  </div>
+                )}
+                <div className="flex items-baseline gap-1 mb-3">
+                  {plan.discountLabel && billing === 'annual' && plan.originalAnnualPrice && (
+                    <span className="text-slate/60 line-through text-xl font-bold mr-1">{plan.originalAnnualPrice}</span>
+                  )}
+                  <span className="text-4xl font-extrabold text-white tracking-tight">{plan.pricing[billing]}</span>
                   {plan.period && <span className="text-slate text-sm font-medium">{plan.period}</span>}
                 </div>
                 <p className="text-slate text-xs leading-relaxed min-h-[3rem]">{plan.description}</p>
