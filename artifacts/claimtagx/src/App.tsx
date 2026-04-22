@@ -34,6 +34,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/handler" component={HandlerRedirect} />
+      <Route path="/handler/sign-in/*?" component={HandlerRedirect} />
+      <Route path="/handler/sign-up/*?" component={HandlerRedirect} />
+      <Route path="/handler/sso-callback/*?" component={HandlerRedirect} />
       <Route path="/price" component={PricingPage} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
