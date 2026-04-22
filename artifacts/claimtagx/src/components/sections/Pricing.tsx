@@ -286,6 +286,7 @@ export default function Pricing() {
         >
           {plans.map((plan) => {
             const isMostPopular = isAnnual ? plan.key === 'advanced' : plan.key === 'essential';
+            const showAnnualDiscount = isAnnual && plan.key === 'advanced' && Boolean(plan.discountLabel);
 
             return (
             <motion.div
@@ -304,17 +305,23 @@ export default function Pricing() {
                 </div>
               )}
 
+              {showAnnualDiscount && (
+                <div className="absolute top-3 right-3 bg-lime text-obsidian px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-widest uppercase shadow-lg">
+                  {plan.discountLabel}
+                </div>
+              )}
+
               <div className="mb-6 mt-1">
                 <h3 className={`font-mono font-bold text-xs tracking-widest uppercase mb-3 ${isMostPopular ? 'text-lime' : 'text-slate'}`}>
                   {plan.name}
                 </h3>
-                {plan.discountLabel && billing === 'annual' && (
+                {showAnnualDiscount && (
                   <div className="inline-flex items-center gap-1 bg-lime/20 text-lime px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide mb-2">
                     ⚡ LIMITED TIME · {plan.discountLabel}
                   </div>
                 )}
                 <div className="flex items-baseline gap-1 mb-3">
-                  {plan.discountLabel && billing === 'annual' && plan.originalAnnualPrice && (
+                  {showAnnualDiscount && plan.originalAnnualPrice && (
                     <span className="text-slate/60 line-through text-xl font-bold mr-1">{plan.originalAnnualPrice}</span>
                   )}
                   <span className="text-4xl font-extrabold text-white tracking-tight">{plan.pricing[billing]}</span>
