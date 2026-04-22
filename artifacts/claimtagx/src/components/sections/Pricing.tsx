@@ -226,6 +226,7 @@ function CellContent({ value, highlighted }: { value: Cell; highlighted?: boolea
 
 export default function Pricing() {
   const [billing, setBilling] = useState<'monthly' | 'annual'>('annual');
+  const isAnnual = billing === 'annual';
 
   return (
     <section id="pricing" className="py-24 md:py-32 bg-obsidian border-t border-white/5 relative overflow-hidden">
@@ -264,8 +265,8 @@ export default function Pricing() {
               }`}
             >
               <span
-                className={`absolute top-1 w-5 h-5 rounded-full transition-transform duration-300 ${
-                  billing === 'annual' ? 'translate-x-8 bg-obsidian' : 'translate-x-1 bg-white'
+                className={`absolute left-1 top-1 w-5 h-5 rounded-full transition-transform duration-300 ${
+                  billing === 'annual' ? 'translate-x-7 bg-obsidian' : 'translate-x-0 bg-obsidian'
                 }`}
               />
             </button>
@@ -283,25 +284,28 @@ export default function Pricing() {
           variants={containerVariants}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-24"
         >
-          {plans.map((plan) => (
+          {plans.map((plan) => {
+            const isMostPopular = isAnnual ? plan.key === 'advanced' : plan.key === 'essential';
+
+            return (
             <motion.div
               key={plan.key}
               variants={itemVariants}
               whileHover={{ y: -6 }}
               className={`relative flex flex-col rounded-2xl p-6 transition-all duration-300 ${
-                plan.primary
+                isMostPopular
                   ? 'bg-steel border-2 border-lime/50 shadow-[0_0_30px_rgba(198,242,78,0.15)] animate-pulse-glow lg:scale-[1.04] z-10'
                   : 'bg-steel/50 border border-white/10 hover:border-lime/30 hover:shadow-xl'
               }`}
             >
-              {plan.badge && (
+              {isMostPopular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime text-obsidian px-3 py-1 rounded-full text-[10px] font-extrabold tracking-widest uppercase shadow-lg whitespace-nowrap">
-                  {plan.badge}
+                  MOST POPULAR
                 </div>
               )}
 
               <div className="mb-6 mt-1">
-                <h3 className={`font-mono font-bold text-xs tracking-widest uppercase mb-3 ${plan.primary ? 'text-lime' : 'text-slate'}`}>
+                <h3 className={`font-mono font-bold text-xs tracking-widest uppercase mb-3 ${isMostPopular ? 'text-lime' : 'text-slate'}`}>
                   {plan.name}
                 </h3>
                 {plan.discountLabel && billing === 'annual' && (
@@ -323,7 +327,7 @@ export default function Pricing() {
                 <ul className="space-y-3 mb-8">
                   {plan.highlights.map((feature, fIndex) => (
                     <li key={fIndex} className="flex items-start gap-2.5">
-                      <Check className={`w-4 h-4 mt-0.5 shrink-0 ${plan.primary ? 'text-lime' : 'text-lime/70'}`} />
+                      <Check className={`w-4 h-4 mt-0.5 shrink-0 ${isMostPopular ? 'text-lime' : 'text-lime/70'}`} />
                       <span className="text-xs text-white/85 font-medium leading-relaxed">{feature}</span>
                     </li>
                   ))}
@@ -335,7 +339,7 @@ export default function Pricing() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`w-full text-center py-3 rounded-xl font-bold text-sm transition-all duration-300 mt-auto ${
-                  plan.primary
+                  isMostPopular
                     ? 'bg-lime text-obsidian hover:bg-lime-hover hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(198,242,78,0.4)]'
                     : 'bg-white/5 border border-white/10 text-white hover:border-lime/50 hover:text-lime hover:bg-white/10'
                 }`}
@@ -343,7 +347,8 @@ export default function Pricing() {
                 {plan.cta}
               </a>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
 
         {/* Full feature matrix */}
