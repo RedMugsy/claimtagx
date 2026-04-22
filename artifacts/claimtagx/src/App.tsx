@@ -19,10 +19,21 @@ import CookieBanner from "@/components/CookieBanner";
 
 const queryClient = new QueryClient();
 
+function HandlerRedirect() {
+  if (typeof window !== "undefined") {
+    const query = window.location.search ?? "";
+    const hash = window.location.hash ?? "";
+    window.location.replace(`/handler/${query}${hash}`);
+  }
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/handler" component={HandlerRedirect} />
       <Route path="/price" component={PricingPage} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
