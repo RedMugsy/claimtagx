@@ -53,9 +53,9 @@ const plans: {
   {
     key: 'advanced',
     name: 'ADVANCED',
-    pricing: { monthly: '$120', annual: '$70' },
+    pricing: { monthly: '$120', annual: '$80' },
     originalAnnualPrice: '$100',
-    discountLabel: '30% OFF',
+    discountLabel: '20% OFF',
     period: '/month',
     description: 'For multi-station operators needing full control.',
     highlights: ['Unlimited stations', 'Unlimited staff', '2,000 tickets / month', 'Multi-template per station', 'NFC / BLE validation', 'Supervisor controls', 'Marketplace buy + sell', 'Limited API access'],
