@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync } from "node:fs";
+import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,6 +10,7 @@ const claimtagxDir = path.join(repoRoot, "artifacts", "claimtagx");
 const claimtagxDistDir = path.join(claimtagxDir, "dist", "public");
 const handlerDistDir = path.join(repoRoot, "artifacts", "handler-app", "dist", "public");
 const handlerTargetDir = path.join(claimtagxDistDir, "handler");
+const redirectsPath = path.join(claimtagxDistDir, "_redirects");
 
 function run(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, {
@@ -46,5 +47,17 @@ run(process.execPath, [npmExecPath, "--filter", "@workspace/handler-app", "run",
 console.log("==> Copying handler output into marketing dist...");
 mkdirSync(handlerTargetDir, { recursive: true });
 cpSync(handlerDistDir, handlerTargetDir, { recursive: true });
+
+console.log("==> Writing Cloudflare SPA rewrites...");
+writeFileSync(
+  redirectsPath,
+  [
+    "/handler /handler/ 301",
+    "/handler/* /handler/index.html 200",
+    "/* /index.html 200",
+    "",
+  ].join("\n"),
+  "utf8",
+);
 
 console.log("==> Done. Output available at artifacts/claimtagx/dist/public");
