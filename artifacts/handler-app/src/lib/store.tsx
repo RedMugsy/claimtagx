@@ -192,6 +192,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const queryKey = getListAssetsQueryKey(venueCode);
     setStreamStatus("connecting");
     let hasConnected = false;
+    // Track the highest server seq we've already applied so an out-of-order
+    // delivery (e.g. a stray duplicate from cross-instance fanout, or a
+    // race between replay and live) can't overwrite newer state with an
+    // older snapshot.
+    let lastAppliedSeq = 0;
+    const seqOf = (raw: MessageEvent): number => {
+      const n = Number(raw.lastEventId);
+      return Number.isFinite(n) ? n : 0;
+    };
 
     const applyAsset = (incoming: ApiCustodyAsset) => {
       const local = toLocal(incoming);
@@ -207,12 +216,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const handle = (raw: MessageEvent) => {
       try {
+        const seq = seqOf(raw);
+        if (seq && seq <= lastAppliedSeq) return;
         const data = JSON.parse(raw.data) as {
           type: "asset.created" | "asset.released";
           asset: ApiCustodyAsset;
           actorEmail: string | null;
         };
         applyAsset(data.asset);
+        if (seq) lastAppliedSeq = seq;
         const fromSelf =
           !!email && !!data.actorEmail &&
           data.actorEmail.toLowerCase() === email.toLowerCase();
@@ -235,6 +247,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const handleTamper = (raw: MessageEvent) => {
       try {
+        const seq = seqOf(raw);
+        if (seq && seq <= lastAppliedSeq) return;
         const data = JSON.parse(raw.data) as {
           type: "signature.invalid";
           tamper: TamperEvent;
@@ -259,6 +273,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             );
           },
         });
+        if (seq) lastAppliedSeq = seq;
         toast({
           title: `Tamper attempt on ${data.tamper.ticketId ?? "unknown tag"}`,
           description: data.tamper.reason,
@@ -269,15 +284,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Server-side replay covers reconnect gaps via Last-Event-ID, so we no
+    // longer refetch the whole custody list on every reconnect. The server
+    // emits a `reset` control event only when the gap is too large to
+    // replay cheaply — in that case we fall back to one full refetch.
+    const handleReset = (raw: MessageEvent) => {
+      const seq = seqOf(raw);
+      if (seq) lastAppliedSeq = seq;
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const key = q.queryKey as readonly unknown[];
+          return (
+            typeof key[0] === "string" &&
+            key[0].includes(`/venues/${venueCode}/tamper-events`)
+          );
+        },
+      });
+    };
+
     es.addEventListener("asset.created", handle as EventListener);
     es.addEventListener("asset.released", handle as EventListener);
     es.addEventListener("signature.invalid", handleTamper as EventListener);
+    es.addEventListener("reset", handleReset as EventListener);
     es.onopen = () => {
-      // If we're recovering from a dropped connection, refetch the active
-      // custody list once so we reconcile any events missed during the gap.
-      if (hasConnected) {
-        queryClient.invalidateQueries({ queryKey });
-      }
       hasConnected = true;
       setStreamStatus("connected");
     };

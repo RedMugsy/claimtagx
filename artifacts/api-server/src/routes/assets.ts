@@ -29,7 +29,15 @@ router.get("/venues/:venueCode/events", async (req, res, next) => {
   try {
     const venueCode = req.params.venueCode.toUpperCase();
     await ensureVenue(venueCode);
-    const unsubscribe = subscribe(venueCode, res);
+    // EventSource auto-sends `Last-Event-ID` with the seq of the last event
+    // it saw. We use it to replay only the missed events instead of forcing
+    // the client to refetch the entire active custody list on reconnect.
+    const lastEventId =
+      req.headers["last-event-id"] ??
+      (typeof req.query.lastEventId === "string"
+        ? req.query.lastEventId
+        : undefined);
+    const unsubscribe = subscribe(venueCode, res, lastEventId);
     req.on("close", () => {
       unsubscribe();
       try {
@@ -248,19 +256,26 @@ router.post("/venues/:venueCode/assets", async (req, res, next) => {
       res.status(500).json({ error: "Failed to create asset" });
       return;
     }
-    await db.insert(eventsTable).values({
-      venueId: venueCode,
-      assetId: inserted.id,
-      handlerId,
-      type: "intake",
-      at: now,
-    });
+    const [intakeEvent] = await db
+      .insert(eventsTable)
+      .values({
+        venueId: venueCode,
+        assetId: inserted.id,
+        handlerId,
+        type: "intake",
+        at: now,
+      })
+      .returning({ seq: eventsTable.seq });
     const serialized = serializeAsset(inserted, venueSecret);
-    publish(venueCode, {
-      type: "asset.created",
-      asset: serialized,
-      actorEmail: handlerEmail ?? null,
-    });
+    publish(
+      venueCode,
+      {
+        type: "asset.created",
+        asset: serialized,
+        actorEmail: handlerEmail ?? null,
+      },
+      intakeEvent!.seq,
+    );
     res.status(201).json(serialized);
   } catch (err) {
     next(err);
@@ -332,11 +347,15 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
         })
         .returning();
       if (inserted) {
-        publish(venueCode, {
-          type: "signature.invalid",
-          tamper: serializeTamperEvent(inserted),
-          actorEmail: handlerEmail ?? null,
-        });
+        publish(
+          venueCode,
+          {
+            type: "signature.invalid",
+            tamper: serializeTamperEvent(inserted),
+            actorEmail: handlerEmail ?? null,
+          },
+          inserted.seq,
+        );
         // Fire-and-forget: check whether this attempt pushes the venue over
         // the configured tamper-spike threshold and, if so, email owners.
         // We deliberately don't await here so a slow email provider can't
@@ -385,19 +404,26 @@ router.post("/venues/:venueCode/assets/:ticketId/release", async (req, res, next
       res.status(404).json({ error: "No active ticket with that id" });
       return;
     }
-    await db.insert(eventsTable).values({
-      venueId: venueCode,
-      assetId: updated.id,
-      handlerId,
-      type: "release",
-      at: now,
-    });
+    const [releaseEvent] = await db
+      .insert(eventsTable)
+      .values({
+        venueId: venueCode,
+        assetId: updated.id,
+        handlerId,
+        type: "release",
+        at: now,
+      })
+      .returning({ seq: eventsTable.seq });
     const serialized = serializeAsset(updated, venueSecret);
-    publish(venueCode, {
-      type: "asset.released",
-      asset: serialized,
-      actorEmail: handlerEmail ?? null,
-    });
+    publish(
+      venueCode,
+      {
+        type: "asset.released",
+        asset: serialized,
+        actorEmail: handlerEmail ?? null,
+      },
+      releaseEvent!.seq,
+    );
     res.json(serialized);
   } catch (err) {
     next(err);
