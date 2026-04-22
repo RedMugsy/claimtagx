@@ -131,6 +131,8 @@ function SignInPage() {
         routing="path"
         path={`${basePath}/sign-in`}
         signUpUrl={`${basePath}/sign-up`}
+        oauthFlow="popup"
+        forceRedirectUrl={`${basePath}/`}
         fallbackRedirectUrl={`${basePath}/`}
       />
     </AuthShell>
@@ -146,6 +148,8 @@ function SignUpPage() {
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
+        oauthFlow="popup"
+        forceRedirectUrl={`${basePath}/`}
         fallbackRedirectUrl={`${basePath}/`}
       />
     </AuthShell>
