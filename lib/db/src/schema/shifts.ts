@@ -26,6 +26,10 @@ export const shiftsTable = pgTable(
       .notNull()
       .defaultNow(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
+    // How the shift was ended. NULL while the shift is open; "manual" when the
+    // handler tapped End, "auto-timeout" when the safety net closed a forgotten
+    // shift older than the configured cap.
+    endReason: text("end_reason"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

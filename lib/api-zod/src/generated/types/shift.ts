@@ -22,4 +22,9 @@ export interface Shift {
    * @nullable
    */
   endedAt?: number | null;
+  /**
+   * How the shift ended. Null while active; "manual" when the handler tapped End; "auto-timeout" when the safety net auto-closed a forgotten shift.
+   * @nullable
+   */
+  endReason?: string | null;
 }

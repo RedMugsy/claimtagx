@@ -675,6 +675,9 @@ components:
         endedAt:
           type: ["integer", "null"]
           description: Epoch milliseconds when the shift ended, or null if still active.
+        endReason:
+          type: ["string", "null"]
+          description: How the shift ended. Null while active; "manual" when the handler tapped End; "auto-timeout" when the safety net auto-closed a forgotten shift.
       required:
         - id
         - venueCode

@@ -345,6 +345,12 @@ export const GetActiveShiftResponse = zod.object({
         .describe(
           "Epoch milliseconds when the shift ended, or null if still active.",
         ),
+      endReason: zod
+        .string()
+        .nullish()
+        .describe(
+          'How the shift ended. Null while active; \"manual\" when the handler tapped End; \"auto-timeout\" when the safety net auto-closed a forgotten shift.',
+        ),
     }),
     zod.null(),
   ]),
@@ -393,6 +399,12 @@ export const EndShiftResponse = zod.object({
     .describe(
       "Epoch milliseconds when the shift ended, or null if still active.",
     ),
+  endReason: zod
+    .string()
+    .nullish()
+    .describe(
+      'How the shift ended. Null while active; \"manual\" when the handler tapped End; \"auto-timeout\" when the safety net auto-closed a forgotten shift.',
+    ),
 });
 
 /**
@@ -422,6 +434,12 @@ export const ListActiveVenueShiftsResponseItem = zod.object({
     .nullish()
     .describe(
       "Epoch milliseconds when the shift ended, or null if still active.",
+    ),
+  endReason: zod
+    .string()
+    .nullish()
+    .describe(
+      'How the shift ended. Null while active; \"manual\" when the handler tapped End; \"auto-timeout\" when the safety net auto-closed a forgotten shift.',
     ),
 });
 export const ListActiveVenueShiftsResponse = zod.array(

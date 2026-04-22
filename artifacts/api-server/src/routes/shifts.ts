@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { and, desc, eq, gte, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { db, shiftsTable, type Shift } from "@workspace/db";
 import {
   requireAuth,
@@ -14,6 +14,34 @@ import { getMembership } from "../lib/memberships";
 // in UTC so the boundary is deterministic regardless of where the API server
 // happens to be running.
 const OVERTIME_MINUTES = 40 * 60;
+
+// Safety net for forgotten shifts. If a handler doesn't tap "End shift", we
+// auto-close the shift once it's older than this cap so the "on shift now"
+// list and weekly hours reports stay accurate. Configurable via env so ops
+// can tune it without a code change; clamped to a sane range.
+function getMaxShiftMs(): number {
+  const raw = Number(process.env.SHIFT_MAX_HOURS);
+  const hours = Number.isFinite(raw) && raw > 0 ? raw : 16;
+  const clamped = Math.min(Math.max(hours, 1), 72);
+  return clamped * 60 * 60 * 1000;
+}
+
+// Close any open shifts whose startedAt is older than the cap. We stamp
+// endedAt at startedAt + cap (not "now") so reports don't credit handlers
+// for time they probably weren't on the floor, and we tag endReason so the
+// row is distinguishable from manually-ended shifts.
+async function sweepStaleShifts(): Promise<void> {
+  const maxMs = getMaxShiftMs();
+  const cutoff = new Date(Date.now() - maxMs);
+  const seconds = Math.floor(maxMs / 1000);
+  await db.execute(sql`
+    update ${shiftsTable}
+       set ended_at = started_at + make_interval(secs => ${seconds}),
+           end_reason = 'auto-timeout'
+     where ended_at is null
+       and started_at < ${cutoff}
+  `);
+}
 
 function startOfIsoWeekUtc(now: Date): Date {
   const d = new Date(
@@ -44,11 +72,13 @@ function serialize(row: Shift) {
     targetMinutes: row.targetMinutes,
     startedAt: row.startedAt.getTime(),
     endedAt: row.endedAt ? row.endedAt.getTime() : null,
+    endReason: row.endReason,
   };
 }
 
 router.get("/me/shift/active", requireAuth, async (req, res, next) => {
   try {
+    await sweepStaleShifts();
     const [row] = await db
       .select()
       .from(shiftsTable)
@@ -82,6 +112,10 @@ router.post("/me/shifts/start", requireAuth, async (req, res, next) => {
       return;
     }
     await ensureVenue(venueCode);
+
+    // Sweep first so a forgotten shift from yesterday doesn't block a fresh
+    // start today.
+    await sweepStaleShifts();
 
     // A handler can only have one active shift at a time, across all venues.
     // The DB enforces this with a partial unique index; we check first so we
@@ -128,7 +162,7 @@ router.post("/me/shifts/:shiftId/end", requireAuth, async (req, res, next) => {
     const shiftId = String(req.params.shiftId);
     const [updated] = await db
       .update(shiftsTable)
-      .set({ endedAt: new Date() })
+      .set({ endedAt: new Date(), endReason: "manual" })
       .where(
         and(
           eq(shiftsTable.id, shiftId),
@@ -154,6 +188,7 @@ router.get(
   async (req, res, next) => {
     try {
       const venueCode = String(req.params.venueCode).toUpperCase();
+      await sweepStaleShifts();
       const rows = await db
         .select()
         .from(shiftsTable)
@@ -181,6 +216,7 @@ router.get(
   async (req, res, next) => {
     try {
       const venueCode = String(req.params.venueCode).toUpperCase();
+      await sweepStaleShifts();
       const now = new Date();
       const weekStart = startOfIsoWeekUtc(now);
       const weekEnd = new Date(weekStart);
