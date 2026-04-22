@@ -5,6 +5,7 @@ import type {
   VenueMembership,
   VenueType,
 } from "./types";
+import { getApiAuthToken, getApiUrl } from "./api-base";
 
 export interface MeResponse {
   userId: string;
@@ -14,10 +15,20 @@ export interface MeResponse {
 }
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const token = await getApiAuthToken();
+  const headers = new Headers({
+    "content-type": "application/json",
+    accept: "application/json",
+    ...(init?.headers ?? {}),
+  });
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+
+  const res = await fetch(getApiUrl(url), {
     credentials: "include",
-    headers: { "content-type": "application/json", accept: "application/json" },
     ...init,
+    headers,
   });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;

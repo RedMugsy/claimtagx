@@ -31,6 +31,7 @@ import {
   joinVenue as apiJoinVenue,
   leaveVenue as apiLeaveVenue,
 } from "./api";
+import { API_BASE_URL, getApiUrl } from "./api-base";
 import { toast } from "@/hooks/use-toast";
 
 const ACTIVE_VENUE_KEY = "ctx_active_venue";
@@ -187,8 +188,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setStreamStatus("idle");
       return;
     }
-    const url = `/api/venues/${encodeURIComponent(venueCode)}/events`;
-    const es = new EventSource(url, { withCredentials: true });
+    const streamPath = `/api/venues/${encodeURIComponent(venueCode)}/events`;
+    const streamUrl = getApiUrl(streamPath);
+    // Cross-origin EventSource cannot carry our bearer token header.
+    // When a remote API base is configured, rely on query invalidation
+    // and optimistic updates instead of a noisy unauthorized SSE loop.
+    if (API_BASE_URL) {
+      setStreamStatus("idle");
+      return;
+    }
+    const es = new EventSource(streamUrl, { withCredentials: true });
     const queryKey = getListAssetsQueryKey(venueCode);
     setStreamStatus("connecting");
     let hasConnected = false;
