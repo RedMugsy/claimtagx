@@ -30,12 +30,13 @@ const CreateBody = z.object({
   requestedByName: z.string().trim().max(120).optional(),
 });
 
-function serialize(row: ServiceRequest) {
+function serialize(row: ServiceRequest, patronName: string | null = null) {
   return {
     id: row.id,
     venueCode: row.venueCode,
     ticketId: row.ticketId,
     assetId: row.assetId ?? null,
+    patronName,
     kind: row.kind,
     notes: row.notes,
     status: row.status,
@@ -70,12 +71,16 @@ router.get(
       const conds = [eq(serviceRequestsTable.venueCode, venueCode)];
       if (status) conds.push(eq(serviceRequestsTable.status, status));
       const rows = await db
-        .select()
+        .select({
+          request: serviceRequestsTable,
+          patronName: assetsTable.patronName,
+        })
         .from(serviceRequestsTable)
+        .leftJoin(assetsTable, eq(assetsTable.id, serviceRequestsTable.assetId))
         .where(and(...conds))
         .orderBy(desc(serviceRequestsTable.createdAt))
         .limit(200);
-      res.json(rows.map(serialize));
+      res.json(rows.map((r) => serialize(r.request, r.patronName ?? null)));
     } catch (err) {
       next(err);
     }
@@ -120,7 +125,11 @@ router.post(
       // Resolve the asset for this ticket (case-insensitive). Service
       // requests must be tied to a real ticket so handlers can act on them.
       const [asset] = await db
-        .select({ id: assetsTable.id, ticketId: assetsTable.ticketId })
+        .select({
+          id: assetsTable.id,
+          ticketId: assetsTable.ticketId,
+          patronName: assetsTable.patronName,
+        })
         .from(assetsTable)
         .where(
           and(
@@ -148,7 +157,7 @@ router.post(
           status: "open",
         })
         .returning();
-      res.status(201).json(serialize(inserted));
+      res.status(201).json(serialize(inserted, asset.patronName ?? null));
     } catch (err) {
       next(err);
     }

@@ -267,7 +267,11 @@ export default function ServicesPage() {
                 className="rounded-2xl border border-white/10 bg-steel/20 p-3 text-xs text-slate"
                 data-testid={`row-closed-${r.id}`}
               >
-                <span className="text-paper font-semibold">{KIND_LABEL[r.kind]}</span> · {r.ticketId} · {r.status}
+                <span className="text-paper font-semibold">{KIND_LABEL[r.kind]}</span>
+                {r.patronName ? (
+                  <> · <span className="text-paper">{r.patronName}</span></>
+                ) : null}
+                {" "}· {r.ticketId} · {r.status}
                 {r.completedAt ? ` · ${timeAgo(r.completedAt)}` : null}
               </li>
             ))}
@@ -301,6 +305,11 @@ function ServiceRow({
           <div className="text-sm font-semibold text-white truncate">
             {KIND_LABEL[row.kind]}
           </div>
+          {row.patronName ? (
+            <div className="text-xs text-paper/90 truncate" data-testid={`text-patron-${row.id}`}>
+              for <span className="font-semibold">{row.patronName}</span>
+            </div>
+          ) : null}
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
             Ticket {row.ticketId} · {timeAgo(row.createdAt)}
             {row.claimedByName ? (

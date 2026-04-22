@@ -462,6 +462,7 @@ export const ListServiceRequestsResponseItem = zod.object({
   venueCode: zod.string(),
   ticketId: zod.string(),
   assetId: zod.string().nullish(),
+  patronName: zod.string().nullish(),
   kind: zod.enum([
     "bring_my_car",
     "fetch_my_coat",
@@ -526,6 +527,7 @@ export const ClaimServiceRequestResponse = zod.object({
   venueCode: zod.string(),
   ticketId: zod.string(),
   assetId: zod.string().nullish(),
+  patronName: zod.string().nullish(),
   kind: zod.enum([
     "bring_my_car",
     "fetch_my_coat",
@@ -556,6 +558,7 @@ export const CompleteServiceRequestResponse = zod.object({
   venueCode: zod.string(),
   ticketId: zod.string(),
   assetId: zod.string().nullish(),
+  patronName: zod.string().nullish(),
   kind: zod.enum([
     "bring_my_car",
     "fetch_my_coat",
@@ -586,6 +589,7 @@ export const CancelServiceRequestResponse = zod.object({
   venueCode: zod.string(),
   ticketId: zod.string(),
   assetId: zod.string().nullish(),
+  patronName: zod.string().nullish(),
   kind: zod.enum([
     "bring_my_car",
     "fetch_my_coat",

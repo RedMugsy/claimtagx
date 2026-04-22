@@ -14,6 +14,8 @@ export interface ServiceRequest {
   ticketId: string;
   /** @nullable */
   assetId?: string | null;
+  /** @nullable */
+  patronName?: string | null;
   kind: ServiceRequestKind;
   notes: string;
   status: ServiceRequestStatus;

@@ -875,6 +875,8 @@ components:
         ticketId: { type: string }
         assetId:
           type: ["string", "null"]
+        patronName:
+          type: ["string", "null"]
         kind:
           $ref: "#/components/schemas/ServiceRequestKind"
         notes: { type: string }
