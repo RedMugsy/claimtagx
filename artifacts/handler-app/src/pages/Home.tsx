@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, Redirect, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   Bell,
@@ -11,28 +11,21 @@ import {
   Radio,
   ConciergeBell,
   ChevronRight,
-  Play,
-  Square,
   Users,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
-  endShift,
   getActiveShift,
   getGetActiveShiftQueryKey,
   getGetOpenServiceCountQueryKey,
-  getGetUnreadMessageCountQueryKey,
   getListActiveVenueShiftsQueryKey,
   getOpenServiceCount,
-  getUnreadMessageCount,
   listActiveVenueShifts,
-  startShift,
   type Shift,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
 import { MODES, MODE_ICONS, VENUE_COPY } from "@/lib/modes";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -85,11 +78,10 @@ const toneClasses: Record<Tile["tone"], string> = {
 };
 
 export default function Home() {
-  const { session, assets, activeVenue, mode } = useStore();
+  const { session, assets, activeVenue, mode, effectiveModes, authorization } = useStore();
   const [, navigate] = useLocation();
   const venueType = activeVenue?.venueType ?? "other";
   const copy = VENUE_COPY[venueType];
-  const queryClient = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
   const custodySwipeStart = useRef<{ x: number; y: number; at: number } | null>(
     null,
@@ -136,34 +128,6 @@ export default function Home() {
   });
   const openServicesCount = openServicesQuery.data?.count ?? 0;
 
-  const startMutation = useMutation({
-    mutationFn: () => startShift({ venueCode }),
-    onSuccess: (shift) => {
-      queryClient.setQueryData(getGetActiveShiftQueryKey(), { shift });
-      queryClient.invalidateQueries({
-        queryKey: getListActiveVenueShiftsQueryKey(venueCode),
-      });
-      toast({ title: "Shift started", description: `Clocked in at ${shiftLabel(new Date(shift.startedAt))}.` });
-    },
-    onError: (err: Error) => {
-      toast({ title: "Could not start shift", description: err.message, variant: "destructive" });
-    },
-  });
-
-  const endMutation = useMutation({
-    mutationFn: (id: string) => endShift(id),
-    onSuccess: (shift) => {
-      queryClient.setQueryData(getGetActiveShiftQueryKey(), { shift: null });
-      queryClient.invalidateQueries({
-        queryKey: getListActiveVenueShiftsQueryKey(shift.venueCode),
-      });
-      toast({ title: "Shift ended", description: `Worked ${formatHm(now - shift.startedAt)}.` });
-    },
-    onError: (err: Error) => {
-      toast({ title: "Could not end shift", description: err.message, variant: "destructive" });
-    },
-  });
-
   const counts = useMemo(() => {
     const active = assets.filter((a) => a.status === "active");
     const released = assets.filter((a) => a.status === "released");
@@ -178,8 +142,8 @@ export default function Home() {
   // Authorization-safe mode strip: handlers should only see UI for the mode
   // their active venue is configured for (e.g. valet => vehicles only).
   const visibleModeRows = useMemo(
-    () => counts.byMode.filter((row) => row.mode.id === mode),
-    [counts.byMode, mode],
+    () => counts.byMode.filter((row) => effectiveModes.includes(row.mode.id)),
+    [counts.byMode, effectiveModes],
   );
 
   const myShiftHere =
@@ -226,13 +190,36 @@ export default function Home() {
   ];
 
   const shiftLoading = activeShiftQuery.isLoading;
-  const startBusy = startMutation.isPending;
-  const endBusy = endMutation.isPending;
 
   // If the user has an active shift at a different venue, surface that so
   // they understand why "Start shift" is unavailable here.
   const shiftElsewhere =
     myShift && venueCode && myShift.venueCode !== venueCode ? myShift : null;
+
+  if (!shiftLoading && !myShiftHere) {
+    return <Redirect to="/pre-shift" />;
+  }
+
+  if (!shiftLoading && effectiveModes.length === 0) {
+    return (
+      <section className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-5" data-testid="panel-authorization-denied-home">
+        <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">Authorization</div>
+        <h1 className="text-xl font-extrabold text-white tracking-tight mt-1">No authorized asset classes for this station</h1>
+        <p className="mt-2 text-sm text-amber-100/90 leading-relaxed">
+          Your handler authorization and station capability matrix currently have no overlap.
+          Ask a supervisor to update your mode permissions.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Link href="/station" className="inline-flex items-center rounded-xl border border-white/10 bg-obsidian/40 px-3 py-1.5 text-xs font-semibold text-paper hover-elevate">
+            Open station details
+          </Link>
+          <Link href="/settings" className="inline-flex items-center rounded-xl border border-white/10 bg-obsidian/40 px-3 py-1.5 text-xs font-semibold text-paper hover-elevate">
+            Open settings
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   const onCommandCenterTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const t = e.touches[0];
@@ -247,8 +234,8 @@ export default function Home() {
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     const dt = Date.now() - start.at;
-    const leftSwipe = dx <= -70 && Math.abs(dy) <= 90 && dt <= 550;
-    if (leftSwipe) navigate("/custody");
+    const rightSwipe = dx >= 70 && Math.abs(dy) <= 90 && dt <= 550;
+    if (rightSwipe) navigate("/custody");
   };
 
   const onIntercomTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -273,7 +260,7 @@ export default function Home() {
       className="space-y-5"
       onTouchStart={onCommandCenterTouchStart}
       onTouchEnd={onCommandCenterTouchEnd}
-      data-testid="gesture-custody-left-swipe"
+      data-testid="gesture-custody-right-swipe"
     >
       {/* Top action row */}
       <div className="flex items-center justify-between">
@@ -303,6 +290,16 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {authorization.usingDerivedDefaults && (
+        <section className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3" data-testid="banner-derived-authorization-home">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">Authorization source</div>
+          <div className="text-xs text-amber-100/90 mt-1 leading-relaxed">
+            Station capabilities and/or handler authorizations are currently inferred from venue type/role defaults.
+            Explicit capability matrix data from backend will override this automatically.
+          </div>
+        </section>
+      )}
 
       {/* Greeting + shift card */}
       <motion.div
@@ -386,33 +383,15 @@ export default function Home() {
         {/* Start / end shift control */}
         <div className="mt-3 flex items-center justify-between gap-2">
           <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            {myShiftHere
-              ? `Role: ${myShiftHere.role}`
-              : "No active shift"}
+            {myShiftHere ? `Role: ${myShiftHere.role}` : "No active shift"}
           </div>
-          {myShiftHere ? (
-            <button
-              type="button"
-              onClick={() => endMutation.mutate(myShiftHere.id)}
-              disabled={endBusy}
-              className="inline-flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 px-3 py-1.5 text-xs font-semibold hover-elevate disabled:opacity-60"
-              data-testid="button-end-shift"
-            >
-              <Square className="w-3.5 h-3.5" />
-              {endBusy ? "Ending…" : "End shift"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => startMutation.mutate()}
-              disabled={startBusy || !venueCode || Boolean(shiftElsewhere)}
-              className="inline-flex items-center gap-2 rounded-xl border border-lime/40 bg-lime/15 text-lime px-3 py-1.5 text-xs font-semibold hover-elevate disabled:opacity-60"
-              data-testid="button-start-shift"
-            >
-              <Play className="w-3.5 h-3.5" />
-              {startBusy ? "Starting…" : "Start shift"}
-            </button>
-          )}
+          <Link
+            href="/checkout"
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 px-3 py-1.5 text-xs font-semibold hover-elevate"
+            data-testid="link-shift-checkout"
+          >
+            Checkout / End shift
+          </Link>
         </div>
 
         {/* Teammates currently on shift here */}
@@ -445,6 +424,31 @@ export default function Home() {
           </div>
         )}
       </motion.div>
+
+      {/* Assignments snapshot */}
+      <section className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-assignments-snapshot">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Assignments</div>
+          <ClipboardList className="w-4 h-4 text-lime" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <AssignmentCell
+            title="Patron requests"
+            subtitle="Ticket-based asks"
+            value={String(openServicesCount)}
+          />
+          <AssignmentCell
+            title="Supervisor tasks"
+            subtitle="Manual + asset-linked"
+            value="Pending"
+          />
+          <AssignmentCell
+            title="Service jobs"
+            subtitle="Ops/clean/prep"
+            value={String(openServicesCount)}
+          />
+        </div>
+      </section>
 
       {/* Mode counter strip: only show authorized mode(s) for the active
           venue. A valet handler should never see baggage/cloakroom/retail
@@ -507,27 +511,22 @@ export default function Home() {
       </div>
 
       {/* End-of-page intercom gesture surface: flick up to open intercom. */}
+      {/* End-of-page intercom pull surface: swipe/flick upward to pull the
+          intercom page from the bottom. */}
       <div
-        className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 flex items-center justify-between gap-3"
+        className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3"
         onTouchStart={onIntercomTouchStart}
         onTouchEnd={onIntercomTouchEnd}
-        data-testid="gesture-intercom-flick-up"
+        data-testid="gesture-intercom-pull-up"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-emerald-300/35" aria-hidden="true" />
+        <div className="flex items-center justify-center gap-2 min-w-0">
           <Radio className="w-5 h-5 text-emerald-300 shrink-0" />
-          <div className="min-w-0">
+          <div className="min-w-0 text-center">
             <div className="text-sm font-semibold text-white">Intercom</div>
-            <div className="text-xs text-slate truncate">Flick up here to open venue intercom</div>
+            <div className="text-xs text-slate truncate">Swipe up from here to pull up Intercom</div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate("/intercom")}
-          className="rounded-xl border border-emerald-300/40 bg-emerald-400/15 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover-elevate"
-          data-testid="button-open-intercom"
-        >
-          Open
-        </button>
       </div>
 
       {/* Footer hint */}
@@ -542,9 +541,27 @@ export default function Home() {
           <Link href="/release" className="text-paper font-semibold underline">
             {copy.releaseAction}
           </Link>{" "}
-          to scan a tag and return one. Swipe left anywhere on this page to open custody.
+          to scan a tag and return one. Swipe right anywhere on this page to open custody.
         </div>
       </div>
+    </div>
+  );
+}
+
+function AssignmentCell({
+  title,
+  subtitle,
+  value,
+}: {
+  title: string;
+  subtitle: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-obsidian/40 p-3">
+      <div className="text-xs text-white font-semibold truncate">{title}</div>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-slate mt-0.5">{subtitle}</div>
+      <div className="mt-2 text-lg font-extrabold text-white">{value}</div>
     </div>
   );
 }

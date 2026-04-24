@@ -22,6 +22,9 @@ import Settings from "@/pages/Settings";
 import MessagesPage from "@/pages/Messages";
 import IntercomPage from "@/pages/Intercom";
 import ServicesPage from "@/pages/Services";
+import StationPage from "@/pages/Station";
+import PreShiftPage from "@/pages/PreShift";
+import CheckoutPage from "@/pages/Checkout";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -170,6 +173,9 @@ function AuthedRoutes() {
         <Route path="/messages" component={MessagesPage} />
         <Route path="/intercom" component={IntercomPage} />
         <Route path="/services" component={ServicesPage} />
+        <Route path="/station" component={StationPage} />
+        <Route path="/pre-shift" component={PreShiftPage} />
+        <Route path="/checkout" component={CheckoutPage} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

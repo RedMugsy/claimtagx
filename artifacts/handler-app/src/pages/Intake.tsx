@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import type { CustodyAsset } from "@/lib/types";
 type Step = "details" | "review" | "done";
 
 export default function Intake() {
-  const { mode, intake, activeVenue } = useStore();
+  const { mode, intake, activeVenue, canAccessMode } = useStore();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
   const copy = VENUE_COPY[activeVenue?.venueType ?? "other"];
@@ -58,6 +59,26 @@ export default function Intake() {
       setSubmitting(false);
     }
   };
+
+  if (!canAccessMode(mode)) {
+    return (
+      <section className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-5" data-testid="panel-authorization-denied-intake">
+        <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">Authorization</div>
+        <h1 className="text-xl font-extrabold text-white tracking-tight mt-1">Intake is not enabled for your authorization</h1>
+        <p className="mt-2 text-sm text-amber-100/90 leading-relaxed">
+          This station mode is outside your current handler authorization scope.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Link href="/station" className="inline-flex items-center rounded-xl border border-white/10 bg-obsidian/40 px-3 py-1.5 text-xs font-semibold text-paper hover-elevate">
+            Open station details
+          </Link>
+          <Link href="/" className="inline-flex items-center rounded-xl border border-white/10 bg-obsidian/40 px-3 py-1.5 text-xs font-semibold text-paper hover-elevate">
+            Back to Command Center
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div>

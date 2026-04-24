@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
-import { ChevronDown, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare } from "lucide-react";
+import { ChevronDown, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare, Info } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,11 +43,11 @@ const tabs = [
   { path: "/release", label: "Scan", icon: ScanLine },
   { path: "/history", label: "History", icon: HistoryIcon },
   { path: "/messages", label: "Messages", icon: MessageSquare },
-  { path: "/settings", label: "Settings", icon: Settings },
+  { path: "/checkout", label: "Checkout", icon: LogOut },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { session, mode, signOut, assets, venues, activeVenue, setActiveVenue, streamStatus } = useStore();
+  const { session, mode, signOut, assets, venues, activeVenue, setActiveVenue, streamStatus, effectiveModes } = useStore();
   const [location, navigate] = useLocation();
   // The header chip used to be a dropdown letting handlers pick an asset
   // mode. The mode now follows the venue's classification — set by the
@@ -57,7 +57,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const venueType = activeVenue?.venueType ?? "other";
   const venueTypeLabel = VENUE_TYPE_LABEL[venueType];
   const VenueTypeIcon = VENUE_TYPE_ICON[venueType];
-  const activeCount = assets.filter((a) => a.status === "active" && a.mode === mode).length;
+  const activeCount = assets.filter((a) => a.status === "active" && effectiveModes.includes(a.mode)).length;
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-obsidian text-paper font-sans">
@@ -154,6 +154,25 @@ export function Shell({ children }: { children: ReactNode }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{session?.email}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider text-slate">
+                Station Information
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onSelect={() => navigate("/station")}
+                data-testid="menu-station-info"
+              >
+                <Info className="w-4 h-4" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">
+                    {activeVenue?.name ?? session?.venueName ?? "No station selected"}
+                  </div>
+                  <div className="text-[10px] font-mono text-slate">
+                    {(activeVenue?.code ?? session?.venueCode ?? "—")}
+                    {activeVenue?.role ? ` · ${activeVenue.role}` : ""}
+                  </div>
+                </div>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => navigate("/settings")}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { Search, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ function fmtAge(ts: number) {
 }
 
 export default function Custody() {
-  const { mode, assets, activeVenue, venues, setActiveVenue } = useStore();
+  const { mode, assets, session, activeVenue, venues, setActiveVenue, canAccessMode } = useStore();
   // Owner-targeted tamper-spike alert emails link to /custody?venue=<code>.
   // Honour that query param so the owner lands on the right venue's feed
   // instead of whichever venue they had selected last.
@@ -53,6 +54,7 @@ export default function Custody() {
   const [selected, setSelected] = useState<CustodyAsset | null>(null);
   const [ageFilter, setAgeFilter] = useState<"all" | AgingBand>("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [kpiWindow, setKpiWindow] = useState<"today" | "week" | "month">("today");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,6 +96,70 @@ export default function Custody() {
     return c;
   }, [allActive, bands]);
 
+  const windowStart = useMemo(() => {
+    const now = new Date();
+    if (kpiWindow === "today") {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    }
+    if (kpiWindow === "week") {
+      return now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    }
+    return now.getTime() - 30 * 24 * 60 * 60 * 1000;
+  }, [kpiWindow]);
+
+  const kpis = useMemo(() => {
+    const base = assets.filter((a) => a.mode === mode);
+    const inRange = base.filter((a) => a.intakeAt >= windowStart);
+    const myName = (session?.handlerName ?? "").trim().toLowerCase();
+    const myEmail = (session?.email ?? "").trim().toLowerCase();
+
+    const handlerCheckIns = inRange.filter(
+      (a) => a.handler.trim().toLowerCase() === myName,
+    ).length;
+
+    const checkOuts = base.filter(
+      (a) => a.releasedAt != null && a.releasedAt >= windowStart,
+    );
+    const handlerCheckOuts = checkOuts.filter((a) => {
+      const releasedBy = (a.releasedBy ?? "").trim().toLowerCase();
+      if (!releasedBy) return false;
+      return releasedBy === myName || releasedBy === myEmail;
+    }).length;
+
+    const stationHandled = inRange.length;
+
+    return {
+      inCustody: allActive.length,
+      handlerHandled: handlerCheckIns,
+      stationHandled,
+      checkIns: inRange.length,
+      checkOuts: checkOuts.length,
+      handlerCheckOuts,
+      contribution:
+        stationHandled > 0 ? Math.round((handlerCheckIns / stationHandled) * 100) : 0,
+    };
+  }, [assets, mode, windowStart, session?.handlerName, session?.email, allActive.length]);
+
+  if (!canAccessMode(mode)) {
+    return (
+      <section className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-5" data-testid="panel-authorization-denied-custody">
+        <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">Authorization</div>
+        <h1 className="text-xl font-extrabold text-white tracking-tight mt-1">Custody view is not enabled for your authorization</h1>
+        <p className="mt-2 text-sm text-amber-100/90 leading-relaxed">
+          Your handler authorization does not include this station mode at the moment.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Link href="/station" className="inline-flex items-center rounded-xl border border-white/10 bg-obsidian/40 px-3 py-1.5 text-xs font-semibold text-paper hover-elevate">
+            Open station details
+          </Link>
+          <Link href="/" className="inline-flex items-center rounded-xl border border-white/10 bg-obsidian/40 px-3 py-1.5 text-xs font-semibold text-paper hover-elevate">
+            Back to Command Center
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div>
       <header className="mb-6">
@@ -120,6 +186,45 @@ export default function Custody() {
           </div>
         ) : null}
       </header>
+
+      <section className="mb-5 rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-custody-kpis">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
+            Custody analytics
+          </div>
+          <div className="inline-flex items-center rounded-full border border-white/10 bg-obsidian/50 p-1">
+            {([
+              { id: "today", label: "Today" },
+              { id: "week", label: "7D" },
+              { id: "month", label: "30D" },
+            ] as const).map((w) => (
+              <button
+                key={w.id}
+                onClick={() => setKpiWindow(w.id)}
+                className={`px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                  kpiWindow === w.id ? "bg-lime/15 text-lime" : "text-slate"
+                }`}
+                data-testid={`kpi-window-${w.id}`}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+          <KpiTile label="In custody" value={String(kpis.inCustody)} tone="lime" />
+          <KpiTile label="Handler handled" value={String(kpis.handlerHandled)} />
+          <KpiTile label="Station handled" value={String(kpis.stationHandled)} />
+          <KpiTile label="Check-ins" value={String(kpis.checkIns)} />
+          <KpiTile label="Check-outs" value={String(kpis.checkOuts)} />
+          <KpiTile label="Contribution" value={`${kpis.contribution}%`} tone="emerald" />
+        </div>
+
+        <div className="mt-3 text-[11px] text-slate">
+          Your checkout completions in this window: <span className="text-paper font-semibold">{kpis.handlerCheckOuts}</span>
+        </div>
+      </section>
 
       <div className="relative mb-3">
         <Search className="w-4 h-4 text-slate absolute left-3 top-1/2 -translate-y-1/2" />
@@ -341,6 +446,31 @@ export default function Custody() {
           )}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function KpiTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "lime" | "emerald";
+}) {
+  const toneCls =
+    tone === "lime"
+      ? "border-lime/30 bg-lime/10"
+      : tone === "emerald"
+      ? "border-emerald-400/30 bg-emerald-500/10"
+      : "border-white/10 bg-obsidian/40";
+  const valueCls = tone === "lime" ? "text-lime" : tone === "emerald" ? "text-emerald-300" : "text-white";
+
+  return (
+    <div className={`rounded-2xl border p-3 ${toneCls}`}>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{label}</div>
+      <div className={`mt-1 text-lg font-extrabold ${valueCls}`}>{value}</div>
     </div>
   );
 }

@@ -61,6 +61,8 @@ export interface VenueMembership {
   name: string;
   role?: string;
   venueType?: VenueType;
+  stationCapabilities?: AssetModeId[];
+  handlerAuthorizations?: AssetModeId[];
 }
 
 export interface AvailableVenue {

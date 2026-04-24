@@ -1,78 +1,97 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Building2,
-  Check,
+  Activity,
+  BarChart3,
+  CalendarClock,
   LogOut,
-  Palette,
-  Plus,
   Settings as SettingsIcon,
-  Trash2,
+  User,
 } from "lucide-react";
+import { getActiveShift, getGetActiveShiftQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
-import { fetchAvailableVenues } from "@/lib/api";
-import type { AvailableVenue } from "@/lib/types";
-import { InvitationsInbox } from "@/components/handler/InvitationsInbox";
-import { VenueAdminPanel } from "@/components/handler/VenueAdminPanel";
+import { MODE_BY_ID } from "@/lib/modes";
 
-const OWNER_ROLES = new Set(["owner", "supervisor"]);
+function pad(n: number) {
+  return n.toString().padStart(2, "0");
+}
+
+function formatHm(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  return `${pad(h)}:${pad(m)}`;
+}
+
+function getWindowStart(window: "day" | "week" | "month" | "year") {
+  const now = Date.now();
+  if (window === "day") return now - 24 * 60 * 60 * 1000;
+  if (window === "week") return now - 7 * 24 * 60 * 60 * 1000;
+  if (window === "month") return now - 30 * 24 * 60 * 60 * 1000;
+  return now - 365 * 24 * 60 * 60 * 1000;
+}
 
 export default function Settings() {
-  const {
-    session,
-    signOut,
-    venues,
-    activeVenue,
-    setActiveVenue,
-    joinVenue,
-    leaveVenue,
-  } = useStore();
-  const [token, setToken] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { session, signOut, assets, mode, activeVenue, authorization } = useStore();
+  const [attendanceWindow, setAttendanceWindow] = useState<"day" | "week" | "month">("day");
+  const [performanceWindow, setPerformanceWindow] = useState<"day" | "week" | "month" | "year">("day");
 
-  const available = useQuery({
-    queryKey: ["available-venues"],
-    queryFn: fetchAvailableVenues,
-    staleTime: 5 * 60_000,
+  const activeShiftQuery = useQuery({
+    queryKey: getGetActiveShiftQueryKey(),
+    queryFn: () => getActiveShift(),
+    staleTime: 30_000,
   });
 
-  const knownCodes = new Set(venues.map((v) => v.code));
-  const presets: AvailableVenue[] = (available.data ?? []).filter(
-    (v) => !knownCodes.has(v.code),
-  );
-  const ownedVenues = venues.filter((v) => OWNER_ROLES.has(v.role ?? ""));
+  const shift = activeShiftQuery.data?.shift ?? null;
 
-  const onAdd = async (inviteToken: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await joinVenue(inviteToken);
-      setToken("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not redeem invite");
-    } finally {
-      setBusy(false);
-    }
-  };
+  const attendance = useMemo(() => {
+    const now = Date.now();
+    const start = getWindowStart(attendanceWindow);
+    const hasShiftInWindow = shift && shift.startedAt >= start;
+    const workedMs = hasShiftInWindow ? now - shift.startedAt : 0;
+    const targetMs = (shift?.targetMinutes ?? 480) * 60 * 1000;
+    return {
+      onShift: Boolean(shift),
+      worked: formatHm(workedMs),
+      target: formatHm(targetMs),
+      overtime: formatHm(Math.max(0, workedMs - targetMs)),
+      remaining: formatHm(Math.max(0, targetMs - workedMs)),
+    };
+  }, [attendanceWindow, shift]);
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!token.trim()) return;
-    void onAdd(token.trim());
-  };
+  const performance = useMemo(() => {
+    const start = getWindowStart(performanceWindow);
+    const myName = (session?.handlerName ?? "").trim().toLowerCase();
+    const myEmail = (session?.email ?? "").trim().toLowerCase();
+    const scoped = assets.filter((a) => a.mode === mode);
+    const checkedIns = scoped.filter(
+      (a) => a.intakeAt >= start && a.handler.trim().toLowerCase() === myName,
+    );
+    const checkedOuts = scoped.filter(
+      (a) =>
+        a.releasedAt != null &&
+        a.releasedAt >= start &&
+        (() => {
+          const by = (a.releasedBy ?? "").trim().toLowerCase();
+          return by === myName || by === myEmail;
+        })(),
+    );
+    const inCustodyNow = scoped.filter((a) => a.status === "active").length;
+    const completionRate =
+      checkedIns.length > 0
+        ? Math.round((checkedOuts.length / checkedIns.length) * 100)
+        : 0;
 
-  const onLeave = async (leaveCode: string) => {
-    setBusy(true);
-    try {
-      await leaveVenue(leaveCode);
-    } finally {
-      setBusy(false);
-    }
-  };
+    return {
+      checkedIns: checkedIns.length,
+      checkedOuts: checkedOuts.length,
+      inCustodyNow,
+      completionRate,
+    };
+  }, [performanceWindow, assets, mode, session?.handlerName, session?.email]);
+
+  const modeLabel = MODE_BY_ID[mode].label;
 
   return (
     <div>
@@ -89,11 +108,11 @@ export default function Settings() {
       </header>
 
       <div className="space-y-6">
-        <InvitationsInbox />
-
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
-          <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4">Handler</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4 flex items-center gap-2">
+            <User className="w-4 h-4" /> Profile
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <div className="text-xs font-mono uppercase tracking-wide text-slate">Name</div>
               <div className="text-white font-semibold">{session?.handlerName}</div>
@@ -103,171 +122,92 @@ export default function Settings() {
               <div className="text-white font-mono">{session?.email}</div>
             </div>
             <div>
-              <div className="text-xs font-mono uppercase tracking-wide text-slate">Active venue</div>
-              <div className="text-white font-semibold">{session?.venueName}</div>
+              <div className="text-xs font-mono uppercase tracking-wide text-slate">Station</div>
+              <div className="text-white font-semibold">{activeVenue?.name ?? session?.venueName}</div>
             </div>
             <div>
-              <div className="text-xs font-mono uppercase tracking-wide text-slate">Venue code</div>
-              <div className="text-white font-mono">{session?.venueCode}</div>
+              <div className="text-xs font-mono uppercase tracking-wide text-slate">Asset class</div>
+              <div className="text-white font-semibold">{modeLabel}</div>
             </div>
+          </div>
+          <div className="mt-4 rounded-2xl border border-white/10 bg-obsidian/40 p-3 text-xs space-y-1">
+            <div className="text-slate">Station capabilities: <span className="text-paper font-mono">{authorization.stationModes.join(", ") || "none"}</span></div>
+            <div className="text-slate">Your authorizations: <span className="text-paper font-mono">{authorization.handlerModes.join(", ") || "none"}</span></div>
+            <div className="text-slate">Effective access: <span className="text-lime font-mono">{authorization.effectiveModes.join(", ") || "none"}</span></div>
           </div>
         </section>
 
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
-          <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4 flex items-center gap-2">
-            <Building2 className="w-4 h-4" /> Venues
-          </h2>
-
-          <div className="space-y-2 mb-5">
-            {venues.map((v) => {
-              const active = v.code === activeVenue?.code;
-              return (
-                <div
-                  key={v.code}
-                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
-                    active
-                      ? "border-lime/40 bg-lime/10"
-                      : "border-white/10 bg-obsidian/40"
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="text-sm font-mono uppercase tracking-wide text-slate flex items-center gap-2">
+              <CalendarClock className="w-4 h-4" /> Attendance overview
+            </h2>
+            <div className="inline-flex items-center rounded-full border border-white/10 bg-obsidian/50 p-1">
+              {(["day", "week", "month"] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setAttendanceWindow(w)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                    attendanceWindow === w ? "bg-lime/15 text-lime" : "text-slate"
                   }`}
-                  data-testid={`venue-row-${v.code}`}
+                  data-testid={`attendance-window-${w}`}
                 >
-                  <button
-                    onClick={() => setActiveVenue(v.code)}
-                    className="flex items-center gap-3 text-left min-w-0"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/30 flex items-center justify-center text-lime shrink-0">
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-white font-semibold truncate">{v.name}</div>
-                      <div className="text-xs font-mono text-slate">
-                        {v.code} · {v.role ?? "handler"}
-                      </div>
-                    </div>
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {active ? (
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-lime flex items-center gap-1">
-                        <Check className="w-3 h-3" /> active
-                      </span>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setActiveVenue(v.code)}
-                        data-testid={`button-activate-${v.code}`}
-                      >
-                        Switch
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void onLeave(v.code)}
-                      className="text-red-300 hover:text-red-200"
-                      data-testid={`button-leave-${v.code}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-            {venues.length === 0 && (
-              <div className="text-sm text-slate">You aren't a member of any venue yet.</div>
-            )}
+                  {w}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {presets.length > 0 && (
-            <div className="mb-4">
-              <Label className="text-xs font-mono uppercase tracking-wide text-slate mb-2 block">
-                Demo venues to join
-              </Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {presets.map((v) => (
-                  <button
-                    key={v.code}
-                    onClick={() => void onAdd(v.inviteToken)}
-                    disabled={busy}
-                    className="text-left flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-obsidian/40 px-4 py-3 hover-elevate disabled:opacity-50"
-                    data-testid={`button-join-${v.code}`}
-                  >
-                    <div className="min-w-0">
-                      <div className="text-white font-semibold truncate">{v.name}</div>
-                      <div className="text-xs font-mono text-slate">{v.code}</div>
-                    </div>
-                    <Plus className="w-4 h-4 text-slate" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <form onSubmit={onSubmit} className="flex items-end gap-2">
-            <div className="flex-1 space-y-1.5">
-              <Label htmlFor="invite-token" className="text-xs font-mono uppercase tracking-wide text-slate">
-                Add venue by invite token
-              </Label>
-              <Input
-                id="invite-token"
-                placeholder="invite-xxxxxx"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                className="bg-obsidian/40 border-white/10 text-white placeholder:text-slate font-mono"
-                data-testid="input-add-invite-token"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={busy || !token.trim()}
-              className="bg-lime text-obsidian hover:bg-lime-hover font-bold"
-              data-testid="button-redeem-invite-settings"
-            >
-              <Plus className="w-4 h-4" /> Redeem
-            </Button>
-          </form>
-          {error && (
-            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-              {error}
-            </div>
-          )}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <MetricTile label="On shift" value={attendance.onShift ? "Yes" : "No"} tone={attendance.onShift ? "lime" : undefined} />
+            <MetricTile label="Worked" value={attendance.worked} />
+            <MetricTile label="Target" value={attendance.target} />
+            <MetricTile label="Remaining" value={attendance.remaining} />
+            <MetricTile label="Overtime" value={attendance.overtime} tone="rose" />
+          </div>
         </section>
 
-        {ownedVenues.map((v) => (
-          <VenueAdminPanel key={v.code} venue={v} />
-        ))}
-
-
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6">
-          <h2 className="text-sm font-mono uppercase tracking-wide text-slate mb-4 flex items-center gap-2">
-            <Palette className="w-4 h-4" /> Theme
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { name: "Obsidian", hex: "#0B0F19" },
-              { name: "Lime", hex: "#C6F24E" },
-              { name: "Steel", hex: "#1F2937" },
-              { name: "Slate", hex: "#64748B" },
-            ].map((c) => (
-              <div key={c.name} className="rounded-2xl border border-white/10 bg-obsidian/40 p-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl border border-white/10" style={{ background: c.hex }} />
-                <div>
-                  <div className="text-sm text-white font-semibold">{c.name}</div>
-                  <div className="text-xs text-slate font-mono">{c.hex}</div>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="text-sm font-mono uppercase tracking-wide text-slate flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" /> Performance overview
+            </h2>
+            <div className="inline-flex items-center rounded-full border border-white/10 bg-obsidian/50 p-1">
+              {(["day", "week", "month", "year"] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setPerformanceWindow(w)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                    performanceWindow === w ? "bg-lime/15 text-lime" : "text-slate"
+                  }`}
+                  data-testid={`performance-window-${w}`}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="mt-4 text-xs text-slate font-mono">
-            Inter · JetBrains Mono · radius 16px · matches the marketing site
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricTile label="Check-ins" value={String(performance.checkedIns)} />
+            <MetricTile label="Check-outs" value={String(performance.checkedOuts)} />
+            <MetricTile label="In custody now" value={String(performance.inCustodyNow)} />
+            <MetricTile
+              label="Completion rate"
+              value={`${performance.completionRate}%`}
+              tone="emerald"
+            />
+          </div>
+          <div className="mt-3 text-[11px] text-slate inline-flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5" />
+            Live snapshot from current shift and custody activity.
           </div>
         </section>
 
         <section className="rounded-3xl border border-white/10 bg-steel/40 p-6 flex items-center justify-between">
           <div>
-            <div className="text-white font-semibold">End shift</div>
-            <div className="text-sm text-slate">Sign out and return to the login screen.</div>
+            <div className="text-white font-semibold">Sign out</div>
+            <div className="text-sm text-slate">Log out of the handler app on this device.</div>
           </div>
           <Button
             variant="secondary"
@@ -279,6 +219,41 @@ export default function Settings() {
           </Button>
         </section>
       </div>
+    </div>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "lime" | "emerald" | "rose";
+}) {
+  const toneCls =
+    tone === "lime"
+      ? "border-lime/30 bg-lime/10"
+      : tone === "emerald"
+      ? "border-emerald-400/30 bg-emerald-500/10"
+      : tone === "rose"
+      ? "border-rose-400/30 bg-rose-500/10"
+      : "border-white/10 bg-obsidian/40";
+
+  const valueCls =
+    tone === "lime"
+      ? "text-lime"
+      : tone === "emerald"
+      ? "text-emerald-300"
+      : tone === "rose"
+      ? "text-rose-300"
+      : "text-white";
+
+  return (
+    <div className={`rounded-2xl border p-3 ${toneCls}`}>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{label}</div>
+      <div className={`mt-1 text-lg font-extrabold ${valueCls}`}>{value}</div>
     </div>
   );
 }

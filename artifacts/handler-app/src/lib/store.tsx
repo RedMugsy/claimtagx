@@ -25,7 +25,7 @@ import type {
   HandlerSession,
   VenueMembership,
 } from "./types";
-import { VENUE_TYPE_TO_MODE } from "./modes";
+import { MODES, VENUE_TYPE_TO_MODE } from "./modes";
 import {
   fetchMe,
   joinVenue as apiJoinVenue,
@@ -69,6 +69,17 @@ interface StoreCtx {
   // intake fields, ticket columns, tile copy, and aging bands automatically
   // — so handlers never see a manual asset-mode toggle.
   mode: AssetModeId;
+  effectiveModes: AssetModeId[];
+  canAccessMode: (m: AssetModeId) => boolean;
+  authorization: {
+    stationModes: AssetModeId[];
+    handlerModes: AssetModeId[];
+    effectiveModes: AssetModeId[];
+    hasAnyModeAccess: boolean;
+    stationModesSource: "membership" | "derived";
+    handlerModesSource: "membership" | "role-derived";
+    usingDerivedDefaults: boolean;
+  };
   assets: CustodyAsset[];
   loading: boolean;
   intake: (
@@ -83,6 +94,16 @@ interface StoreCtx {
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
+
+const ALL_MODE_IDS: AssetModeId[] = MODES.map((m) => m.id);
+
+function isAssetModeId(value: string): value is AssetModeId {
+  return (ALL_MODE_IDS as string[]).includes(value);
+}
+
+function uniqueModes(modes: AssetModeId[]): AssetModeId[] {
+  return [...new Set(modes)];
+}
 
 function readStoredVenue(): string | null {
   try {
@@ -149,12 +170,78 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [venues, activeVenueCode],
   );
 
+  // Dual authorization model:
+  // 1) Station capability filter (which asset modes the station supports)
+  // 2) Handler authorization filter (which modes this handler can operate)
+  // Effective modes are intersection(station ∩ handler).
+  const stationModesProvided = Array.isArray(activeVenue?.stationCapabilities);
+
+  const stationModes = useMemo<AssetModeId[]>(() => {
+    if (stationModesProvided) {
+      const fromMembership = (activeVenue?.stationCapabilities ?? []).filter((m) =>
+        isAssetModeId(m),
+      );
+      return uniqueModes(fromMembership);
+    }
+    return [VENUE_TYPE_TO_MODE[activeVenue?.venueType ?? "other"]];
+  }, [stationModesProvided, activeVenue?.stationCapabilities, activeVenue?.venueType]);
+
+  const stationModesSource: "membership" | "derived" =
+    stationModesProvided ? "membership" : "derived";
+
+  const handlerModesProvided = Array.isArray(activeVenue?.handlerAuthorizations);
+
+  const handlerModes = useMemo<AssetModeId[]>(() => {
+    if (handlerModesProvided) {
+      const fromMembership = (activeVenue?.handlerAuthorizations ?? []).filter((m) =>
+        isAssetModeId(m),
+      );
+      return uniqueModes(fromMembership);
+    }
+    const role = (activeVenue?.role ?? "handler").toLowerCase();
+    if (role === "owner" || role === "supervisor") return ALL_MODE_IDS;
+    return stationModes;
+  }, [handlerModesProvided, activeVenue?.handlerAuthorizations, activeVenue?.role, stationModes]);
+
+  const handlerModesSource: "membership" | "role-derived" =
+    handlerModesProvided ? "membership" : "role-derived";
+
+  const effectiveModes = useMemo<AssetModeId[]>(
+    () => stationModes.filter((m) => handlerModes.includes(m)),
+    [stationModes, handlerModes],
+  );
+
   // Drive the asset mode straight from the venue's classification. Default
   // to "other" → vehicles when an owner hasn't picked a type yet, so the
   // app stays usable instead of going blank on a fresh tenant.
   const mode: AssetModeId = useMemo(
-    () => VENUE_TYPE_TO_MODE[activeVenue?.venueType ?? "other"],
-    [activeVenue?.venueType],
+    () => effectiveModes[0] ?? stationModes[0] ?? "vehicles",
+    [effectiveModes, stationModes],
+  );
+
+  const canAccessMode = useCallback(
+    (m: AssetModeId) => effectiveModes.includes(m),
+    [effectiveModes],
+  );
+
+  const authorization = useMemo(
+    () => ({
+      stationModes,
+      handlerModes,
+      effectiveModes,
+      hasAnyModeAccess: effectiveModes.length > 0,
+      stationModesSource,
+      handlerModesSource,
+      usingDerivedDefaults:
+        stationModesSource === "derived" || handlerModesSource === "role-derived",
+    }),
+    [
+      stationModes,
+      handlerModes,
+      effectiveModes,
+      stationModesSource,
+      handlerModesSource,
+    ],
   );
 
   const session = useMemo<HandlerSession | null>(() => {
@@ -464,6 +551,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refreshMe,
       signOut: signOutFn,
       mode,
+      effectiveModes,
+      canAccessMode,
+      authorization,
       assets,
       loading: assetsLoading,
       intake,
@@ -483,6 +573,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refreshMe,
       signOutFn,
       mode,
+      effectiveModes,
+      canAccessMode,
+      authorization,
       assets,
       assetsLoading,
       intake,
