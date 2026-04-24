@@ -2,14 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
-  CheckCircle2,
-  FileEdit,
   Loader2,
   MessageCircle,
   Nfc,
   QrCode,
   Send,
-  UserPlus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,9 +19,7 @@ interface ModeSpec {
   iconTone: string;
   title: string;
   subtitle: string;
-  // Caption shown while the ClaimTag is being broadcast over the chosen channel.
   broadcasting: string;
-  // Short instruction for the handler once the tag is live on the channel.
   instruction: string;
 }
 
@@ -63,26 +58,39 @@ const SPECS: Record<Mode, ModeSpec> = {
 };
 
 function generateTicketId(): string {
-  // Mock client-side ticket reference until backend wires this up.
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
   const stamp = Date.now().toString(36).slice(-3).toUpperCase();
   return `CT-${stamp}${rand}`;
 }
 
+function generateRecoveryCode(): string {
+  // 3-digit code (000–999) recited to the patron in case they lose their
+  // phone — short enough to dictate, never used as primary auth.
+  return Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+}
+
 function IssueQuick({ mode }: { mode: Mode }) {
   const spec = SPECS[mode];
   const [, navigate] = useLocation();
-  const [phase, setPhase] = useState<"issuing" | "broadcasting" | "captured">(
-    "issuing",
-  );
+  const [phase, setPhase] = useState<"issuing" | "ready">("issuing");
   const ticketId = useMemo(() => generateTicketId(), []);
+  const recovery = useMemo(() => generateRecoveryCode(), []);
 
   useEffect(() => {
-    // Simulate the "instant issue" round-trip. Replace with real mutation
-    // once the issue-quick endpoint is available.
-    const t = setTimeout(() => setPhase("broadcasting"), 700);
+    const t = setTimeout(() => setPhase("ready"), 700);
     return () => clearTimeout(t);
   }, []);
+
+  const goToSuccess = () => {
+    const params = new URLSearchParams({
+      ticket: ticketId,
+      code: recovery,
+      channel: mode,
+    });
+    navigate(`/issue/success?${params.toString()}`);
+  };
 
   return (
     <div className="space-y-5" data-testid={`page-issue-${mode}`}>
@@ -110,7 +118,6 @@ function IssueQuick({ mode }: { mode: Mode }) {
         </div>
       </header>
 
-      {/* Issue status card */}
       <section
         className="rounded-3xl border border-white/10 bg-steel/40 p-5"
         data-testid="card-issue-status"
@@ -127,26 +134,22 @@ function IssueQuick({ mode }: { mode: Mode }) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-lime" />
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-mono uppercase tracking-wider text-slate">
-                ClaimTag issued
-              </div>
-              <div
-                className="text-lg font-bold text-white font-mono"
-                data-testid="text-ticket-id"
-              >
-                {ticketId}
-              </div>
-              <div className="text-xs text-slate mt-1">{spec.broadcasting}</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-xs font-mono uppercase tracking-wider text-slate">
+              ClaimTag reserved
             </div>
+            <div
+              className="text-lg font-bold text-white font-mono"
+              data-testid="text-ticket-id"
+            >
+              {ticketId}
+            </div>
+            <div className="text-xs text-slate">{spec.broadcasting}</div>
           </div>
         )}
       </section>
 
-      {/* Channel-specific transfer panel */}
-      {phase !== "issuing" && (
+      {phase === "ready" && (
         <section
           className="rounded-3xl border border-white/10 bg-obsidian/40 p-5"
           data-testid="card-transfer-panel"
@@ -157,11 +160,11 @@ function IssueQuick({ mode }: { mode: Mode }) {
           {mode === "qr" ? (
             <div className="flex flex-col items-center text-center">
               <div className="w-44 h-44 rounded-2xl bg-paper text-obsidian flex items-center justify-center font-mono text-xs">
-                {/* Placeholder QR — real renderer to be wired with the ticket
-                    payload + signed URL. */}
                 <div className="grid grid-cols-8 gap-[2px] p-3">
                   {Array.from({ length: 64 }).map((_, i) => {
-                    const on = (i * 7 + ticketId.charCodeAt(i % ticketId.length)) % 3 !== 0;
+                    const on =
+                      (i * 7 + ticketId.charCodeAt(i % ticketId.length)) % 3 !==
+                      0;
                     return (
                       <div
                         key={i}
@@ -219,44 +222,16 @@ function IssueQuick({ mode }: { mode: Mode }) {
               <div className="text-xs text-slate">{spec.instruction}</div>
             </div>
           )}
+
+          <Button
+            onClick={goToSuccess}
+            className="w-full mt-5 bg-lime text-obsidian hover:bg-lime-hover font-bold"
+            data-testid="button-confirm-handshake"
+          >
+            Patron received — continue
+          </Button>
         </section>
       )}
-
-      {/* Capture-after panel */}
-      <section
-        className="rounded-3xl border border-amber-400/20 bg-amber-500/5 p-5"
-        data-testid="card-capture-after"
-      >
-        <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-amber-200 mb-2">
-          <FileEdit className="w-3.5 h-3.5" /> Asset details required
-        </div>
-        <p className="text-sm text-paper leading-snug">
-          The vehicle / asset is{" "}
-          <span className="font-semibold">not considered received</span> until
-          required information is captured — by you, or by a teammate you pass
-          this ticket to.
-        </p>
-        <p className="text-xs text-slate mt-2">
-          Whether you can issue another ClaimTag before completing this capture
-          is controlled by your TA in station settings.
-        </p>
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          <Button
-            onClick={() => navigate(`/intake?ticket=${ticketId}`)}
-            className="bg-lime text-obsidian hover:bg-lime-hover font-bold"
-            data-testid="button-capture-now"
-          >
-            <FileEdit className="w-4 h-4" /> Capture now
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(`/assignments/all?handoff=${ticketId}`)}
-            data-testid="button-pass-to-teammate"
-          >
-            <UserPlus className="w-4 h-4" /> Pass to teammate
-          </Button>
-        </div>
-      </section>
     </div>
   );
 }

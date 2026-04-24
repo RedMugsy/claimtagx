@@ -225,6 +225,54 @@ export const VENUE_COPY: Record<VenueType, VenueCopy> = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Asset noun (singular) used in CTAs like "Check-in new vehicle".
+// Sourced from the venue's SEP (Service Eligibility Profile). Until the
+// backend exposes per-venue overrides we fall back to this venue-type table.
+// ---------------------------------------------------------------------------
+export const VENUE_ASSET_NOUN: Record<VenueType, string> = {
+  valet: "vehicle",
+  baggage: "bag",
+  cloakroom: "garment",
+  retail: "bag",
+  other: "asset",
+};
+
+// ---------------------------------------------------------------------------
+// TA policy (mocked).
+//
+// These describe choices the Tenant Admin makes at the SEP level: do they
+// need to differentiate Service Class (e.g. VIP / Regular), do they
+// segment Patron types, and can a handler take in another asset before
+// completing the previous capture? The real values will come from the
+// backend later — for now we stub realistic defaults so the UI is
+// exercised end-to-end.
+// ---------------------------------------------------------------------------
+export interface TaPolicy {
+  /**
+   * Up to 6 service-class names defined in the SEP. `undefined` means the
+   * SEP has a single class (no chooser shown).
+   */
+  serviceClasses?: string[];
+  /**
+   * Patron segmentation defined by the handler/TA. `undefined` means a
+   * single bucket (no chooser shown).
+   */
+  patronTypes?: string[];
+  /**
+   * If true, a handler may issue another ClaimTag before completing the
+   * required capture for the current pending one. The pending asset stays
+   * pegged to the handler until they capture details or hand it off.
+   */
+  allowMultiAssetPending: boolean;
+}
+
+export const DEFAULT_TA_POLICY: TaPolicy = {
+  serviceClasses: ["VIP", "Regular"],
+  patronTypes: ["Hotel guest", "Restaurant", "Drop-off"],
+  allowMultiAssetPending: true,
+};
+
 export type AgingBand = "fresh" | "watch" | "overdue";
 
 export function classifyAge(
