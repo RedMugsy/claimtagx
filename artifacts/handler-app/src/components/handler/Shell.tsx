@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
-import { ChevronDown, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare, Info } from "lucide-react";
+import { ChevronDown, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare, Info, Radio } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +40,9 @@ function StreamStatusDot({ status }: { status: StreamStatus }) {
 
 const tabs = [
   { path: "/", label: "Home", icon: LayoutGrid, exact: true },
-  { path: "/release", label: "Scan", icon: ScanLine },
   { path: "/history", label: "History", icon: HistoryIcon },
   { path: "/messages", label: "Messages", icon: MessageSquare },
-  { path: "/checkout", label: "Checkout", icon: LogOut },
+  { path: "/checkout", label: "End Shift", icon: LogOut },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -173,6 +172,16 @@ export function Shell({ children }: { children: ReactNode }) {
                   </div>
                 </div>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => navigate("/intercom")}
+                data-testid="menu-intercom"
+              >
+                <Radio className="w-4 h-4" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">Intercom</div>
+                  <div className="text-[10px] font-mono text-slate">Voice + presence</div>
+                </div>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => navigate("/settings")}
@@ -214,7 +223,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
       {/* Bottom tab nav (mobile-first, also visible on desktop) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-obsidian/95 backdrop-blur-md sm:static sm:border-t sm:bg-transparent">
-        <div className="max-w-5xl mx-auto px-2 sm:px-6 py-2 grid grid-cols-5 gap-1 sm:flex sm:justify-center sm:gap-2">
+        <div className="max-w-5xl mx-auto px-2 sm:px-6 py-2 grid grid-cols-4 gap-1 sm:flex sm:justify-center sm:gap-2">
           {tabs.map((t) => {
             const Icon = t.icon;
             const active = t.exact ? location === t.path : location.startsWith(t.path);

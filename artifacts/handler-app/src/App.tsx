@@ -19,6 +19,10 @@ import Home from "@/pages/Home";
 import History from "@/pages/History";
 import Release from "@/pages/Release";
 import Settings from "@/pages/Settings";
+import SettingsProfile from "@/pages/settings/Profile";
+import SettingsAttendance from "@/pages/settings/Attendance";
+import SettingsPerformance from "@/pages/settings/Performance";
+import SettingsSecurity from "@/pages/settings/Security";
 import MessagesPage from "@/pages/Messages";
 import IntercomPage from "@/pages/Intercom";
 import ServicesPage from "@/pages/Services";
@@ -177,6 +181,10 @@ function AuthedRoutes() {
         <Route path="/pre-shift" component={PreShiftPage} />
         <Route path="/checkout" component={CheckoutPage} />
         <Route path="/settings" component={Settings} />
+        <Route path="/settings/profile" component={SettingsProfile} />
+        <Route path="/settings/attendance" component={SettingsAttendance} />
+        <Route path="/settings/performance" component={SettingsPerformance} />
+        <Route path="/settings/security" component={SettingsSecurity} />
         <Route component={NotFound} />
       </Switch>
     </Shell>

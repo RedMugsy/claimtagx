@@ -4,13 +4,16 @@ import { motion } from "framer-motion";
 import {
   Bell,
   Search,
-  CloudSun,
   PackagePlus,
   ClipboardList,
-  Radio,
-  ConciergeBell,
-  ChevronRight,
   Users,
+  Camera,
+  Ticket,
+  FileEdit,
+  Inbox,
+  Briefcase,
+  Wrench,
+  LayoutList,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -23,8 +26,7 @@ import {
   type Shift,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
-import { MODES, MODE_ICONS, VENUE_COPY } from "@/lib/modes";
-import { Badge } from "@/components/ui/badge";
+import { VENUE_COPY } from "@/lib/modes";
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -50,34 +52,8 @@ function shiftLabel(start: Date) {
   return start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-const WEEKDAYS: Array<{ key: number; short: string; long: string; icon: string }> = [
-  { key: 1, short: "Mon", long: "Monday", icon: "☀️" },
-  { key: 2, short: "Tue", long: "Tuesday", icon: "⛅" },
-  { key: 3, short: "Wed", long: "Wednesday", icon: "🌤️" },
-  { key: 4, short: "Thu", long: "Thursday", icon: "🌧️" },
-  { key: 5, short: "Fri", long: "Friday", icon: "⛅" },
-  { key: 6, short: "Sat", long: "Saturday", icon: "☀️" },
-];
-
-interface Tile {
-  to: string;
-  label: string;
-  Icon: typeof PackagePlus;
-  tone: "lime" | "indigo" | "amber" | "violet" | "emerald" | "rose";
-  badge?: string;
-}
-
-const toneClasses: Record<Tile["tone"], string> = {
-  lime: "bg-lime/15 text-lime border-lime/30",
-  indigo: "bg-indigo-500/15 text-indigo-300 border-indigo-400/30",
-  amber: "bg-amber-500/15 text-amber-300 border-amber-400/30",
-  violet: "bg-violet-500/15 text-violet-300 border-violet-400/30",
-  emerald: "bg-emerald-500/15 text-emerald-300 border-emerald-400/30",
-  rose: "bg-rose-500/15 text-rose-300 border-rose-400/30",
-};
-
 export default function Home() {
-  const { session, assets, activeVenue, mode, effectiveModes, authorization } = useStore();
+  const { session, activeVenue, effectiveModes, authorization } = useStore();
   const [, navigate] = useLocation();
   const venueType = activeVenue?.venueType ?? "other";
   const copy = VENUE_COPY[venueType];
@@ -127,24 +103,6 @@ export default function Home() {
   });
   const openServicesCount = openServicesQuery.data?.count ?? 0;
 
-  const counts = useMemo(() => {
-    const active = assets.filter((a) => a.status === "active");
-    const released = assets.filter((a) => a.status === "released");
-    const byMode = MODES.map((m) => ({
-      mode: m,
-      active: active.filter((a) => a.mode === m.id).length,
-      released: released.filter((a) => a.mode === m.id).length,
-    }));
-    return { active: active.length, released: released.length, byMode };
-  }, [assets]);
-
-  // Authorization-safe mode strip: handlers should only see UI for the mode
-  // their active venue is configured for (e.g. valet => vehicles only).
-  const visibleModeRows = useMemo(
-    () => counts.byMode.filter((row) => effectiveModes.includes(row.mode.id)),
-    [counts.byMode, effectiveModes],
-  );
-
   const myShiftHere =
     myShift && venueCode && myShift.venueCode === venueCode ? myShift : null;
   const teammatesOnShift = venueShifts.filter(
@@ -158,20 +116,10 @@ export default function Home() {
   const overtime = myShiftHere ? Math.max(0, elapsed - target) : 0;
 
   const today = new Date(now);
-  const todayWeekdayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1; // Mon-first
 
   const handlerName = session?.handlerName ?? "Handler";
   const venueName = session?.venueName ?? activeVenue?.name ?? "Your venue";
-
-  const secondaryTiles: Tile[] = [
-    {
-      to: "/services",
-      label: "Services",
-      Icon: ConciergeBell,
-      tone: "violet",
-      badge: openServicesCount > 0 ? String(openServicesCount) : undefined,
-    },
-  ];
+  const handlerRole = myShiftHere?.role ?? activeVenue?.role ?? "Handler";
 
   const shiftLoading = activeShiftQuery.isLoading;
 
@@ -242,9 +190,15 @@ export default function Home() {
   return (
     <div
       className="space-y-5"
-      onTouchStart={onCommandCenterTouchStart}
-      onTouchEnd={onCommandCenterTouchEnd}
-      data-testid="gesture-custody-right-swipe"
+      onTouchStart={(e) => {
+        onCommandCenterTouchStart(e);
+        onIntercomTouchStart(e);
+      }}
+      onTouchEnd={(e) => {
+        onCommandCenterTouchEnd(e);
+        onIntercomTouchEnd(e);
+      }}
+      data-testid="gesture-command-center"
     >
       {/* Top action row */}
       <div className="flex items-center justify-between">
@@ -285,69 +239,60 @@ export default function Home() {
         </section>
       )}
 
-      {/* Greeting + shift card */}
+      {/* Greeting + shift card (compact: role moved to top-right, no inline checkout) */}
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5"
+        className="rounded-3xl border border-white/10 bg-steel/40 p-3 sm:p-4"
         data-testid="card-greeting"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-mono uppercase tracking-wider text-slate">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
               {greeting(today)}
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">
+            <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight truncate">
               {handlerName}
             </h1>
-            <div className="mt-1 text-xs text-slate" data-testid="text-shift-status">
+            <div className="mt-0.5 text-[11px] text-slate" data-testid="text-shift-status">
               {shiftLoading ? (
                 "Checking your shift…"
               ) : myShiftHere && checkedInDate ? (
                 <>
-                  You started this shift at{" "}
+                  Started at{" "}
                   <span className="text-paper font-semibold">
                     {shiftLabel(checkedInDate)}
                   </span>
                 </>
               ) : shiftElsewhere ? (
                 <>
-                  You're on shift at{" "}
+                  On shift at{" "}
                   <span className="text-paper font-semibold">
                     {shiftElsewhere.venueCode}
-                  </span>{" "}
-                  — end it there to start one here.
+                  </span>
                 </>
               ) : (
-                "You're not on shift yet."
+                "Not on shift."
               )}
             </div>
           </div>
 
-          {/* Mini week / weather strip */}
-          <div className="hidden sm:flex flex-col items-stretch gap-1 rounded-2xl border border-white/10 bg-obsidian/50 px-2 py-2 text-[10px] font-mono">
-            {WEEKDAYS.map((d, i) => {
-              const isToday = i === todayWeekdayIdx;
-              return (
-                <div
-                  key={d.key}
-                  className={`flex items-center gap-2 px-1 ${
-                    isToday ? "text-lime" : "text-slate"
-                  }`}
-                >
-                  <span className="w-6 uppercase">{d.short}</span>
-                  <span>{d.icon}</span>
-                </div>
-              );
-            })}
+          <div
+            className="shrink-0 inline-flex flex-col items-end gap-0.5"
+            data-testid="chip-handler-role"
+          >
+            <div className="text-[9px] font-mono uppercase tracking-wider text-slate">Role</div>
+            <div className="rounded-full border border-lime/30 bg-lime/10 px-2.5 py-0.5 text-[11px] font-mono uppercase tracking-wider text-lime">
+              {handlerRole}
+            </div>
           </div>
         </div>
 
         {/* Shift stats */}
-        <div className="mt-4 grid grid-cols-3 rounded-2xl border border-white/10 bg-obsidian/40 overflow-hidden">
+        <div className="mt-3 grid grid-cols-3 rounded-2xl border border-white/10 bg-obsidian/40 overflow-hidden">
           <ShiftStat
-            label="Time worked"
+            label="Worked"
             value={myShiftHere ? formatHm(elapsed) : "--:--"}
             tone={myShiftHere ? "lime" : "slate"}
           />
@@ -362,20 +307,6 @@ export default function Home() {
             tone={myShiftHere && overtime > 0 ? "rose" : "slate"}
             last
           />
-        </div>
-
-        {/* Start / end shift control */}
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            {myShiftHere ? `Role: ${myShiftHere.role}` : "No active shift"}
-          </div>
-          <Link
-            href="/checkout"
-            className="inline-flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-200 px-3 py-1.5 text-xs font-semibold hover-elevate"
-            data-testid="link-shift-checkout"
-          >
-            Checkout / End shift
-          </Link>
         </div>
 
         {/* Teammates currently on shift here */}
@@ -409,129 +340,205 @@ export default function Home() {
         )}
       </motion.div>
 
-      {/* Assignments snapshot */}
-      <section className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-assignments-snapshot">
+      {/* Command Station — circular hub: top half split into 3 segmented input methods */}
+      <CommandStation
+        onManual={() => navigate("/intake")}
+        onCamera={() => navigate("/release")}
+        onTicket={() => navigate("/services")}
+        modeCount={effectiveModes.length}
+      />
+
+      {/* Assignments — 4 icon tiles with badge counts */}
+      <section className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-assignments">
         <div className="flex items-center justify-between mb-3">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Assignments</div>
           <ClipboardList className="w-4 h-4 text-lime" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <AssignmentCell
-            title="Patron requests"
-            subtitle="Ticket-based asks"
-            value={String(openServicesCount)}
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          <AssignmentIcon
+            to="/assignments/patron"
+            Icon={Inbox}
+            label="Patron"
+            tone="violet"
+            badge={openServicesCount}
+            testId="assign-patron"
           />
-          <AssignmentCell
-            title="Supervisor tasks"
-            subtitle="Manual + asset-linked"
-            value="Pending"
+          <AssignmentIcon
+            to="/assignments/supervisor"
+            Icon={Briefcase}
+            label="Supervisor"
+            tone="amber"
+            badge={0}
+            testId="assign-supervisor"
           />
-          <AssignmentCell
-            title="Service jobs"
-            subtitle="Ops/clean/prep"
-            value={String(openServicesCount)}
+          <AssignmentIcon
+            to="/services"
+            Icon={Wrench}
+            label="Service"
+            tone="indigo"
+            badge={openServicesCount}
+            testId="assign-service"
           />
+          <AssignmentIcon
+            to="/assignments/all"
+            Icon={LayoutList}
+            label="All"
+            tone="lime"
+            badge={openServicesCount}
+            testId="assign-all"
+          />
+        </div>
+        <div className="mt-3 text-[10px] font-mono uppercase tracking-wider text-slate">
+          All — main house for every assignment at this station, with aging.
         </div>
       </section>
 
-      {/* Mode counter strip: only show authorized mode(s) for the active
-          venue. A valet handler should never see baggage/cloakroom/retail
-          cards in Command Center. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {visibleModeRows.map((row, i) => {
-          const Icon = MODE_ICONS[row.mode.id];
-          return (
-            <motion.div
-              key={row.mode.id}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: i * 0.03 }}
-              className="rounded-2xl border p-3 border-lime/40 bg-lime/10"
-              data-testid={`tile-count-${row.mode.id}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <Icon className="w-4 h-4 text-lime" />
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate">
-                  {copy.custodyTileLabel}
-                </span>
-              </div>
-              <div className="text-2xl font-extrabold text-white leading-tight">
-                {row.active}
-              </div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-                in custody
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Secondary action tiles */}
-      <div>
-        <div className="flex items-center justify-between mb-2 px-1">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
-            More
-          </div>
-          <Link
-            href="/settings"
-            className="text-[11px] font-mono uppercase tracking-wider text-slate hover:text-paper flex items-center gap-1 hover-elevate rounded-full px-2 py-0.5"
-            data-testid="link-settings-from-home"
-          >
-            Settings <ChevronRight className="w-3 h-3" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {secondaryTiles.map((t, i) => (
-            <ActionTile key={t.to} tile={t} index={i} />
-          ))}
-        </div>
-      </div>
-
-      {/* End-of-page intercom gesture surface: flick up to open intercom. */}
-      {/* End-of-page intercom pull surface: swipe/flick upward to pull the
-          intercom page from the bottom. */}
-      <div
-        className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3"
-        onTouchStart={onIntercomTouchStart}
-        onTouchEnd={onIntercomTouchEnd}
-        data-testid="gesture-intercom-pull-up"
-      >
-        <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-emerald-300/35" aria-hidden="true" />
-        <div className="flex items-center justify-center gap-2 min-w-0">
-          <Radio className="w-5 h-5 text-emerald-300 shrink-0" />
-          <div className="min-w-0 text-center">
-            <div className="text-sm font-semibold text-white">Intercom</div>
-            <div className="text-xs text-slate truncate">Swipe up from here to pull up Intercom</div>
-          </div>
-        </div>
-      </div>
-
       {/* Footer hint */}
       <div className="rounded-2xl border border-white/10 bg-steel/30 px-4 py-3 flex items-center gap-3">
-        <CloudSun className="w-5 h-5 text-lime shrink-0" />
         <div className="text-xs text-slate leading-snug">
-          Tip — use the Scan tab to log a new asset or return one. Swipe right anywhere on this page to open custody.
+          Tip — swipe right anywhere on this page to open Custody. Flick up to pull Intercom.
         </div>
       </div>
     </div>
   );
 }
 
-function AssignmentCell({
-  title,
-  subtitle,
-  value,
+function CommandStation({
+  onManual,
+  onCamera,
+  onTicket,
+  modeCount,
 }: {
-  title: string;
-  subtitle: string;
-  value: string;
+  onManual: () => void;
+  onCamera: () => void;
+  onTicket: () => void;
+  modeCount: number;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-obsidian/40 p-3">
-      <div className="text-xs text-white font-semibold truncate">{title}</div>
-      <div className="text-[10px] font-mono uppercase tracking-wider text-slate mt-0.5">{subtitle}</div>
-      <div className="mt-2 text-lg font-extrabold text-white">{value}</div>
-    </div>
+    <section
+      className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-6 flex flex-col items-center"
+      data-testid="card-command-station"
+    >
+      <div className="text-[11px] font-mono uppercase tracking-wider text-slate self-start mb-3">
+        Command Station
+      </div>
+
+      <div className="relative w-56 h-56 sm:w-64 sm:h-64">
+        {/* Outer ring */}
+        <div className="absolute inset-0 rounded-full border border-white/10 bg-obsidian/50 shadow-inner" />
+
+        {/* Top half — 3 segmented buttons */}
+        <div className="absolute top-0 left-0 right-0 h-1/2 grid grid-cols-3 overflow-hidden rounded-t-full">
+          <button
+            type="button"
+            onClick={onManual}
+            className="group relative flex flex-col items-end justify-end pb-3 pr-1 hover:bg-violet-500/15 transition-colors border-r border-white/10"
+            data-testid="cmd-station-manual"
+            aria-label="Open manual form"
+          >
+            <FileEdit className="w-5 h-5 text-violet-300 mb-1" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate group-hover:text-paper pr-1">
+              Manual
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onCamera}
+            className="group relative flex flex-col items-center justify-end pb-3 hover:bg-lime/10 transition-colors border-r border-white/10"
+            data-testid="cmd-station-camera"
+            aria-label="Open camera"
+          >
+            <Camera className="w-5 h-5 text-lime mb-1" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate group-hover:text-paper">
+              Camera
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onTicket}
+            className="group relative flex flex-col items-start justify-end pb-3 pl-1 hover:bg-amber-500/15 transition-colors"
+            data-testid="cmd-station-ticket"
+            aria-label="Issue ticket immediately"
+          >
+            <Ticket className="w-5 h-5 text-amber-300 mb-1" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate group-hover:text-paper pl-1">
+              Ticket
+            </span>
+          </button>
+        </div>
+
+        {/* Mid divider */}
+        <div className="absolute top-1/2 left-2 right-2 h-px bg-white/10" />
+
+        {/* Bottom half — center info */}
+        <div className="absolute bottom-0 left-0 right-0 h-1/2 flex flex-col items-center justify-center px-4 text-center">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            Active modes
+          </div>
+          <div className="mt-1 text-3xl font-extrabold text-white tracking-tight">
+            {modeCount}
+          </div>
+          <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-slate">
+            Tap a quadrant
+          </div>
+        </div>
+
+        {/* Center hub */}
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-lime/30 bg-lime/15 flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <PackagePlus className="w-5 h-5 text-lime" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AssignmentIcon({
+  to,
+  Icon,
+  label,
+  tone,
+  badge,
+  testId,
+}: {
+  to: string;
+  Icon: typeof PackagePlus;
+  label: string;
+  tone: "lime" | "indigo" | "amber" | "violet" | "emerald" | "rose";
+  badge?: number;
+  testId: string;
+}) {
+  const toneCls =
+    tone === "lime"
+      ? "border-lime/30 bg-lime/10 text-lime"
+      : tone === "indigo"
+      ? "border-indigo-400/30 bg-indigo-500/10 text-indigo-300"
+      : tone === "amber"
+      ? "border-amber-400/30 bg-amber-500/10 text-amber-300"
+      : tone === "violet"
+      ? "border-violet-400/30 bg-violet-500/10 text-violet-300"
+      : tone === "emerald"
+      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+      : "border-rose-400/30 bg-rose-500/10 text-rose-300";
+  const showBadge = typeof badge === "number" && badge > 0;
+  return (
+    <Link
+      href={to}
+      className={`relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border p-3 hover-elevate ${toneCls}`}
+      data-testid={`tile-${testId}`}
+    >
+      <Icon className="w-6 h-6" />
+      <span className="text-[10px] font-mono uppercase tracking-wider text-paper truncate max-w-full">
+        {label}
+      </span>
+      {showBadge && (
+        <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center border border-obsidian">
+          {badge}
+        </span>
+      )}
+    </Link>
   );
 }
 
@@ -563,47 +570,5 @@ function ShiftStat({
         {value}
       </div>
     </div>
-  );
-}
-
-function ActionTile({
-  tile,
-  index,
-  large,
-}: {
-  tile: Tile;
-  index: number;
-  large?: boolean;
-}) {
-  const { Icon } = tile;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.03 }}
-    >
-      <Link
-        href={tile.to}
-        className={`relative block rounded-3xl border bg-steel/40 hover-elevate transition-colors ${
-          large ? "aspect-square" : "aspect-[1.15/1]"
-        } ${toneClasses[tile.tone]}`}
-        data-testid={`tile-action-${tile.label.toLowerCase().replace(/\s+/g, "-")}`}
-      >
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
-          <Icon className={`${large ? "w-9 h-9" : "w-7 h-7"}`} />
-          <div className="text-sm font-semibold text-white">{tile.label}</div>
-        </div>
-        {tile.badge && (
-          <div className="absolute top-2 right-2">
-            <Badge
-              className="font-mono text-[10px] bg-rose-500 text-white border-0"
-              data-testid={`badge-${tile.label.toLowerCase()}`}
-            >
-              {tile.badge}
-            </Badge>
-          </div>
-        )}
-      </Link>
-    </motion.div>
   );
 }
