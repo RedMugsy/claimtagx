@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
-import { ChevronDown, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare, Info, Radio } from "lucide-react";
+import { ChevronDown, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare, Info } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -170,16 +170,6 @@ export function Shell({ children }: { children: ReactNode }) {
                     {(activeVenue?.code ?? session?.venueCode ?? "—")}
                     {activeVenue?.role ? ` · ${activeVenue.role}` : ""}
                   </div>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => navigate("/intercom")}
-                data-testid="menu-intercom"
-              >
-                <Radio className="w-4 h-4" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">Intercom</div>
-                  <div className="text-[10px] font-mono text-slate">Voice + presence</div>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChevronRight,
   LogOut,
+  Radio,
   Settings as SettingsIcon,
   ShieldCheck,
   User,
@@ -49,10 +50,17 @@ const rows: Row[] = [
     description: "Sign-in, devices, sessions",
     testId: "settings-row-security",
   },
+  {
+    to: "/intercom",
+    Icon: Radio,
+    label: "Intercom",
+    description: "Voice channel and presence",
+    testId: "settings-row-intercom",
+  },
 ];
 
 export default function SettingsIndex() {
-  const { signOut } = useStore();
+  const { signOut, authorization } = useStore();
   return (
     <div>
       <header className="mb-6">
@@ -102,6 +110,21 @@ export default function SettingsIndex() {
           <LogOut className="w-4 h-4" /> Sign out
         </Button>
       </div>
+
+      {authorization.usingDerivedDefaults && (
+        <section
+          className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3"
+          data-testid="note-derived-authorization"
+        >
+          <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">
+            Authorization source
+          </div>
+          <div className="text-xs text-amber-100/90 mt-1 leading-relaxed">
+            Station capabilities and/or handler authorizations are currently inferred from venue type/role
+            defaults. Explicit capability matrix data from backend will override this automatically.
+          </div>
+        </section>
+      )}
     </div>
   );
 }

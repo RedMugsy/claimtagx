@@ -14,6 +14,10 @@ import {
   Briefcase,
   Wrench,
   LayoutList,
+  Menu,
+  Info,
+  Settings as SettingsIcon,
+  LogOut,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -27,6 +31,14 @@ import {
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
 import { VENUE_COPY } from "@/lib/modes";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -53,7 +65,7 @@ function shiftLabel(start: Date) {
 }
 
 export default function Home() {
-  const { session, activeVenue, effectiveModes, authorization } = useStore();
+  const { session, activeVenue, effectiveModes, signOut } = useStore();
   const [, navigate] = useLocation();
   const venueType = activeVenue?.venueType ?? "other";
   const copy = VENUE_COPY[venueType];
@@ -226,18 +238,54 @@ export default function Home() {
           >
             <Search className="w-4 h-4 text-paper" />
           </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="w-10 h-10 rounded-2xl border border-white/10 bg-steel/40 flex items-center justify-center hover-elevate"
+                data-testid="button-home-hamburger"
+                aria-label="Open menu"
+              >
+                <Menu className="w-4 h-4 text-paper" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider text-slate">
+                Station
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onSelect={() => navigate("/station")}
+                data-testid="menu-home-station"
+              >
+                <Info className="w-4 h-4" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">
+                    {activeVenue?.name ?? session?.venueName ?? "No station"}
+                  </div>
+                  <div className="text-[10px] font-mono text-slate">
+                    {(activeVenue?.code ?? session?.venueCode ?? "—")}
+                    {activeVenue?.role ? ` · ${activeVenue.role}` : ""}
+                  </div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => navigate("/settings")}
+                data-testid="menu-home-settings"
+              >
+                <SettingsIcon className="w-4 h-4" /> Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => void signOut()}
+                data-testid="menu-home-signout"
+              >
+                <LogOut className="w-4 h-4" /> Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      {authorization.usingDerivedDefaults && (
-        <section className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3" data-testid="banner-derived-authorization-home">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">Authorization source</div>
-          <div className="text-xs text-amber-100/90 mt-1 leading-relaxed">
-            Station capabilities and/or handler authorizations are currently inferred from venue type/role defaults.
-            Explicit capability matrix data from backend will override this automatically.
-          </div>
-        </section>
-      )}
 
       {/* Greeting + shift card (compact: role moved to top-right, no inline checkout) */}
       <motion.div
@@ -340,7 +388,7 @@ export default function Home() {
         )}
       </motion.div>
 
-      {/* Command Station — circular hub: top half split into 3 segmented input methods */}
+      {/* Command Station — circular hub: top half is three pie sectors */}
       <CommandStation
         onManual={() => navigate("/intake")}
         onCamera={() => navigate("/release")}
@@ -414,64 +462,125 @@ function CommandStation({
   onTicket: () => void;
   modeCount: number;
 }) {
+  // Three equal 60° pie sectors fill the top half of the dial.
+  // SVG y-axis points down, so the top of the circle is at angle 270°
+  // and the top half spans 180° → 360° clockwise.
+  const cx = 100;
+  const cy = 100;
+  const r = 100;
+
+  const wedge = (a1: number, a2: number) => {
+    const toXY = (deg: number) => {
+      const rad = (deg * Math.PI) / 180;
+      return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)] as const;
+    };
+    const [x1, y1] = toXY(a1);
+    const [x2, y2] = toXY(a2);
+    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+  };
+
+  const sectors = [
+    {
+      d: wedge(180, 240),
+      fill: "fill-violet-500/15 hover:fill-violet-500/30",
+      stroke: "stroke-violet-300/40",
+      onClick: onManual,
+      label: "Open manual form",
+      testId: "cmd-station-manual",
+      // Centroid bisector at 210° (sin/cos rough centroid for a 60° wedge)
+      labelLeft: "24%",
+      labelTop: "35%",
+      Icon: FileEdit,
+      iconCls: "text-violet-200",
+      caption: "Manual",
+    },
+    {
+      d: wedge(240, 300),
+      fill: "fill-lime/15 hover:fill-lime/30",
+      stroke: "stroke-lime/40",
+      onClick: onCamera,
+      label: "Open camera",
+      testId: "cmd-station-camera",
+      labelLeft: "50%",
+      labelTop: "20%",
+      Icon: Camera,
+      iconCls: "text-lime",
+      caption: "Camera",
+    },
+    {
+      d: wedge(300, 360),
+      fill: "fill-amber-500/15 hover:fill-amber-500/30",
+      stroke: "stroke-amber-300/40",
+      onClick: onTicket,
+      label: "Issue ticket immediately",
+      testId: "cmd-station-ticket",
+      labelLeft: "76%",
+      labelTop: "35%",
+      Icon: Ticket,
+      iconCls: "text-amber-200",
+      caption: "Ticket",
+    },
+  ];
+
   return (
-    <section
-      className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-6 flex flex-col items-center"
+    <div
+      className="flex flex-col items-center"
       data-testid="card-command-station"
     >
-      <div className="text-[11px] font-mono uppercase tracking-wider text-slate self-start mb-3">
+      <div className="text-[11px] font-mono uppercase tracking-wider text-slate self-start mb-2">
         Command Station
       </div>
 
-      <div className="relative w-56 h-56 sm:w-64 sm:h-64">
-        {/* Outer ring */}
-        <div className="absolute inset-0 rounded-full border border-white/10 bg-obsidian/50 shadow-inner" />
+      <div className="relative w-60 h-60 sm:w-72 sm:h-72">
+        <svg
+          viewBox="0 0 200 200"
+          className="absolute inset-0 w-full h-full"
+          aria-label="Command station dial"
+        >
+          {/* Full base disc */}
+          <circle cx={cx} cy={cy} r={r} className="fill-obsidian/60 stroke-white/10" strokeWidth={1} />
 
-        {/* Top half — 3 segmented buttons */}
-        <div className="absolute top-0 left-0 right-0 h-1/2 grid grid-cols-3 overflow-hidden rounded-t-full">
-          <button
-            type="button"
-            onClick={onManual}
-            className="group relative flex flex-col items-end justify-end pb-3 pr-1 hover:bg-violet-500/15 transition-colors border-r border-white/10"
-            data-testid="cmd-station-manual"
-            aria-label="Open manual form"
-          >
-            <FileEdit className="w-5 h-5 text-violet-300 mb-1" />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate group-hover:text-paper pr-1">
-              Manual
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={onCamera}
-            className="group relative flex flex-col items-center justify-end pb-3 hover:bg-lime/10 transition-colors border-r border-white/10"
-            data-testid="cmd-station-camera"
-            aria-label="Open camera"
-          >
-            <Camera className="w-5 h-5 text-lime mb-1" />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate group-hover:text-paper">
-              Camera
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={onTicket}
-            className="group relative flex flex-col items-start justify-end pb-3 pl-1 hover:bg-amber-500/15 transition-colors"
-            data-testid="cmd-station-ticket"
-            aria-label="Issue ticket immediately"
-          >
-            <Ticket className="w-5 h-5 text-amber-300 mb-1" />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate group-hover:text-paper pl-1">
-              Ticket
-            </span>
-          </button>
-        </div>
+          {/* Three top-half pie sectors */}
+          {sectors.map((s) => (
+            <path
+              key={s.testId}
+              d={s.d}
+              role="button"
+              tabIndex={0}
+              aria-label={s.label}
+              data-testid={s.testId}
+              onClick={s.onClick}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  s.onClick();
+                }
+              }}
+              className={`cursor-pointer transition-colors ${s.fill} ${s.stroke}`}
+              strokeWidth={1}
+            />
+          ))}
 
-        {/* Mid divider */}
-        <div className="absolute top-1/2 left-2 right-2 h-px bg-white/10" />
+          {/* Diameter line separating top and bottom halves */}
+          <line x1={0} y1={cy} x2={200} y2={cy} className="stroke-white/15" strokeWidth={1} />
+        </svg>
 
-        {/* Bottom half — center info */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/2 flex flex-col items-center justify-center px-4 text-center">
+        {/* Sector labels (HTML overlay so we can use lucide icons + Tailwind) */}
+        {sectors.map((s) => (
+          <div
+            key={`${s.testId}-label`}
+            className="absolute pointer-events-none flex flex-col items-center text-center"
+            style={{ left: s.labelLeft, top: s.labelTop, transform: "translate(-50%, -50%)" }}
+          >
+            <s.Icon className={`w-5 h-5 ${s.iconCls}`} />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-paper mt-0.5">
+              {s.caption}
+            </span>
+          </div>
+        ))}
+
+        {/* Bottom-half info */}
+        <div className="absolute left-0 right-0 bottom-0 h-1/2 flex flex-col items-center justify-center px-4 text-center pointer-events-none">
           <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
             Active modes
           </div>
@@ -479,19 +588,19 @@ function CommandStation({
             {modeCount}
           </div>
           <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-slate">
-            Tap a quadrant
+            Tap a slice
           </div>
         </div>
 
-        {/* Center hub */}
+        {/* Center hub disc (covers wedge tips for a clean look) */}
         <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-lime/30 bg-lime/15 flex items-center justify-center"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-lime/30 bg-obsidian flex items-center justify-center pointer-events-none"
           aria-hidden="true"
         >
           <PackagePlus className="w-5 h-5 text-lime" />
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
