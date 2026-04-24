@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import {
+  endShift,
   getActiveShift,
   getGetActiveShiftQueryKey,
   getListActiveVenueShiftsQueryKey,
@@ -78,6 +79,27 @@ export default function PreShiftPage() {
     },
   });
 
+  const endOtherMutation = useMutation({
+    mutationFn: (id: string) => endShift(id),
+    onSuccess: () => {
+      queryClient.setQueryData(getGetActiveShiftQueryKey(), { shift: null });
+      queryClient.invalidateQueries({
+        queryKey: getListActiveVenueShiftsQueryKey(venueCode),
+      });
+      toast({
+        title: "Other shift ended",
+        description: "You can now start your shift here.",
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Could not end other shift",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (myShiftHere) return <Redirect to="/" />;
 
   return (
@@ -124,9 +146,25 @@ export default function PreShiftPage() {
         {shiftElsewhere ? (
           <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-300 mt-0.5 shrink-0" />
-            <div className="text-xs text-amber-100 leading-relaxed">
-              You already have an active shift at <span className="font-semibold">{shiftElsewhere.venueCode}</span> since {shiftLabel(shiftElsewhere.startedAt)}.
-              End it first before starting one here.
+            <div className="flex-1 min-w-0 text-xs text-amber-100 leading-relaxed">
+              <div>
+                You already have an active shift at <span className="font-semibold">{shiftElsewhere.venueCode}</span> since {shiftLabel(shiftElsewhere.startedAt)}.
+                End it first before starting one here.
+              </div>
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => endOtherMutation.mutate(shiftElsewhere.id)}
+                  disabled={endOtherMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/15 text-amber-100 px-3 py-1.5 text-xs font-semibold hover-elevate disabled:opacity-60"
+                  data-testid="button-end-other-shift"
+                >
+                  {endOtherMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : null}
+                  End shift at {shiftElsewhere.venueCode}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

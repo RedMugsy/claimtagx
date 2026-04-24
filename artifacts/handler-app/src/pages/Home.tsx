@@ -6,7 +6,6 @@ import {
   Search,
   CloudSun,
   PackagePlus,
-  ScanLine,
   ClipboardList,
   Radio,
   ConciergeBell,
@@ -163,21 +162,6 @@ export default function Home() {
 
   const handlerName = session?.handlerName ?? "Handler";
   const venueName = session?.venueName ?? activeVenue?.name ?? "Your venue";
-
-  const primaryTiles: Tile[] = [
-    {
-      to: "/intake",
-      label: copy.intakeAction,
-      Icon: PackagePlus,
-      tone: "lime",
-    },
-    {
-      to: "/release",
-      label: copy.releaseAction,
-      Icon: ScanLine,
-      tone: "rose",
-    },
-  ];
 
   const secondaryTiles: Tile[] = [
     {
@@ -482,13 +466,6 @@ export default function Home() {
         })}
       </div>
 
-      {/* Primary action tiles */}
-      <div className="grid grid-cols-3 gap-3">
-        {primaryTiles.map((t, i) => (
-          <ActionTile key={t.to} tile={t} index={i} large />
-        ))}
-      </div>
-
       {/* Secondary action tiles */}
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
@@ -533,15 +510,7 @@ export default function Home() {
       <div className="rounded-2xl border border-white/10 bg-steel/30 px-4 py-3 flex items-center gap-3">
         <CloudSun className="w-5 h-5 text-lime shrink-0" />
         <div className="text-xs text-slate leading-snug">
-          Tip — tap{" "}
-          <Link href="/intake" className="text-paper font-semibold underline">
-            {copy.intakeAction}
-          </Link>{" "}
-          to log a new asset, or{" "}
-          <Link href="/release" className="text-paper font-semibold underline">
-            {copy.releaseAction}
-          </Link>{" "}
-          to scan a tag and return one. Swipe right anywhere on this page to open custody.
+          Tip — use the Scan tab to log a new asset or return one. Swipe right anywhere on this page to open custody.
         </div>
       </div>
     </div>
