@@ -75,37 +75,13 @@ export default function CheckoutPage() {
     return <Redirect to="/pre-shift" />;
   }
 
-  if (!shiftHere && shiftElsewhere) {
-    return (
-      <div className="space-y-4" data-testid="page-checkout-other-venue">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate rounded-full px-2 py-1"
-          data-testid="link-back-home"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Command Center
-        </Link>
-        <section className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-5">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-200 mt-0.5 shrink-0" />
-            <div>
-              <h1 className="text-lg font-bold text-amber-100">Checkout unavailable for this station</h1>
-              <p className="mt-2 text-sm text-amber-100/90">
-                Your active shift belongs to <span className="font-semibold">{shiftElsewhere.venueCode}</span>. Switch to that station to end the shift.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-    );
-  }
+  // Use whichever shift is active — even if it belongs to another station,
+  // allow ending it from here so the handler can recover.
+  const activeShift = shiftHere ?? shiftElsewhere!;
+  const isElsewhere = !shiftHere && Boolean(shiftElsewhere);
 
-  if (!shiftHere) {
-    return <Redirect to="/pre-shift" />;
-  }
-
-  const elapsed = Date.now() - shiftHere.startedAt;
-  const target = (shiftHere.targetMinutes ?? 480) * 60 * 1000;
+  const elapsed = Date.now() - activeShift.startedAt;
+  const target = (activeShift.targetMinutes ?? 480) * 60 * 1000;
   const remaining = Math.max(0, target - elapsed);
   const overtime = Math.max(0, elapsed - target);
 
@@ -131,9 +107,18 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+        {isElsewhere ? (
+          <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-300 mt-0.5 shrink-0" />
+            <div className="text-xs text-amber-100 leading-relaxed">
+              This shift belongs to <span className="font-semibold">{activeShift.venueCode}</span>, not your current station. Ending it here will close it out and let you start a new shift at {activeVenue?.code ?? "this station"}.
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <SummaryStat icon={<Building2 className="w-4 h-4 text-lime" />} label="Station" value={activeVenue?.name ?? shiftHere.venueCode} detail={shiftHere.venueCode} />
-          <SummaryStat icon={<Clock3 className="w-4 h-4 text-lime" />} label="Started" value={atLabel(shiftHere.startedAt)} detail={shiftHere.role} />
+          <SummaryStat icon={<Building2 className="w-4 h-4 text-lime" />} label="Station" value={isElsewhere ? activeShift.venueCode : (activeVenue?.name ?? activeShift.venueCode)} detail={activeShift.venueCode} />
+          <SummaryStat icon={<Clock3 className="w-4 h-4 text-lime" />} label="Started" value={atLabel(activeShift.startedAt)} detail={activeShift.role} />
           <SummaryStat icon={<Clock3 className="w-4 h-4 text-lime" />} label="Worked" value={formatHm(elapsed)} detail="Elapsed" />
           <SummaryStat icon={<Clock3 className="w-4 h-4 text-lime" />} label="Remaining" value={formatHm(remaining)} detail={overtime > 0 ? `Overtime ${formatHm(overtime)}` : "On target"} />
         </div>
@@ -148,13 +133,13 @@ export default function CheckoutPage() {
           </Link>
           <button
             type="button"
-            onClick={() => endMutation.mutate(shiftHere.id)}
+            onClick={() => endMutation.mutate(activeShift.id)}
             disabled={endMutation.isPending}
             className="inline-flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-100 px-4 py-2 text-sm font-semibold hover-elevate disabled:opacity-60"
             data-testid="button-confirm-checkout"
           >
             {endMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-            {endMutation.isPending ? "Ending…" : "End shift"}
+            {endMutation.isPending ? "Ending…" : isElsewhere ? `End shift at ${activeShift.venueCode}` : "End shift"}
           </button>
         </div>
       </section>
