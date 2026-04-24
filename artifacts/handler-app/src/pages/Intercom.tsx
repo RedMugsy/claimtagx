@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft,
   Radio,
   Mic,
-  Volume2,
   Users,
   PhoneOff,
-  Loader2,
+  Check,
+  Volume2,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,7 +28,6 @@ function blobToBase64(blob: Blob): Promise<string> {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // result looks like "data:audio/webm;base64,XXX"
       const i = result.indexOf(",");
       resolve(i >= 0 ? result.slice(i + 1) : result);
     };
@@ -55,6 +54,10 @@ function pickSupportedMime(): string {
   return "audio/webm";
 }
 
+// Special sentinel for "broadcast to entire station". When this is the only
+// selected target the channel behaves as an open walkie-talkie.
+const TARGET_STATION = "__station__";
+
 export default function IntercomPage() {
   const { activeVenue } = useStore();
   const venueCode = activeVenue?.code ?? "";
@@ -62,12 +65,18 @@ export default function IntercomPage() {
   const [joined, setJoined] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
+  const [targets, setTargets] = useState<Set<string>>(
+    () => new Set([TARGET_STATION]),
+  );
+  const [lastHeard, setLastHeard] = useState<IntercomTransmission | null>(null);
+  const [nowTalking, setNowTalking] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const recordStartRef = useRef<number>(0);
   const lastSeenRef = useRef<number>(Date.now());
   const playedIdsRef = useRef<Set<string>>(new Set());
+  const nowTalkingTimerRef = useRef<number | null>(null);
 
   const presence = useQuery({
     queryKey: getListIntercomPresenceQueryKey(venueCode),
@@ -76,8 +85,6 @@ export default function IntercomPage() {
     refetchInterval: 8_000,
   });
 
-  // Keep the query key venue-scoped (excludeSelf only) so the cache key
-  // stays stable as `since` advances; `since` is passed at fetch time.
   const transmissions = useQuery({
     queryKey: getListIntercomTransmissionsQueryKey(venueCode, {
       excludeSelf: true,
@@ -120,9 +127,7 @@ export default function IntercomPage() {
     return () => {
       cancelled = true;
       window.clearInterval(hb);
-      // Best-effort leave
       leaveIntercom(venueCode).catch(() => {});
-      // Stop any in-flight recording / mic
       try {
         if (recorderRef.current && recorderRef.current.state === "recording") {
           recorderRef.current.stop();
@@ -137,44 +142,65 @@ export default function IntercomPage() {
     };
   }, [venueCode, queryClient]);
 
-  // Auto-play new transmissions. The server already filters out our own
-  // transmissions (excludeSelf=true) by Clerk user id, so this loop just
-  // plays whatever it gets without any name-based heuristic.
+  // Auto-play new transmissions and surface "now talking" indicator.
   useEffect(() => {
     const list = transmissions.data ?? [];
     if (list.length === 0) return;
     let lastTs = lastSeenRef.current;
+    let latest: IntercomTransmission | null = null;
     for (const tx of list) {
       if (tx.createdAt > lastTs) lastTs = tx.createdAt;
       if (playedIdsRef.current.has(tx.id)) continue;
       playedIdsRef.current.add(tx.id);
       try {
         const audio = new Audio(`data:${tx.mimeType};base64,${tx.audioBase64}`);
-        audio.play().catch(() => {
-          // Autoplay can be blocked until first user gesture; OK to swallow.
-        });
+        audio.play().catch(() => {});
       } catch {
         // ignore decode failures
       }
+      if (!latest || tx.createdAt > latest.createdAt) latest = tx;
+    }
+    if (latest) {
+      setLastHeard(latest);
+      setNowTalking(latest.senderName);
+      if (nowTalkingTimerRef.current) window.clearTimeout(nowTalkingTimerRef.current);
+      const clearAfter = Math.max(1500, (latest.durationMs || 1500) + 800);
+      nowTalkingTimerRef.current = window.setTimeout(() => {
+        setNowTalking(null);
+      }, clearAfter);
     }
     lastSeenRef.current = lastTs;
   }, [transmissions.data]);
+
+  useEffect(() => {
+    return () => {
+      if (nowTalkingTimerRef.current) window.clearTimeout(nowTalkingTimerRef.current);
+    };
+  }, []);
 
   const transmitMut = useMutation({
     mutationFn: ({
       audioBase64,
       mimeType,
       durationMs,
+      targetUserIds,
     }: {
       audioBase64: string;
       mimeType: string;
       durationMs: number;
+      targetUserIds: string[] | null;
     }) =>
+      // NOTE: The backend currently broadcasts to all handlers on the channel.
+      // `targetUserIds` is forwarded for forward-compatibility once the API
+      // supports targeted PTT; it is silently ignored today.
       transmitIntercom(venueCode, {
         audioBase64,
         mimeType,
         durationMs,
-      }),
+        ...(targetUserIds && targetUserIds.length > 0
+          ? ({ targetUserIds } as unknown as Record<string, unknown>)
+          : {}),
+      } as Parameters<typeof transmitIntercom>[1]),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: getListIntercomTransmissionsQueryKey(venueCode, {
@@ -227,7 +253,16 @@ export default function IntercomPage() {
             return;
           }
           const audioBase64 = await blobToBase64(blob);
-          transmitMut.mutate({ audioBase64, mimeType: mime, durationMs });
+          const stationOnly = targets.has(TARGET_STATION) || targets.size === 0;
+          const targetUserIds = stationOnly
+            ? null
+            : Array.from(targets).filter((t) => t !== TARGET_STATION);
+          transmitMut.mutate({
+            audioBase64,
+            mimeType: mime,
+            durationMs,
+            targetUserIds,
+          });
         } finally {
           stopTracks();
         }
@@ -236,7 +271,6 @@ export default function IntercomPage() {
       recorderRef.current = recorder;
       recordStartRef.current = Date.now();
       setRecording(true);
-      // Hard cap: stop after 15s no matter what to bound payload size.
       window.setTimeout(() => {
         if (recorderRef.current?.state === "recording") {
           recorderRef.current.stop();
@@ -256,11 +290,38 @@ export default function IntercomPage() {
     setRecording(false);
   }
 
+  function toggleTarget(id: string) {
+    setTargets((prev) => {
+      const next = new Set(prev);
+      if (id === TARGET_STATION) {
+        return new Set([TARGET_STATION]);
+      }
+      next.delete(TARGET_STATION);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      if (next.size === 0) next.add(TARGET_STATION);
+      return next;
+    });
+  }
+
   const presenceList = presence.data ?? [];
-  const recent = (transmissions.data ?? []).slice().reverse().slice(0, 8);
+  const stationSelected = targets.has(TARGET_STATION);
+  const individualCount = stationSelected
+    ? 0
+    : Array.from(targets).filter((t) => t !== TARGET_STATION).length;
+
+  const targetSummary = useMemo(() => {
+    if (stationSelected) return "Whole station";
+    if (individualCount === 1) {
+      const id = Array.from(targets)[0];
+      const p = presenceList.find((x) => x.handlerUserId === id);
+      return p?.handlerName ?? "1 handler";
+    }
+    return `${individualCount} handlers`;
+  }, [stationSelected, individualCount, targets, presenceList]);
 
   return (
-    <div className="space-y-4" data-testid="page-intercom">
+    <div className="space-y-4 pb-44 sm:pb-40" data-testid="page-intercom">
       <div className="flex items-center justify-between">
         <Link
           href="/"
@@ -286,6 +347,7 @@ export default function IntercomPage() {
         </button>
       </div>
 
+      {/* Channel header */}
       <div className="rounded-3xl border border-white/10 bg-steel/40 p-4">
         <div className="flex items-center gap-3">
           <div
@@ -297,130 +359,188 @@ export default function IntercomPage() {
           >
             <Radio className="w-6 h-6" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
               {joined ? "Channel live" : "Joining channel…"}
             </div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl font-extrabold text-white tracking-tight truncate">
               {activeVenue?.name ?? "Venue"} intercom
             </h1>
           </div>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-steel/40 p-5 flex flex-col items-center">
-        <div className="text-[11px] font-mono uppercase tracking-wider text-slate mb-3">
-          Hold to talk · max 15 seconds
-        </div>
-        <button
-          type="button"
-          onMouseDown={startRecording}
-          onMouseUp={stopRecording}
-          onMouseLeave={() => recording && stopRecording()}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            startRecording();
-          }}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            stopRecording();
-          }}
-          disabled={!joined}
-          className={`w-32 h-32 rounded-full border-4 flex items-center justify-center transition-transform select-none ${
-            recording
-              ? "bg-rose-500/30 border-rose-400 text-rose-100 scale-105"
-              : "bg-emerald-500/20 border-emerald-400/60 text-emerald-100 hover:scale-105"
-          } disabled:opacity-50`}
-          data-testid="button-ptt"
+      {/* Now-talking + last-heard ticker — replaces the voicemail-style list. */}
+      <div
+        className={`rounded-2xl border p-3 flex items-center gap-3 ${
+          nowTalking
+            ? "border-amber-400/40 bg-amber-500/10"
+            : "border-white/10 bg-steel/30"
+        }`}
+        data-testid="card-channel-status"
+      >
+        <div
+          className={`w-9 h-9 rounded-xl border flex items-center justify-center ${
+            nowTalking
+              ? "border-amber-400/40 bg-amber-500/20 text-amber-200"
+              : "border-white/10 bg-obsidian/40 text-slate"
+          }`}
         >
-          <Mic className="w-12 h-12" />
-        </button>
-        <div className="mt-3 text-xs text-slate" data-testid="text-ptt-status">
-          {recording
-            ? "Recording…"
-            : transmitMut.isPending
-            ? "Sending…"
-            : "Ready"}
+          <Volume2 className="w-4 h-4" />
         </div>
-        {recordError && (
-          <div className="mt-2 text-xs text-rose-300" data-testid="text-record-error">
-            {recordError}
-          </div>
-        )}
+        <div className="flex-1 min-w-0">
+          {nowTalking ? (
+            <>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-amber-200">
+                Now talking
+              </div>
+              <div className="text-sm font-semibold text-white truncate">
+                {nowTalking}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
+                Channel quiet
+              </div>
+              <div className="text-xs text-slate truncate">
+                {lastHeard
+                  ? `Last heard: ${lastHeard.senderName} at ${new Date(
+                      lastHeard.createdAt,
+                    ).toLocaleTimeString(undefined, {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}`
+                  : "No traffic since you joined."}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <section
-          className="rounded-3xl border border-white/10 bg-steel/30 p-4"
-          data-testid="card-presence"
-        >
-          <div className="flex items-center gap-2 mb-2 text-[11px] font-mono uppercase tracking-wider text-slate">
-            <Users className="w-3.5 h-3.5 text-emerald-300" /> On channel ({presenceList.length})
-          </div>
-          {presenceList.length === 0 ? (
-            <div className="text-sm text-slate">Just you so far.</div>
-          ) : (
-            <ul className="space-y-1">
-              {presenceList.map((p) => (
-                <li
-                  key={p.handlerUserId}
-                  className="text-sm text-paper flex items-center justify-between"
-                  data-testid={`row-presence-${p.handlerUserId}`}
-                >
-                  <span>{p.handlerName}</span>
-                  <span className="text-[10px] font-mono text-slate">
-                    on since {new Date(p.joinedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                  </span>
-                </li>
-              ))}
-            </ul>
+      {/* Target selector */}
+      <section
+        className="rounded-3xl border border-white/10 bg-steel/30 p-4"
+        data-testid="card-targets"
+      >
+        <div className="flex items-center gap-2 mb-3 text-[11px] font-mono uppercase tracking-wider text-slate">
+          <Users className="w-3.5 h-3.5 text-emerald-300" /> Talk to
+          <span className="ml-auto text-paper">{targetSummary}</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <TargetChip
+            label="Whole station"
+            active={stationSelected}
+            onClick={() => toggleTarget(TARGET_STATION)}
+            testId="chip-target-station"
+          />
+          {presenceList.map((p) => (
+            <TargetChip
+              key={p.handlerUserId}
+              label={p.handlerName}
+              active={targets.has(p.handlerUserId)}
+              onClick={() => toggleTarget(p.handlerUserId)}
+              testId={`chip-target-${p.handlerUserId}`}
+            />
+          ))}
+          {presenceList.length === 0 && (
+            <div className="text-xs text-slate">
+              No other handlers on the channel yet.
+            </div>
           )}
-        </section>
+        </div>
+        {!stationSelected && (
+          <div
+            className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100/90 leading-relaxed"
+            data-testid="note-targeting-broadcast"
+          >
+            Targeted PTT is queued for backend support — for now your message
+            still reaches everyone on this channel. The selected handlers will
+            be marked as the intended recipients once the API is updated.
+          </div>
+        )}
+      </section>
 
-        <section
-          className="rounded-3xl border border-white/10 bg-steel/30 p-4"
-          data-testid="card-recent-transmissions"
-        >
-          <div className="flex items-center gap-2 mb-2 text-[11px] font-mono uppercase tracking-wider text-slate">
-            <Volume2 className="w-3.5 h-3.5 text-emerald-300" /> Recent chatter
-            {transmissions.isFetching && (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate" />
-            )}
+      {/* Sticky bottom PTT zone — ergonomic thumb-reach. */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gradient-to-t from-obsidian via-obsidian/95 to-obsidian/70 backdrop-blur px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        data-testid="bar-ptt"
+      >
+        <div className="mx-auto max-w-md flex flex-col items-center">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-slate mb-2">
+            Hold to talk · max 15 s ·{" "}
+            <span className="text-paper">{targetSummary}</span>
           </div>
-          {recent.length === 0 ? (
-            <div className="text-sm text-slate">No chatter yet.</div>
-          ) : (
-            <ul className="space-y-2">
-              {recent.map((t) => (
-                <TransmissionRow key={t.id} tx={t} />
-              ))}
-            </ul>
+          <button
+            type="button"
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onMouseLeave={() => recording && stopRecording()}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              startRecording();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              stopRecording();
+            }}
+            disabled={!joined}
+            aria-label="Push to talk"
+            title="Hold to talk"
+            className={`w-24 h-24 rounded-full border-4 flex items-center justify-center transition-transform select-none shadow-lg shadow-black/40 ${
+              recording
+                ? "bg-rose-500/40 border-rose-400 text-rose-50 scale-105"
+                : "bg-emerald-500/20 border-emerald-400/60 text-emerald-100 active:scale-95"
+            } disabled:opacity-50`}
+            data-testid="button-ptt"
+          >
+            <Mic className="w-10 h-10" />
+          </button>
+          <div className="mt-2 text-xs text-slate" data-testid="text-ptt-status">
+            {recording
+              ? "Recording…"
+              : transmitMut.isPending
+                ? "Sending…"
+                : "Ready"}
+          </div>
+          {recordError && (
+            <div
+              className="mt-1 text-xs text-rose-300"
+              data-testid="text-record-error"
+            >
+              {recordError}
+            </div>
           )}
-        </section>
+        </div>
       </div>
     </div>
   );
 }
 
-function TransmissionRow({ tx }: { tx: IntercomTransmission }) {
+function TargetChip({
+  label,
+  active,
+  onClick,
+  testId,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  testId: string;
+}) {
   return (
-    <li
-      className="rounded-xl border border-white/10 bg-obsidian/50 p-2 flex items-center justify-between gap-2"
-      data-testid={`row-tx-${tx.id}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover-elevate ${
+        active
+          ? "border-emerald-400/50 bg-emerald-500/20 text-emerald-100"
+          : "border-white/10 bg-obsidian/40 text-slate"
+      }`}
+      data-testid={testId}
     >
-      <div className="min-w-0">
-        <div className="text-sm text-paper font-semibold truncate">
-          {tx.senderName}
-        </div>
-        <div className="text-[10px] font-mono text-slate">
-          {new Date(tx.createdAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} · {Math.max(1, Math.round((tx.durationMs || 0) / 1000))}s
-        </div>
-      </div>
-      <audio
-        controls
-        src={`data:${tx.mimeType};base64,${tx.audioBase64}`}
-        className="h-8"
-      />
-    </li>
+      {active && <Check className="w-3.5 h-3.5" />}
+      <span className="truncate max-w-[10rem]">{label}</span>
+    </button>
   );
 }

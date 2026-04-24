@@ -29,6 +29,7 @@ import ServicesPage from "@/pages/Services";
 import StationPage from "@/pages/Station";
 import PreShiftPage from "@/pages/PreShift";
 import CheckoutPage from "@/pages/Checkout";
+import { IssueNfcPage, IssueQrPage, IssueSmsPage } from "@/pages/IssueQuick";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -180,6 +181,9 @@ function AuthedRoutes() {
         <Route path="/station" component={StationPage} />
         <Route path="/pre-shift" component={PreShiftPage} />
         <Route path="/checkout" component={CheckoutPage} />
+        <Route path="/issue/nfc" component={IssueNfcPage} />
+        <Route path="/issue/qr" component={IssueQrPage} />
+        <Route path="/issue/sms" component={IssueSmsPage} />
         <Route path="/settings" component={Settings} />
         <Route path="/settings/profile" component={SettingsProfile} />
         <Route path="/settings/attendance" component={SettingsAttendance} />

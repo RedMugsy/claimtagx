@@ -8,7 +8,9 @@ import {
   ClipboardList,
   Users,
   Camera,
-  Ticket,
+  Nfc,
+  QrCode,
+  MessageCircle,
   FileEdit,
   Inbox,
   Briefcase,
@@ -388,11 +390,14 @@ export default function Home() {
         )}
       </motion.div>
 
-      {/* Command Station — circular hub: top half is three pie sectors */}
+      {/* Command Station — circular hub: top half = capture (Manual/Camera),
+          bottom half = quick-issue ClaimTag (NFC/BLE, QR, SMS/WA) */}
       <CommandStation
         onManual={() => navigate("/intake")}
         onCamera={() => navigate("/release")}
-        onTicket={() => navigate("/services")}
+        onNfc={() => navigate("/issue/nfc")}
+        onQr={() => navigate("/issue/qr")}
+        onSms={() => navigate("/issue/sms")}
         modeCount={effectiveModes.length}
       />
 
@@ -454,17 +459,25 @@ export default function Home() {
 function CommandStation({
   onManual,
   onCamera,
-  onTicket,
+  onNfc,
+  onQr,
+  onSms,
   modeCount,
 }: {
   onManual: () => void;
   onCamera: () => void;
-  onTicket: () => void;
+  onNfc: () => void;
+  onQr: () => void;
+  onSms: () => void;
   modeCount: number;
 }) {
-  // Three equal 60° pie sectors fill the top half of the dial.
-  // SVG y-axis points down, so the top of the circle is at angle 270°
-  // and the top half spans 180° → 360° clockwise.
+  // Top half (180° → 360° in SVG y-down coords): two equal 90° sectors
+  //   - Manual  : 180° → 270°  (top-left)
+  //   - Camera  : 270° → 360°  (top-right)
+  // Bottom half (0° → 180°): three equal 60° sectors — quick-issue ClaimTag
+  //   - NFC/BLE : 0°   → 60°   (bottom-right)
+  //   - QR Code : 60°  → 120°  (bottom-center)
+  //   - SMS/WA  : 120° → 180°  (bottom-left)
   const cx = 100;
   const cy = 100;
   const r = 100;
@@ -480,45 +493,77 @@ function CommandStation({
   };
 
   const sectors = [
+    // Top — capture modes
     {
-      d: wedge(180, 240),
+      d: wedge(180, 270),
       fill: "fill-violet-500/15 hover:fill-violet-500/30",
       stroke: "stroke-violet-300/40",
       onClick: onManual,
-      label: "Open manual form",
+      label: "Open manual capture form",
       testId: "cmd-station-manual",
-      // Centroid bisector at 210° (sin/cos rough centroid for a 60° wedge)
-      labelLeft: "24%",
-      labelTop: "35%",
+      // Centroid of 90° wedge bisected at 225° → ~(58, 58) in viewBox
+      labelLeft: "29%",
+      labelTop: "29%",
       Icon: FileEdit,
       iconCls: "text-violet-200",
       caption: "Manual",
     },
     {
-      d: wedge(240, 300),
+      d: wedge(270, 360),
       fill: "fill-lime/15 hover:fill-lime/30",
       stroke: "stroke-lime/40",
       onClick: onCamera,
-      label: "Open camera",
+      label: "Open camera capture",
       testId: "cmd-station-camera",
-      labelLeft: "50%",
-      labelTop: "20%",
+      // Centroid bisected at 315° → ~(142, 58)
+      labelLeft: "71%",
+      labelTop: "29%",
       Icon: Camera,
       iconCls: "text-lime",
       caption: "Camera",
     },
+    // Bottom — quick-issue (capture-after) modes
     {
-      d: wedge(300, 360),
+      d: wedge(120, 180),
+      fill: "fill-emerald-500/15 hover:fill-emerald-500/30",
+      stroke: "stroke-emerald-300/40",
+      onClick: onSms,
+      label: "Issue ClaimTag via SMS or WhatsApp",
+      testId: "cmd-station-sms",
+      // 60° wedge bisected at 150° → ~(45, 132)
+      labelLeft: "22%",
+      labelTop: "66%",
+      Icon: MessageCircle,
+      iconCls: "text-emerald-200",
+      caption: "SMS/WA",
+    },
+    {
+      d: wedge(60, 120),
       fill: "fill-amber-500/15 hover:fill-amber-500/30",
       stroke: "stroke-amber-300/40",
-      onClick: onTicket,
-      label: "Issue ticket immediately",
-      testId: "cmd-station-ticket",
-      labelLeft: "76%",
-      labelTop: "35%",
-      Icon: Ticket,
+      onClick: onQr,
+      label: "Issue ClaimTag via QR code",
+      testId: "cmd-station-qr",
+      // bisect 90° → (100, 164)
+      labelLeft: "50%",
+      labelTop: "82%",
+      Icon: QrCode,
       iconCls: "text-amber-200",
-      caption: "Ticket",
+      caption: "QR Code",
+    },
+    {
+      d: wedge(0, 60),
+      fill: "fill-indigo-500/15 hover:fill-indigo-500/30",
+      stroke: "stroke-indigo-300/40",
+      onClick: onNfc,
+      label: "Issue ClaimTag via NFC or BLE",
+      testId: "cmd-station-nfc",
+      // bisect 30° → ~(155, 132)
+      labelLeft: "78%",
+      labelTop: "66%",
+      Icon: Nfc,
+      iconCls: "text-indigo-200",
+      caption: "NFC/BLE",
     },
   ];
 
@@ -527,8 +572,16 @@ function CommandStation({
       className="flex flex-col items-center"
       data-testid="card-command-station"
     >
-      <div className="text-[11px] font-mono uppercase tracking-wider text-slate self-start mb-2">
-        Command Station
+      <div className="flex items-center justify-between w-full mb-2">
+        <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
+          Command Station
+        </div>
+        <div
+          className="text-[10px] font-mono uppercase tracking-wider text-slate"
+          data-testid="text-active-modes"
+        >
+          <span className="text-paper font-bold">{modeCount}</span> active modes
+        </div>
       </div>
 
       <div className="relative w-60 h-60 sm:w-72 sm:h-72">
@@ -540,7 +593,7 @@ function CommandStation({
           {/* Full base disc */}
           <circle cx={cx} cy={cy} r={r} className="fill-obsidian/60 stroke-white/10" strokeWidth={1} />
 
-          {/* Three top-half pie sectors */}
+          {/* Five interactive sectors — 2 capture on top, 3 quick-issue on bottom */}
           {sectors.map((s) => (
             <path
               key={s.testId}
@@ -561,7 +614,7 @@ function CommandStation({
             />
           ))}
 
-          {/* Diameter line separating top and bottom halves */}
+          {/* Diameter separator */}
           <line x1={0} y1={cy} x2={200} y2={cy} className="stroke-white/15" strokeWidth={1} />
         </svg>
 
@@ -579,26 +632,17 @@ function CommandStation({
           </div>
         ))}
 
-        {/* Bottom-half info */}
-        <div className="absolute left-0 right-0 bottom-0 h-1/2 flex flex-col items-center justify-center px-4 text-center pointer-events-none">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            Active modes
-          </div>
-          <div className="mt-1 text-3xl font-extrabold text-white tracking-tight">
-            {modeCount}
-          </div>
-          <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-slate">
-            Tap a slice
-          </div>
-        </div>
-
-        {/* Center hub disc (covers wedge tips for a clean look) */}
+        {/* Center hub disc */}
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-lime/30 bg-obsidian flex items-center justify-center pointer-events-none"
           aria-hidden="true"
         >
           <PackagePlus className="w-5 h-5 text-lime" />
         </div>
+      </div>
+
+      <div className="mt-3 text-[10px] font-mono uppercase tracking-wider text-slate text-center max-w-xs">
+        Top — capture asset, then issue. Bottom — issue ClaimTag now, capture after.
       </div>
     </div>
   );
