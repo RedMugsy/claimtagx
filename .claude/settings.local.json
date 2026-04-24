@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(//d/OneDrive - Ali Achkar/Documents/01 Digiteck Vision/Projects/**)",
-      "Bash(mv claimtagx-website-tmp/* claimtagx-website-tmp/.* claimtagx-website/)",
-      "Bash(rmdir claimtagx-website-tmp *)"
-    ]
-  }
-}
