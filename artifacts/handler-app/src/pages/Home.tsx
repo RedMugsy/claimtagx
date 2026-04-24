@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   Bell,
@@ -8,8 +8,6 @@ import {
   PackagePlus,
   ScanLine,
   ClipboardList,
-  History as HistoryIcon,
-  MessageSquare,
   Radio,
   ConciergeBell,
   ChevronRight,
@@ -88,10 +86,17 @@ const toneClasses: Record<Tile["tone"], string> = {
 
 export default function Home() {
   const { session, assets, activeVenue, mode } = useStore();
+  const [, navigate] = useLocation();
   const venueType = activeVenue?.venueType ?? "other";
   const copy = VENUE_COPY[venueType];
   const queryClient = useQueryClient();
   const [now, setNow] = useState(() => Date.now());
+  const custodySwipeStart = useRef<{ x: number; y: number; at: number } | null>(
+    null,
+  );
+  const intercomSwipeStart = useRef<{ x: number; y: number; at: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000 * 30);
@@ -129,15 +134,7 @@ export default function Home() {
     staleTime: 15_000,
     refetchInterval: 20_000,
   });
-  const unreadMessagesQuery = useQuery({
-    queryKey: getGetUnreadMessageCountQueryKey(venueCode),
-    queryFn: () => getUnreadMessageCount(venueCode),
-    enabled: Boolean(venueCode),
-    staleTime: 15_000,
-    refetchInterval: 20_000,
-  });
   const openServicesCount = openServicesQuery.data?.count ?? 0;
-  const unreadMessagesCount = unreadMessagesQuery.data?.count ?? 0;
 
   const startMutation = useMutation({
     mutationFn: () => startShift({ venueCode }),
@@ -178,6 +175,13 @@ export default function Home() {
     return { active: active.length, released: released.length, byMode };
   }, [assets]);
 
+  // Authorization-safe mode strip: handlers should only see UI for the mode
+  // their active venue is configured for (e.g. valet => vehicles only).
+  const visibleModeRows = useMemo(
+    () => counts.byMode.filter((row) => row.mode.id === mode),
+    [counts.byMode, mode],
+  );
+
   const myShiftHere =
     myShift && venueCode && myShift.venueCode === venueCode ? myShift : null;
   const teammatesOnShift = venueShifts.filter(
@@ -209,13 +213,6 @@ export default function Home() {
       Icon: ScanLine,
       tone: "rose",
     },
-    {
-      to: "/custody",
-      label: copy.custodyHeading,
-      Icon: ClipboardList,
-      tone: "indigo",
-      badge: counts.active > 0 ? String(counts.active) : undefined,
-    },
   ];
 
   const secondaryTiles: Tile[] = [
@@ -225,26 +222,6 @@ export default function Home() {
       Icon: ConciergeBell,
       tone: "violet",
       badge: openServicesCount > 0 ? String(openServicesCount) : undefined,
-    },
-    {
-      to: "/messages",
-      label: "Messages",
-      Icon: MessageSquare,
-      tone: "amber",
-      badge: unreadMessagesCount > 0 ? String(unreadMessagesCount) : undefined,
-    },
-    {
-      to: "/intercom",
-      label: "Intercom",
-      Icon: Radio,
-      tone: "emerald",
-    },
-    {
-      to: "/history",
-      label: "History",
-      Icon: HistoryIcon,
-      tone: "indigo",
-      badge: counts.released > 0 ? String(counts.released) : undefined,
     },
   ];
 
@@ -257,8 +234,47 @@ export default function Home() {
   const shiftElsewhere =
     myShift && venueCode && myShift.venueCode !== venueCode ? myShift : null;
 
+  const onCommandCenterTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    custodySwipeStart.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+  };
+
+  const onCommandCenterTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = custodySwipeStart.current;
+    custodySwipeStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.at;
+    const leftSwipe = dx <= -70 && Math.abs(dy) <= 90 && dt <= 550;
+    if (leftSwipe) navigate("/custody");
+  };
+
+  const onIntercomTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    intercomSwipeStart.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+  };
+
+  const onIntercomTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = intercomSwipeStart.current;
+    intercomSwipeStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.at;
+    const upFlick = dy <= -65 && Math.abs(dx) <= 90 && dt <= 550;
+    if (upFlick) navigate("/intercom");
+  };
+
   return (
-    <div className="space-y-5">
+    <div
+      className="space-y-5"
+      onTouchStart={onCommandCenterTouchStart}
+      onTouchEnd={onCommandCenterTouchEnd}
+      data-testid="gesture-custody-left-swipe"
+    >
       {/* Top action row */}
       <div className="flex items-center justify-between">
         <div className="leading-tight">
@@ -430,31 +446,25 @@ export default function Home() {
         )}
       </motion.div>
 
-      {/* Mode counter strip — highlight the venue's own mode tile so the
-          count for "this kind of asset" is the most prominent number on
-          the screen. The other tiles stay visible for handlers covering
-          mixed venues, but they're dimmed. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {counts.byMode.map((row, i) => {
+      {/* Mode counter strip: only show authorized mode(s) for the active
+          venue. A valet handler should never see baggage/cloakroom/retail
+          cards in Command Center. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {visibleModeRows.map((row, i) => {
           const Icon = MODE_ICONS[row.mode.id];
-          const isVenueMode = row.mode.id === mode;
           return (
             <motion.div
               key={row.mode.id}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: i * 0.03 }}
-              className={`rounded-2xl border p-3 ${
-                isVenueMode
-                  ? "border-lime/40 bg-lime/10"
-                  : "border-white/10 bg-steel/40 opacity-70"
-              }`}
+              className="rounded-2xl border p-3 border-lime/40 bg-lime/10"
               data-testid={`tile-count-${row.mode.id}`}
             >
               <div className="flex items-center justify-between mb-1">
-                <Icon className={`w-4 h-4 ${isVenueMode ? "text-lime" : "text-slate"}`} />
+                <Icon className="w-4 h-4 text-lime" />
                 <span className="text-[10px] font-mono uppercase tracking-wider text-slate">
-                  {isVenueMode ? copy.custodyTileLabel : row.mode.short}
+                  {copy.custodyTileLabel}
                 </span>
               </div>
               <div className="text-2xl font-extrabold text-white leading-tight">
@@ -496,6 +506,30 @@ export default function Home() {
         </div>
       </div>
 
+      {/* End-of-page intercom gesture surface: flick up to open intercom. */}
+      <div
+        className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 flex items-center justify-between gap-3"
+        onTouchStart={onIntercomTouchStart}
+        onTouchEnd={onIntercomTouchEnd}
+        data-testid="gesture-intercom-flick-up"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Radio className="w-5 h-5 text-emerald-300 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-white">Intercom</div>
+            <div className="text-xs text-slate truncate">Flick up here to open venue intercom</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/intercom")}
+          className="rounded-xl border border-emerald-300/40 bg-emerald-400/15 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover-elevate"
+          data-testid="button-open-intercom"
+        >
+          Open
+        </button>
+      </div>
+
       {/* Footer hint */}
       <div className="rounded-2xl border border-white/10 bg-steel/30 px-4 py-3 flex items-center gap-3">
         <CloudSun className="w-5 h-5 text-lime shrink-0" />
@@ -508,7 +542,7 @@ export default function Home() {
           <Link href="/release" className="text-paper font-semibold underline">
             {copy.releaseAction}
           </Link>{" "}
-          to scan a tag and return one.
+          to scan a tag and return one. Swipe left anywhere on this page to open custody.
         </div>
       </div>
     </div>

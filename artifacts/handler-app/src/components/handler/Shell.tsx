@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
-import { ChevronDown, ClipboardList, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff } from "lucide-react";
+import { ChevronDown, ScanLine, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,9 +40,9 @@ function StreamStatusDot({ status }: { status: StreamStatus }) {
 
 const tabs = [
   { path: "/", label: "Home", icon: LayoutGrid, exact: true },
-  { path: "/custody", label: "Custody", icon: ClipboardList },
   { path: "/release", label: "Scan", icon: ScanLine },
   { path: "/history", label: "History", icon: HistoryIcon },
+  { path: "/messages", label: "Messages", icon: MessageSquare },
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 
