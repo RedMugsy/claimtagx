@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Search, Clock, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { Search, Clock, ArrowDownToLine, ArrowUpFromLine, RefreshCw, SlidersHorizontal, Check } from "lucide-react";
 import {
   Cell,
   Pie,
@@ -10,6 +10,11 @@ import {
 } from "recharts";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useStore } from "@/lib/store";
 import {
   MODE_BY_ID,
@@ -222,6 +227,30 @@ export default function Custody() {
   const vacant = Math.max(0, capacity - occupied);
   const occupancyPct = capacity > 0 ? Math.round((occupied / capacity) * 100) : 0;
 
+  const searchPlaceholder = `Search ${cfg.label.toLowerCase()} by ticket, plate or patron…`;
+  const filtersActive = ageFilter !== "all" || sort !== "newest";
+  const ageFilterOptions = [
+    { id: "all", label: "All", count: allActive.length, tone: "" },
+    {
+      id: "fresh",
+      label: `Fresh · <${formatBandThreshold(bands.watchAfterMin)}`,
+      count: bandCounts.fresh,
+      tone: "lime",
+    },
+    {
+      id: "watch",
+      label: `Watch · ${formatBandThreshold(bands.watchAfterMin)}+`,
+      count: bandCounts.watch,
+      tone: "amber",
+    },
+    {
+      id: "overdue",
+      label: `Overdue · ${formatBandThreshold(bands.overdueAfterMin)}+`,
+      count: bandCounts.overdue,
+      tone: "rose",
+    },
+  ] as const;
+
   if (!canAccessMode(mode)) {
     return (
       <section className="rounded-3xl border border-amber-400/30 bg-amber-500/10 p-5" data-testid="panel-authorization-denied-custody">
@@ -244,23 +273,20 @@ export default function Custody() {
 
   return (
     <div>
-      <header className="mb-6">
+      <header className="mb-3">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-lime/15 border border-lime/30 flex items-center justify-center">
             <ModeIcon className="w-5 h-5 text-lime" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="text-xs font-mono uppercase tracking-wider text-slate">Active custody</div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">
               {copy.custodyHeading}
             </h1>
           </div>
-          <Badge variant="outline" className="ml-auto border-lime/30 text-lime font-mono">
-            {list.length}
-          </Badge>
         </div>
         {activeVenue ? (
-          <div className="mt-3 flex items-center justify-end">
+          <div className="mt-2 flex items-center justify-end">
             <TamperAlerts
               venueCode={activeVenue.code}
               canAcknowledge={activeVenue.role === "owner"}
@@ -315,76 +341,115 @@ export default function Custody() {
         </div>
       </section>
 
-      <div className="relative mb-3">
-        <Search className="w-4 h-4 text-slate absolute left-3 top-1/2 -translate-y-1/2" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={`Search ${cfg.label.toLowerCase()} by ticket, patron, or detail...`}
-          className="pl-9 bg-steel/40 border-white/10 text-white placeholder:text-slate"
-          data-testid="input-search"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 mb-5">
-        {([
-          { id: "all", label: "All", count: allActive.length, tone: "" },
-          {
-            id: "fresh",
-            label: `Fresh · <${formatBandThreshold(bands.watchAfterMin)}`,
-            count: bandCounts.fresh,
-            tone: "lime",
-          },
-          {
-            id: "watch",
-            label: `Watch · ${formatBandThreshold(bands.watchAfterMin)}+`,
-            count: bandCounts.watch,
-            tone: "amber",
-          },
-          {
-            id: "overdue",
-            label: `Overdue · ${formatBandThreshold(bands.overdueAfterMin)}+`,
-            count: bandCounts.overdue,
-            tone: "rose",
-          },
-        ] as const).map((f) => {
-          const active = ageFilter === f.id;
-          const activeTone =
-            f.tone === "amber"
-              ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
-              : f.tone === "rose"
-                ? "border-rose-400/40 bg-rose-500/15 text-rose-200"
-                : "border-lime/40 bg-lime/15 text-lime";
-          return (
-            <button
-              key={f.id}
-              onClick={() => setAgeFilter(f.id as "all" | AgingBand)}
-              className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-mono uppercase tracking-wider hover-elevate ${
-                active
-                  ? activeTone
-                  : "border-white/10 bg-steel/40 text-slate"
-              }`}
-              data-testid={`filter-age-${f.id}`}
-            >
-              <span>{f.label}</span>
-              <span className="text-[10px] opacity-80">{f.count}</span>
-            </button>
-          );
-        })}
-        <div className="ml-auto flex items-center gap-1 rounded-full border border-white/10 bg-steel/40 p-1">
-          {(["newest", "oldest"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSort(s)}
-              className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-wider hover-elevate ${
-                sort === s ? "bg-lime/15 text-lime" : "text-slate"
-              }`}
-              data-testid={`sort-${s}`}
-            >
-              {s}
-            </button>
-          ))}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-slate absolute left-3 top-1/2 -translate-y-1/2" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="pl-9 bg-steel/40 border-white/10 text-white placeholder:text-slate"
+            data-testid="input-search"
+          />
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setLoading(true);
+            window.setTimeout(() => setLoading(false), 220);
+          }}
+          className="w-10 h-10 shrink-0 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+          aria-label="Refresh list"
+          data-testid="button-refresh"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={`relative w-10 h-10 shrink-0 rounded-xl border flex items-center justify-center hover-elevate ${
+                filtersActive
+                  ? "border-lime/40 bg-lime/15 text-lime"
+                  : "border-white/10 bg-steel/40 text-slate hover:text-paper"
+              }`}
+              aria-label="Open filters"
+              data-testid="button-filters"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {filtersActive ? (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-lime border border-obsidian" />
+              ) : null}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-72 bg-obsidian border-white/10 text-paper p-3"
+          >
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-2">
+              Aging
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {ageFilterOptions.map((f) => {
+                const active = ageFilter === f.id;
+                const activeTone =
+                  f.tone === "amber"
+                    ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
+                    : f.tone === "rose"
+                      ? "border-rose-400/40 bg-rose-500/15 text-rose-200"
+                      : "border-lime/40 bg-lime/15 text-lime";
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setAgeFilter(f.id as "all" | AgingBand)}
+                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                      active ? activeTone : "border-white/10 bg-steel/40 text-slate"
+                    }`}
+                    data-testid={`filter-age-${f.id}`}
+                  >
+                    <span>{f.label}</span>
+                    <span className="text-[10px] opacity-80">{f.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-2">
+              Sort
+            </div>
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-steel/40 p-1 w-fit">
+              {(["newest", "oldest"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSort(s)}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                    sort === s ? "bg-lime/15 text-lime" : "text-slate"
+                  }`}
+                  data-testid={`sort-${s}`}
+                >
+                  {sort === s ? <Check className="w-3 h-3" /> : null}
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAgeFilter("all");
+                  setSort("newest");
+                }}
+                className="mt-4 w-full rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+                data-testid="button-filters-reset"
+              >
+                Reset filters
+              </button>
+            ) : null}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {loading ? (
