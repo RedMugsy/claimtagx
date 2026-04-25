@@ -294,25 +294,23 @@ export default function Custody() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 sm:gap-5 flex-wrap">
+        <div className="flex items-center justify-around gap-3 sm:gap-5 flex-nowrap">
           <ProcessedDonut
             total={kpis.totalProcessed}
             handler={kpis.handlerProcessed}
             others={kpis.othersProcessed}
             noun={VENUE_ASSET_NOUN[venueType]}
           />
-          <div className="hidden sm:block self-stretch w-px bg-white/5" />
+          <TrafficTotals
+            totalIn={trafficSeries.reduce((s, b) => s + b.in, 0)}
+            totalOut={trafficSeries.reduce((s, b) => s + b.out, 0)}
+          />
           <OccupancyCard
             occupied={occupied}
             vacant={vacant}
             capacity={capacity}
             pct={occupancyPct}
             noun={VENUE_ASSET_NOUN[venueType]}
-          />
-          <div className="hidden sm:block self-stretch w-px bg-white/5" />
-          <TrafficTotals
-            totalIn={trafficSeries.reduce((s, b) => s + b.in, 0)}
-            totalOut={trafficSeries.reduce((s, b) => s + b.out, 0)}
           />
         </div>
       </section>
@@ -563,9 +561,9 @@ function ProcessedDonut({
   const handlerPct = total > 0 ? Math.round((handler / total) * 100) : 0;
   return (
     <div
-      className="flex items-center gap-3"
+      className="flex items-center"
       data-testid="card-processed-donut"
-      title={`${noun}s processed: ${total} (you ${handler}, team ${others})`}
+      title={`${noun}s processed: ${total} (you ${handler}, team ${others}) — ${handlerPct}% by you`}
     >
       <div className="relative w-20 h-20 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
@@ -593,17 +591,6 @@ function ProcessedDonut({
           </div>
         </div>
       </div>
-      <div className="leading-tight">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-          Processed
-        </div>
-        <div className="text-[11px] text-paper">
-          You <span className="font-mono font-bold text-lime">{handler}</span>
-          <span className="text-slate"> · </span>
-          Team <span className="font-mono text-paper">{others}</span>
-        </div>
-        <div className="text-[10px] font-mono text-lime">{handlerPct}% you</div>
-      </div>
     </div>
   );
 }
@@ -617,34 +604,24 @@ function TrafficTotals({
 }) {
   return (
     <div
-      className="flex items-center gap-4"
+      className="flex flex-col items-center gap-1.5"
       data-testid="card-traffic-totals"
       title={`Traffic — in ${totalIn}, out ${totalOut}`}
     >
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-xl border border-lime/30 bg-lime/10 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-full border border-lime/30 bg-lime/10 flex items-center justify-center">
           <ArrowDownToLine className="w-4 h-4 text-lime" />
         </div>
-        <div className="leading-tight">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            In
-          </div>
-          <div className="text-base font-extrabold font-mono tabular-nums text-paper">
-            {totalIn}
-          </div>
+        <div className="text-base font-extrabold font-mono tabular-nums text-paper w-6 text-left">
+          {totalIn}
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-xl border border-amber-300/30 bg-amber-500/10 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-full border border-amber-300/30 bg-amber-500/10 flex items-center justify-center">
           <ArrowUpFromLine className="w-4 h-4 text-amber-300" />
         </div>
-        <div className="leading-tight">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            Out
-          </div>
-          <div className="text-base font-extrabold font-mono tabular-nums text-paper">
-            {totalOut}
-          </div>
+        <div className="text-base font-extrabold font-mono tabular-nums text-paper w-6 text-left">
+          {totalOut}
         </div>
       </div>
     </div>
@@ -675,11 +652,11 @@ function OccupancyCard({
   const dash = (pct / 100) * circ;
   return (
     <div
-      className="flex items-center gap-3"
+      className="flex items-center"
       data-testid="card-occupancy"
-      title={`Occupancy: ${occupied}/${capacity} (${vacant} vacant)`}
+      title={`Occupancy: ${occupied}/${capacity} (${vacant} ${noun}s vacant) — ${pct}%`}
     >
-      <div className="relative w-20 h-12 shrink-0">
+      <div className="relative w-24 h-14 shrink-0">
         <svg viewBox="0 0 140 80" className="w-full h-full">
           <path
             d="M 14 70 A 56 56 0 0 1 126 70"
@@ -699,20 +676,10 @@ function OccupancyCard({
           />
         </svg>
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-center">
-          <div className={`text-xs font-extrabold font-mono tabular-nums ${tone.text}`}>
+          <div className={`text-sm font-extrabold font-mono tabular-nums ${tone.text}`}>
             {pct}%
           </div>
         </div>
-      </div>
-      <div className="leading-tight">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-          Occupancy
-        </div>
-        <div className="text-[11px] text-paper">
-          <span className="font-mono font-bold text-paper">{occupied}</span>
-          <span className="text-slate">/{capacity}</span>
-        </div>
-        <div className="text-[10px] font-mono text-slate">{vacant} {noun}s free</div>
       </div>
     </div>
   );
