@@ -1,6 +1,5 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
-import { VENUE_TYPE_ICON, VENUE_TYPE_LABEL } from "@/lib/modes";
 import { ChevronDown, Settings, LogOut, Building2, Plus, Check, History as HistoryIcon, LayoutGrid, WifiOff, MessageSquare, Info } from "lucide-react";
 import {
   DropdownMenu,
@@ -46,17 +45,8 @@ const tabs = [
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { session, mode, signOut, assets, venues, activeVenue, setActiveVenue, streamStatus, effectiveModes } = useStore();
+  const { session, signOut, venues, activeVenue, setActiveVenue, streamStatus } = useStore();
   const [location, navigate] = useLocation();
-  // The header chip used to be a dropdown letting handlers pick an asset
-  // mode. The mode now follows the venue's classification — set by the
-  // owner once in settings — so the chip becomes a passive label that
-  // tells handlers what kind of venue they're working in and how many
-  // items are currently in custody.
-  const venueType = activeVenue?.venueType ?? "other";
-  const venueTypeLabel = VENUE_TYPE_LABEL[venueType];
-  const VenueTypeIcon = VENUE_TYPE_ICON[venueType];
-  const activeCount = assets.filter((a) => a.status === "active" && effectiveModes.includes(a.mode)).length;
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-obsidian text-paper font-sans">
@@ -66,20 +56,11 @@ export function Shell({ children }: { children: ReactNode }) {
           <Link href="/" className="flex items-center gap-1 group shrink-0">
             <span className="font-extrabold text-lg tracking-tight text-white">Claim</span>
             <span className="font-extrabold text-lg tracking-tight text-lime">TagX</span>
-            <span className="ml-2 text-xs font-mono uppercase tracking-wider text-slate">handler</span>
           </Link>
 
           <StreamStatusDot status={streamStatus} />
 
-          <div
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 text-sm"
-            data-testid="badge-venue-type"
-            title={`Venue type: ${venueTypeLabel}`}
-          >
-            <VenueTypeIcon className="w-4 h-4 text-lime" />
-            <span className="font-semibold text-white">{venueTypeLabel}</span>
-            <span className="font-mono text-xs text-slate">{activeCount}</span>
-          </div>
+          <div className="flex-1" />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -131,21 +112,10 @@ export function Shell({ children }: { children: ReactNode }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-2 text-right hover-elevate rounded-xl px-2 py-1.5"
+                className="flex items-center gap-2 hover-elevate rounded-xl p-1"
                 data-testid="button-handler-menu"
+                aria-label="Open account menu"
               >
-                <div className="hidden sm:block leading-tight">
-                  <div className="text-sm font-semibold text-white">{session?.handlerName}</div>
-                  <div className="text-xs text-slate font-mono">{session?.venueName}</div>
-                </div>
-                <div className="sm:hidden leading-tight text-right">
-                  <div className="text-[11px] font-mono uppercase tracking-wider text-slate -mb-0.5">
-                    {session?.venueName}
-                  </div>
-                  <div className="text-xs font-semibold text-white truncate max-w-[7rem]">
-                    {session?.handlerName}
-                  </div>
-                </div>
                 <div className="w-9 h-9 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center text-lime font-bold shrink-0">
                   {(session?.handlerName ?? "H").slice(0, 1)}
                 </div>

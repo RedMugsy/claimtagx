@@ -41,6 +41,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FirstSignInTour } from "@/components/handler/FirstSignInTour";
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -404,7 +410,12 @@ export default function Home() {
       {/* Assignments — 4 icon tiles with badge counts */}
       <section className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-assignments">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Assignments</div>
+          <div className="flex items-center gap-1.5">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Assignments</div>
+            <InfoTip label="About Assignments">
+              All — main house for every assignment at this station, with aging.
+            </InfoTip>
+          </div>
           <ClipboardList className="w-4 h-4 text-lime" />
         </div>
         <div className="grid grid-cols-4 gap-2 sm:gap-3">
@@ -441,17 +452,10 @@ export default function Home() {
             testId="assign-all"
           />
         </div>
-        <div className="mt-3 text-[10px] font-mono uppercase tracking-wider text-slate">
-          All — main house for every assignment at this station, with aging.
-        </div>
       </section>
 
-      {/* Footer hint */}
-      <div className="rounded-2xl border border-white/10 bg-steel/30 px-4 py-3 flex items-center gap-3">
-        <div className="text-xs text-slate leading-snug">
-          Tip — swipe right anywhere on this page to open Custody. Flick up to pull Intercom.
-        </div>
-      </div>
+      {/* First-sign-in gesture tour (one-time, gated by localStorage) */}
+      <FirstSignInTour />
     </div>
   );
 }
@@ -573,8 +577,14 @@ function CommandStation({
       data-testid="card-command-station"
     >
       <div className="flex items-center justify-between w-full mb-2">
-        <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
-          Command Station
+        <div className="flex items-center gap-1.5">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
+            Command Station
+          </div>
+          <InfoTip label="About the Command Station">
+            Top — capture asset, then issue. Bottom — issue ClaimTag now,
+            capture after.
+          </InfoTip>
         </div>
         <div
           className="text-[10px] font-mono uppercase tracking-wider text-slate"
@@ -641,7 +651,7 @@ function CommandStation({
         </div>
       </div>
 
-      <div className="mt-3 text-[10px] font-mono uppercase tracking-wider text-slate text-center max-w-xs">
+      <div className="mt-3 text-[10px] font-mono uppercase tracking-wider text-slate text-center max-w-xs sr-only">
         Top — capture asset, then issue. Bottom — issue ClaimTag now, capture after.
       </div>
     </div>
@@ -723,5 +733,25 @@ function ShiftStat({
         {value}
       </div>
     </div>
+  );
+}
+
+function InfoTip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          className="inline-flex items-center justify-center w-4 h-4 rounded-full text-slate hover:text-paper transition-colors"
+          data-testid={`tip-${label.replace(/\s+/g, "-").toLowerCase()}`}
+        >
+          <Info className="w-3.5 h-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-[16rem] text-[11px] leading-snug normal-case tracking-normal">
+        {children}
+      </TooltipContent>
+    </Tooltip>
   );
 }
