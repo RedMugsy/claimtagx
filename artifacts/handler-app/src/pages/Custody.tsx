@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Search, Clock, ArrowDownToLine, ArrowUpFromLine, RefreshCw, SlidersHorizontal, Check } from "lucide-react";
+import { Search, Clock, ArrowDownToLine, ArrowUpFromLine, RefreshCw, SlidersHorizontal, Check, LayoutGrid, List as ListIcon, Images, ImageOff } from "lucide-react";
 import {
   Cell,
   Pie,
@@ -67,6 +67,7 @@ export default function Custody() {
   const [ageFilter, setAgeFilter] = useState<"all" | AgingBand>("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [kpiWindow, setKpiWindow] = useState<"today" | "week" | "month">("today");
+  const [view, setView] = useState<"cards" | "list" | "gallery">("cards");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -452,6 +453,36 @@ export default function Custody() {
         </Popover>
       </div>
 
+      {!loading && list.length > 0 ? (
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            {list.length} {list.length === 1 ? "item" : "items"}
+          </div>
+          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-steel/40 p-1">
+            {(
+              [
+                { id: "cards" as const, Icon: LayoutGrid, label: "Cards" },
+                { id: "list" as const, Icon: ListIcon, label: "List" },
+                { id: "gallery" as const, Icon: Images, label: "Gallery" },
+              ]
+            ).map(({ id, Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setView(id)}
+                aria-label={label}
+                className={`flex items-center justify-center w-8 h-8 rounded-full hover-elevate ${
+                  view === id ? "bg-lime/15 text-lime" : "text-slate hover:text-paper"
+                }`}
+                data-testid={`view-${id}`}
+              >
+                <Icon className="w-4 h-4" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="custody-skeleton">
           {[0, 1, 2, 3].map((i) => (
@@ -487,7 +518,15 @@ export default function Custody() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div
+          className={
+            view === "list"
+              ? "flex flex-col gap-2"
+              : view === "gallery"
+                ? "grid grid-cols-2 sm:grid-cols-3 gap-3"
+                : "grid grid-cols-1 md:grid-cols-2 gap-3"
+          }
+        >
           {list.map((a, i) => {
             const band = classifyAge(a.intakeAt, bands);
             const cardBorder =
@@ -508,38 +547,105 @@ export default function Custody() {
                 : band === "watch"
                   ? "WATCH"
                   : "FRESH";
-            return (
-            <motion.button
-              key={a.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: i * 0.02 }}
-              onClick={() => setSelected(a)}
-              className={`text-left rounded-2xl border p-4 hover-elevate ${cardBorder}`}
-              data-testid={`card-asset-${a.ticketId}`}
-              data-band={band}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-mono text-sm text-lime tracking-wider">{a.ticketId}</div>
-                <Badge variant="secondary" className={`font-mono text-[10px] ${badgeCls}`}>
-                  {badgeLabel}
-                </Badge>
-              </div>
-              <div className="text-white font-semibold mb-1">{a.patron.name}</div>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {cfg.columns.slice(0, 3).map((c) => (
-                  <div key={c.key}>
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{c.label}</div>
-                    <div className={`text-sm text-white truncate ${c.mono ? "font-mono" : ""}`}>
-                      {String(a.fields[c.key] ?? "—")}
+
+            if (view === "list") {
+              return (
+                <motion.button
+                  key={a.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, delay: i * 0.015 }}
+                  onClick={() => setSelected(a)}
+                  className={`flex items-center gap-3 text-left rounded-xl border px-3 py-2.5 hover-elevate ${cardBorder}`}
+                  data-testid={`row-asset-${a.ticketId}`}
+                  data-band={band}
+                >
+                  <div className="font-mono text-xs text-lime tracking-wider w-20 shrink-0 truncate">{a.ticketId}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
+                    <div className="text-[11px] text-slate font-mono truncate">
+                      {cfg.columns.slice(0, 2).map((c) => String(a.fields[c.key] ?? "—")).join(" · ")}
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate font-mono">
-                <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)} · {a.handler}
-              </div>
-            </motion.button>
+                  <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate font-mono shrink-0">
+                    <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)}
+                  </div>
+                  <Badge variant="secondary" className={`font-mono text-[10px] shrink-0 ${badgeCls}`}>
+                    {badgeLabel}
+                  </Badge>
+                </motion.button>
+              );
+            }
+
+            if (view === "gallery") {
+              const photo = a.photos?.[0];
+              return (
+                <motion.button
+                  key={a.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.02 }}
+                  onClick={() => setSelected(a)}
+                  className={`text-left rounded-2xl border overflow-hidden hover-elevate ${cardBorder}`}
+                  data-testid={`tile-asset-${a.ticketId}`}
+                  data-band={band}
+                >
+                  <div className="relative aspect-square bg-obsidian/60 flex items-center justify-center">
+                    {photo ? (
+                      <img src={photo} alt={a.ticketId} className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageOff className="w-6 h-6 text-slate" />
+                    )}
+                    <Badge
+                      variant="secondary"
+                      className={`absolute top-2 right-2 font-mono text-[10px] ${badgeCls}`}
+                    >
+                      {badgeLabel}
+                    </Badge>
+                  </div>
+                  <div className="p-2.5">
+                    <div className="font-mono text-xs text-lime tracking-wider truncate">{a.ticketId}</div>
+                    <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
+                    <div className="flex items-center gap-1 text-[11px] text-slate font-mono mt-1">
+                      <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)}
+                    </div>
+                  </div>
+                </motion.button>
+              );
+            }
+
+            return (
+              <motion.button
+                key={a.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: i * 0.02 }}
+                onClick={() => setSelected(a)}
+                className={`text-left rounded-2xl border p-4 hover-elevate ${cardBorder}`}
+                data-testid={`card-asset-${a.ticketId}`}
+                data-band={band}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-mono text-sm text-lime tracking-wider">{a.ticketId}</div>
+                  <Badge variant="secondary" className={`font-mono text-[10px] ${badgeCls}`}>
+                    {badgeLabel}
+                  </Badge>
+                </div>
+                <div className="text-white font-semibold mb-1">{a.patron.name}</div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {cfg.columns.slice(0, 3).map((c) => (
+                    <div key={c.key}>
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{c.label}</div>
+                      <div className={`text-sm text-white truncate ${c.mono ? "font-mono" : ""}`}>
+                        {String(a.fields[c.key] ?? "—")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate font-mono">
+                  <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)} · {a.handler}
+                </div>
+              </motion.button>
             );
           })}
         </div>
