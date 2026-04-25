@@ -3,13 +3,10 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Search, Clock, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import {
-  Area,
-  AreaChart,
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
-  Tooltip as RTooltip,
 } from "recharts";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -297,7 +294,7 @@ export default function Custody() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr,auto] items-center gap-3 sm:gap-4">
+        <div className="flex items-center justify-between gap-3 sm:gap-5 flex-wrap">
           <ProcessedDonut
             total={kpis.totalProcessed}
             handler={kpis.handlerProcessed}
@@ -305,14 +302,17 @@ export default function Custody() {
             noun={VENUE_ASSET_NOUN[venueType]}
           />
           <div className="hidden sm:block self-stretch w-px bg-white/5" />
-          <TrafficChart series={trafficSeries} />
-          <div className="hidden sm:block self-stretch w-px bg-white/5" />
           <OccupancyCard
             occupied={occupied}
             vacant={vacant}
             capacity={capacity}
             pct={occupancyPct}
             noun={VENUE_ASSET_NOUN[venueType]}
+          />
+          <div className="hidden sm:block self-stretch w-px bg-white/5" />
+          <TrafficTotals
+            totalIn={trafficSeries.reduce((s, b) => s + b.in, 0)}
+            totalOut={trafficSeries.reduce((s, b) => s + b.out, 0)}
           />
         </div>
       </section>
@@ -608,75 +608,44 @@ function ProcessedDonut({
   );
 }
 
-function TrafficChart({
-  series,
+function TrafficTotals({
+  totalIn,
+  totalOut,
 }: {
-  series: { key: number; label: string; in: number; out: number }[];
+  totalIn: number;
+  totalOut: number;
 }) {
-  const totalIn = series.reduce((s, b) => s + b.in, 0);
-  const totalOut = series.reduce((s, b) => s + b.out, 0);
   return (
     <div
-      className="flex flex-col min-w-0"
-      data-testid="card-traffic-chart"
+      className="flex items-center gap-4"
+      data-testid="card-traffic-totals"
+      title={`Traffic — in ${totalIn}, out ${totalOut}`}
     >
-      <div className="flex items-center justify-between mb-1">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-          Traffic
+      <div className="flex items-center gap-2">
+        <div className="w-9 h-9 rounded-xl border border-lime/30 bg-lime/10 flex items-center justify-center">
+          <ArrowDownToLine className="w-4 h-4 text-lime" />
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono">
-          <span className="flex items-center gap-1 text-lime">
-            <ArrowDownToLine className="w-3 h-3" /> {totalIn}
-          </span>
-          <span className="flex items-center gap-1 text-amber-300">
-            <ArrowUpFromLine className="w-3 h-3" /> {totalOut}
-          </span>
+        <div className="leading-tight">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            In
+          </div>
+          <div className="text-base font-extrabold font-mono tabular-nums text-paper">
+            {totalIn}
+          </div>
         </div>
       </div>
-      <div className="w-full h-16">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={series} margin={{ top: 2, right: 2, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gradIn" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
-                <stop offset="100%" stopColor="#a3e635" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gradOut" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <RTooltip
-              contentStyle={{
-                background: "#0b1117",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 8,
-                fontSize: 11,
-                padding: "4px 8px",
-              }}
-              labelStyle={{ color: "#e5e7eb" }}
-              itemStyle={{ color: "#e5e7eb" }}
-            />
-            <Area
-              type="monotone"
-              dataKey="in"
-              name="In"
-              stroke="#a3e635"
-              strokeWidth={1.5}
-              fill="url(#gradIn)"
-              isAnimationActive={false}
-            />
-            <Area
-              type="monotone"
-              dataKey="out"
-              name="Out"
-              stroke="#fbbf24"
-              strokeWidth={1.5}
-              fill="url(#gradOut)"
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="flex items-center gap-2">
+        <div className="w-9 h-9 rounded-xl border border-amber-300/30 bg-amber-500/10 flex items-center justify-center">
+          <ArrowUpFromLine className="w-4 h-4 text-amber-300" />
+        </div>
+        <div className="leading-tight">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            Out
+          </div>
+          <div className="text-base font-extrabold font-mono tabular-nums text-paper">
+            {totalOut}
+          </div>
+        </div>
       </div>
     </div>
   );
