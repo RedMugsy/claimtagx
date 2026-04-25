@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Search, Clock } from "lucide-react";
+import { Search, Clock, ArrowDownToLine, ArrowUpFromLine, ParkingCircle } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/lib/store";
@@ -9,6 +21,7 @@ import {
   MODE_BY_ID,
   MODE_ICONS,
   VENUE_AGING_BANDS,
+  VENUE_ASSET_NOUN,
   VENUE_COPY,
   classifyAge,
   formatBandThreshold,
@@ -127,6 +140,8 @@ export default function Custody() {
     }).length;
 
     const stationHandled = inRange.length;
+    const totalProcessed = stationHandled + checkOuts.length;
+    const handlerProcessed = handlerCheckIns + handlerCheckOuts;
 
     return {
       inCustody: allActive.length,
@@ -135,10 +150,83 @@ export default function Custody() {
       checkIns: inRange.length,
       checkOuts: checkOuts.length,
       handlerCheckOuts,
+      totalProcessed,
+      handlerProcessed,
+      othersProcessed: Math.max(0, totalProcessed - handlerProcessed),
       contribution:
         stationHandled > 0 ? Math.round((handlerCheckIns / stationHandled) * 100) : 0,
     };
   }, [assets, mode, windowStart, session?.handlerName, session?.email, allActive.length]);
+
+  // Traffic-over-time buckets — hourly for "today", daily otherwise.
+  const trafficSeries = useMemo(() => {
+    const now = Date.now();
+    const isToday = kpiWindow === "today";
+    const buckets: { key: number; label: string; in: number; out: number }[] = [];
+
+    if (isToday) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      for (let h = 0; h < 24; h++) {
+        const t = startOfDay.getTime() + h * 3600_000;
+        if (t > now + 3600_000) break;
+        buckets.push({
+          key: t,
+          label: `${String(h).padStart(2, "0")}:00`,
+          in: 0,
+          out: 0,
+        });
+      }
+    } else {
+      const days = kpiWindow === "week" ? 7 : 30;
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      for (let d = days - 1; d >= 0; d--) {
+        const dt = new Date(startOfDay);
+        dt.setDate(startOfDay.getDate() - d);
+        buckets.push({
+          key: dt.getTime(),
+          label: dt.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+          in: 0,
+          out: 0,
+        });
+      }
+    }
+
+    const bucketMs = isToday ? 3600_000 : 86400_000;
+    const findBucket = (ts: number) => {
+      for (let i = buckets.length - 1; i >= 0; i--) {
+        if (ts >= buckets[i].key && ts < buckets[i].key + bucketMs) return buckets[i];
+      }
+      return null;
+    };
+
+    const base = assets.filter((a) => a.mode === mode);
+    for (const a of base) {
+      if (a.intakeAt >= windowStart) {
+        const b = findBucket(a.intakeAt);
+        if (b) b.in += 1;
+      }
+      if (a.releasedAt != null && a.releasedAt >= windowStart) {
+        const b = findBucket(a.releasedAt);
+        if (b) b.out += 1;
+      }
+    }
+    return buckets;
+  }, [assets, mode, kpiWindow, windowStart]);
+
+  // Occupancy is mocked off the venue type until the API exposes capacity.
+  const capacity = useMemo(() => {
+    const type = activeVenue?.venueType ?? "other";
+    if (type === "valet") return 50;
+    if (type === "baggage") return 200;
+    if (type === "cloakroom") return 120;
+    if (type === "retail") return 100;
+    return 100;
+  }, [activeVenue?.venueType]);
+  const occupied = Math.min(kpis.inCustody, capacity);
+  const vacant = Math.max(0, capacity - occupied);
+  const occupancyPct = capacity > 0 ? Math.round((occupied / capacity) * 100) : 0;
 
   if (!canAccessMode(mode)) {
     return (
@@ -188,7 +276,7 @@ export default function Custody() {
       </header>
 
       <section className="mb-5 rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-custody-kpis">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
             Custody analytics
           </div>
@@ -212,17 +300,21 @@ export default function Custody() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
-          <KpiTile label="In custody" value={String(kpis.inCustody)} tone="lime" />
-          <KpiTile label="Handler handled" value={String(kpis.handlerHandled)} />
-          <KpiTile label="Station handled" value={String(kpis.stationHandled)} />
-          <KpiTile label="Check-ins" value={String(kpis.checkIns)} />
-          <KpiTile label="Check-outs" value={String(kpis.checkOuts)} />
-          <KpiTile label="Contribution" value={`${kpis.contribution}%`} tone="emerald" />
-        </div>
-
-        <div className="mt-3 text-[11px] text-slate">
-          Your checkout completions in this window: <span className="text-paper font-semibold">{kpis.handlerCheckOuts}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <ProcessedDonut
+            total={kpis.totalProcessed}
+            handler={kpis.handlerProcessed}
+            others={kpis.othersProcessed}
+            noun={VENUE_ASSET_NOUN[venueType]}
+          />
+          <TrafficChart series={trafficSeries} />
+          <OccupancyCard
+            occupied={occupied}
+            vacant={vacant}
+            capacity={capacity}
+            pct={occupancyPct}
+            noun={VENUE_ASSET_NOUN[venueType]}
+          />
         </div>
       </section>
 
@@ -450,27 +542,261 @@ export default function Custody() {
   );
 }
 
-function KpiTile({
-  label,
-  value,
-  tone,
+function ProcessedDonut({
+  total,
+  handler,
+  others,
+  noun,
 }: {
-  label: string;
-  value: string;
-  tone?: "lime" | "emerald";
+  total: number;
+  handler: number;
+  others: number;
+  noun: string;
 }) {
-  const toneCls =
-    tone === "lime"
-      ? "border-lime/30 bg-lime/10"
-      : tone === "emerald"
-      ? "border-emerald-400/30 bg-emerald-500/10"
-      : "border-white/10 bg-obsidian/40";
-  const valueCls = tone === "lime" ? "text-lime" : tone === "emerald" ? "text-emerald-300" : "text-white";
-
+  const data =
+    total > 0
+      ? [
+          { name: "You", value: handler },
+          { name: "Team", value: others },
+        ]
+      : [{ name: "Empty", value: 1 }];
+  const colors = total > 0 ? ["#a3e635", "#475569"] : ["#1f2937"];
+  const handlerPct = total > 0 ? Math.round((handler / total) * 100) : 0;
   return (
-    <div className={`rounded-2xl border p-3 ${toneCls}`}>
-      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{label}</div>
-      <div className={`mt-1 text-lg font-extrabold ${valueCls}`}>{value}</div>
+    <div
+      className="rounded-2xl border border-white/10 bg-obsidian/40 p-4 flex flex-col"
+      data-testid="card-processed-donut"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+          {noun.charAt(0).toUpperCase() + noun.slice(1)}s processed
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-lime">
+          You {handlerPct}%
+        </span>
+      </div>
+      <div className="relative w-full h-40">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={48}
+              outerRadius={70}
+              startAngle={90}
+              endAngle={-270}
+              stroke="none"
+              isAnimationActive={false}
+            >
+              {data.map((_, i) => (
+                <Cell key={i} fill={colors[i % colors.length]} />
+              ))}
+            </Pie>
+            {total > 0 ? (
+              <RTooltip
+                contentStyle={{
+                  background: "#0b1117",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8,
+                  fontSize: 11,
+                }}
+                labelStyle={{ color: "#e5e7eb" }}
+                itemStyle={{ color: "#e5e7eb" }}
+              />
+            ) : null}
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="text-3xl font-extrabold font-mono tracking-tight text-white tabular-nums">
+            {total}
+          </div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            Total
+          </div>
+        </div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-lime" />
+          <span className="text-slate">You</span>
+          <span className="ml-auto font-mono text-paper">{handler}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-slate-500" />
+          <span className="text-slate">Team</span>
+          <span className="ml-auto font-mono text-paper">{others}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrafficChart({
+  series,
+}: {
+  series: { key: number; label: string; in: number; out: number }[];
+}) {
+  const totalIn = series.reduce((s, b) => s + b.in, 0);
+  const totalOut = series.reduce((s, b) => s + b.out, 0);
+  return (
+    <div
+      className="rounded-2xl border border-white/10 bg-obsidian/40 p-4 flex flex-col"
+      data-testid="card-traffic-chart"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+          Traffic in &amp; out
+        </div>
+        <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider">
+          <span className="flex items-center gap-1 text-lime">
+            <ArrowDownToLine className="w-3 h-3" /> {totalIn}
+          </span>
+          <span className="flex items-center gap-1 text-amber-300">
+            <ArrowUpFromLine className="w-3 h-3" /> {totalOut}
+          </span>
+        </div>
+      </div>
+      <div className="w-full h-40">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={series} margin={{ top: 6, right: 6, left: -16, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradIn" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
+                <stop offset="100%" stopColor="#a3e635" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="gradOut" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}
+              axisLine={false}
+              tickLine={false}
+              interval="preserveStartEnd"
+              minTickGap={24}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fill: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}
+              axisLine={false}
+              tickLine={false}
+              width={28}
+            />
+            <RTooltip
+              contentStyle={{
+                background: "#0b1117",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8,
+                fontSize: 11,
+              }}
+              labelStyle={{ color: "#e5e7eb" }}
+              itemStyle={{ color: "#e5e7eb" }}
+            />
+            <Area
+              type="monotone"
+              dataKey="in"
+              name="In"
+              stroke="#a3e635"
+              strokeWidth={2}
+              fill="url(#gradIn)"
+              isAnimationActive={false}
+            />
+            <Area
+              type="monotone"
+              dataKey="out"
+              name="Out"
+              stroke="#fbbf24"
+              strokeWidth={2}
+              fill="url(#gradOut)"
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function OccupancyCard({
+  occupied,
+  vacant,
+  capacity,
+  pct,
+  noun,
+}: {
+  occupied: number;
+  vacant: number;
+  capacity: number;
+  pct: number;
+  noun: string;
+}) {
+  const tone =
+    pct >= 90
+      ? { bar: "bg-rose-400", text: "text-rose-300" }
+      : pct >= 70
+      ? { bar: "bg-amber-400", text: "text-amber-300" }
+      : { bar: "bg-lime", text: "text-lime" };
+  // Half-circle gauge: rotate a conic-like SVG arc by pct.
+  const radius = 56;
+  const circ = Math.PI * radius; // half-circle circumference
+  const dash = (pct / 100) * circ;
+  return (
+    <div
+      className="rounded-2xl border border-white/10 bg-obsidian/40 p-4 flex flex-col"
+      data-testid="card-occupancy"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+          Occupancy
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-slate inline-flex items-center gap-1">
+          <ParkingCircle className="w-3 h-3 text-lime" /> {capacity} cap
+        </span>
+      </div>
+      <div className="relative flex-1 flex items-end justify-center">
+        <svg viewBox="0 0 140 80" className="w-full max-w-[180px] h-auto">
+          <path
+            d="M 14 70 A 56 56 0 0 1 126 70"
+            fill="none"
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth={12}
+            strokeLinecap="round"
+          />
+          <path
+            d="M 14 70 A 56 56 0 0 1 126 70"
+            fill="none"
+            stroke="currentColor"
+            className={tone.text}
+            strokeWidth={12}
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${circ}`}
+          />
+        </svg>
+        <div className="absolute inset-x-0 bottom-2 flex flex-col items-center">
+          <div className={`text-2xl font-extrabold font-mono tabular-nums ${tone.text}`}>
+            {pct}%
+          </div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+            occupied
+          </div>
+        </div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${tone.bar}`} />
+          <span className="text-slate">Occupied</span>
+          <span className="ml-auto font-mono text-paper">{occupied}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-white/20" />
+          <span className="text-slate">Vacant {noun}s</span>
+          <span className="ml-auto font-mono text-paper">{vacant}</span>
+        </div>
+      </div>
     </div>
   );
 }
