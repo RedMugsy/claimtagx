@@ -1,18 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Search, Clock, ArrowDownToLine, ArrowUpFromLine, ParkingCircle } from "lucide-react";
+import { Search, Clock, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip as RTooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -275,12 +272,12 @@ export default function Custody() {
         ) : null}
       </header>
 
-      <section className="mb-5 rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-custody-kpis">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+      <section className="mb-5 rounded-3xl border border-white/10 bg-steel/40 px-4 py-3 sm:px-5 sm:py-4" data-testid="card-custody-kpis">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
             Custody analytics
           </div>
-          <div className="inline-flex items-center rounded-full border border-white/10 bg-obsidian/50 p-1">
+          <div className="inline-flex items-center rounded-full border border-white/10 bg-obsidian/50 p-0.5">
             {([
               { id: "today", label: "Today" },
               { id: "week", label: "7D" },
@@ -289,7 +286,7 @@ export default function Custody() {
               <button
                 key={w.id}
                 onClick={() => setKpiWindow(w.id)}
-                className={`px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider hover-elevate ${
                   kpiWindow === w.id ? "bg-lime/15 text-lime" : "text-slate"
                 }`}
                 data-testid={`kpi-window-${w.id}`}
@@ -300,14 +297,16 @@ export default function Custody() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr,auto] items-center gap-3 sm:gap-4">
           <ProcessedDonut
             total={kpis.totalProcessed}
             handler={kpis.handlerProcessed}
             others={kpis.othersProcessed}
             noun={VENUE_ASSET_NOUN[venueType]}
           />
+          <div className="hidden sm:block self-stretch w-px bg-white/5" />
           <TrafficChart series={trafficSeries} />
+          <div className="hidden sm:block self-stretch w-px bg-white/5" />
           <OccupancyCard
             occupied={occupied}
             vacant={vacant}
@@ -564,26 +563,19 @@ function ProcessedDonut({
   const handlerPct = total > 0 ? Math.round((handler / total) * 100) : 0;
   return (
     <div
-      className="rounded-2xl border border-white/10 bg-obsidian/40 p-4 flex flex-col"
+      className="flex items-center gap-3"
       data-testid="card-processed-donut"
+      title={`${noun}s processed: ${total} (you ${handler}, team ${others})`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-          {noun.charAt(0).toUpperCase() + noun.slice(1)}s processed
-        </div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-lime">
-          You {handlerPct}%
-        </span>
-      </div>
-      <div className="relative w-full h-40">
+      <div className="relative w-20 h-20 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               dataKey="value"
               nameKey="name"
-              innerRadius={48}
-              outerRadius={70}
+              innerRadius={26}
+              outerRadius={38}
               startAngle={90}
               endAngle={-270}
               stroke="none"
@@ -593,40 +585,24 @@ function ProcessedDonut({
                 <Cell key={i} fill={colors[i % colors.length]} />
               ))}
             </Pie>
-            {total > 0 ? (
-              <RTooltip
-                contentStyle={{
-                  background: "#0b1117",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 8,
-                  fontSize: 11,
-                }}
-                labelStyle={{ color: "#e5e7eb" }}
-                itemStyle={{ color: "#e5e7eb" }}
-              />
-            ) : null}
           </PieChart>
         </ResponsiveContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <div className="text-3xl font-extrabold font-mono tracking-tight text-white tabular-nums">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-base font-extrabold font-mono tracking-tight text-white tabular-nums">
             {total}
-          </div>
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            Total
           </div>
         </div>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-lime" />
-          <span className="text-slate">You</span>
-          <span className="ml-auto font-mono text-paper">{handler}</span>
+      <div className="leading-tight">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+          Processed
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-slate-500" />
-          <span className="text-slate">Team</span>
-          <span className="ml-auto font-mono text-paper">{others}</span>
+        <div className="text-[11px] text-paper">
+          You <span className="font-mono font-bold text-lime">{handler}</span>
+          <span className="text-slate"> · </span>
+          Team <span className="font-mono text-paper">{others}</span>
         </div>
+        <div className="text-[10px] font-mono text-lime">{handlerPct}% you</div>
       </div>
     </div>
   );
@@ -641,14 +617,14 @@ function TrafficChart({
   const totalOut = series.reduce((s, b) => s + b.out, 0);
   return (
     <div
-      className="rounded-2xl border border-white/10 bg-obsidian/40 p-4 flex flex-col"
+      className="flex flex-col min-w-0"
       data-testid="card-traffic-chart"
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1">
         <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-          Traffic in &amp; out
+          Traffic
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-[10px] font-mono">
           <span className="flex items-center gap-1 text-lime">
             <ArrowDownToLine className="w-3 h-3" /> {totalIn}
           </span>
@@ -657,9 +633,9 @@ function TrafficChart({
           </span>
         </div>
       </div>
-      <div className="w-full h-40">
+      <div className="w-full h-16">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={series} margin={{ top: 6, right: 6, left: -16, bottom: 0 }}>
+          <AreaChart data={series} margin={{ top: 2, right: 2, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="gradIn" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
@@ -670,28 +646,13 @@ function TrafficChart({
                 <stop offset="100%" stopColor="#fbbf24" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}
-              axisLine={false}
-              tickLine={false}
-              interval="preserveStartEnd"
-              minTickGap={24}
-            />
-            <YAxis
-              allowDecimals={false}
-              tick={{ fill: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}
-              axisLine={false}
-              tickLine={false}
-              width={28}
-            />
             <RTooltip
               contentStyle={{
                 background: "#0b1117",
                 border: "1px solid rgba(255,255,255,0.1)",
                 borderRadius: 8,
                 fontSize: 11,
+                padding: "4px 8px",
               }}
               labelStyle={{ color: "#e5e7eb" }}
               itemStyle={{ color: "#e5e7eb" }}
@@ -701,7 +662,7 @@ function TrafficChart({
               dataKey="in"
               name="In"
               stroke="#a3e635"
-              strokeWidth={2}
+              strokeWidth={1.5}
               fill="url(#gradIn)"
               isAnimationActive={false}
             />
@@ -710,7 +671,7 @@ function TrafficChart({
               dataKey="out"
               name="Out"
               stroke="#fbbf24"
-              strokeWidth={2}
+              strokeWidth={1.5}
               fill="url(#gradOut)"
               isAnimationActive={false}
             />
@@ -736,34 +697,26 @@ function OccupancyCard({
 }) {
   const tone =
     pct >= 90
-      ? { bar: "bg-rose-400", text: "text-rose-300" }
+      ? { text: "text-rose-300" }
       : pct >= 70
-      ? { bar: "bg-amber-400", text: "text-amber-300" }
-      : { bar: "bg-lime", text: "text-lime" };
-  // Half-circle gauge: rotate a conic-like SVG arc by pct.
+      ? { text: "text-amber-300" }
+      : { text: "text-lime" };
   const radius = 56;
-  const circ = Math.PI * radius; // half-circle circumference
+  const circ = Math.PI * radius;
   const dash = (pct / 100) * circ;
   return (
     <div
-      className="rounded-2xl border border-white/10 bg-obsidian/40 p-4 flex flex-col"
+      className="flex items-center gap-3"
       data-testid="card-occupancy"
+      title={`Occupancy: ${occupied}/${capacity} (${vacant} vacant)`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-          Occupancy
-        </div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-slate inline-flex items-center gap-1">
-          <ParkingCircle className="w-3 h-3 text-lime" /> {capacity} cap
-        </span>
-      </div>
-      <div className="relative flex-1 flex items-end justify-center">
-        <svg viewBox="0 0 140 80" className="w-full max-w-[180px] h-auto">
+      <div className="relative w-20 h-12 shrink-0">
+        <svg viewBox="0 0 140 80" className="w-full h-full">
           <path
             d="M 14 70 A 56 56 0 0 1 126 70"
             fill="none"
             stroke="rgba(255,255,255,0.08)"
-            strokeWidth={12}
+            strokeWidth={14}
             strokeLinecap="round"
           />
           <path
@@ -771,31 +724,26 @@ function OccupancyCard({
             fill="none"
             stroke="currentColor"
             className={tone.text}
-            strokeWidth={12}
+            strokeWidth={14}
             strokeLinecap="round"
             strokeDasharray={`${dash} ${circ}`}
           />
         </svg>
-        <div className="absolute inset-x-0 bottom-2 flex flex-col items-center">
-          <div className={`text-2xl font-extrabold font-mono tabular-nums ${tone.text}`}>
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center">
+          <div className={`text-xs font-extrabold font-mono tabular-nums ${tone.text}`}>
             {pct}%
-          </div>
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-            occupied
           </div>
         </div>
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${tone.bar}`} />
-          <span className="text-slate">Occupied</span>
-          <span className="ml-auto font-mono text-paper">{occupied}</span>
+      <div className="leading-tight">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+          Occupancy
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-white/20" />
-          <span className="text-slate">Vacant {noun}s</span>
-          <span className="ml-auto font-mono text-paper">{vacant}</span>
+        <div className="text-[11px] text-paper">
+          <span className="font-mono font-bold text-paper">{occupied}</span>
+          <span className="text-slate">/{capacity}</span>
         </div>
+        <div className="text-[10px] font-mono text-slate">{vacant} {noun}s free</div>
       </div>
     </div>
   );
