@@ -396,7 +396,17 @@ export default function AssignmentsPage() {
           {!currentAssignment ? (
             <div className="rounded-2xl border border-white/10 bg-steel/30 p-6 text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Standby timer</div>
-              <div className="mt-1 text-3xl font-extrabold font-mono tracking-tight text-paper tabular-nums">00:00:00</div>
+              <div className="mt-2 inline-flex items-center justify-center gap-2">
+                <span
+                  className="w-2 h-2 rounded-full bg-lime/55 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]"
+                  aria-hidden="true"
+                />
+                <div
+                  className="text-3xl font-extrabold font-mono tracking-tight text-paper/90 tabular-nums motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]"
+                >
+                  00:00:00
+                </div>
+              </div>
               <div className="mt-3 text-sm text-slate">No current todo in progress for this handler.</div>
             </div>
           ) : (
