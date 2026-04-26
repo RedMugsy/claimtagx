@@ -84,6 +84,7 @@ export default function Home() {
   const intercomSwipeStart = useRef<{ x: number; y: number; at: number } | null>(
     null,
   );
+  const intercomSwipeTriggered = useRef(false);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000 * 30);
@@ -193,17 +194,39 @@ export default function Home() {
   const onIntercomTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const t = e.touches[0];
     intercomSwipeStart.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+    intercomSwipeTriggered.current = false;
+  };
+
+  const onIntercomTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = intercomSwipeStart.current;
+    if (!start || intercomSwipeTriggered.current) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.at;
+    const verticalIntent = Math.abs(dy) >= 42 && Math.abs(dy) > Math.abs(dx) * 1.08;
+    const upFlick = dy <= -52 && verticalIntent && dt <= 900;
+    if (upFlick) {
+      intercomSwipeTriggered.current = true;
+      intercomSwipeStart.current = null;
+      navigate("/intercom");
+    }
   };
 
   const onIntercomTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     const start = intercomSwipeStart.current;
     intercomSwipeStart.current = null;
+    if (intercomSwipeTriggered.current) {
+      intercomSwipeTriggered.current = false;
+      return;
+    }
     if (!start) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     const dt = Date.now() - start.at;
-    const upFlick = dy <= -65 && Math.abs(dx) <= 90 && dt <= 550;
+    const verticalIntent = Math.abs(dy) >= 42 && Math.abs(dy) > Math.abs(dx) * 1.08;
+    const upFlick = dy <= -52 && verticalIntent && dt <= 900;
     if (upFlick) navigate("/intercom");
   };
 
@@ -218,6 +241,7 @@ export default function Home() {
         onCommandCenterTouchEnd(e);
         onIntercomTouchEnd(e);
       }}
+      onTouchMove={onIntercomTouchMove}
       data-testid="gesture-command-center"
     >
       {/* Top action row */}

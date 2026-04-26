@@ -1,7 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Search, Clock, ArrowDownToLine, ArrowUpFromLine, RefreshCw, SlidersHorizontal, Check, LayoutGrid, List as ListIcon, Images, ImageOff } from "lucide-react";
+import {
+  Search,
+  Clock,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  RefreshCw,
+  SlidersHorizontal,
+  Check,
+  LayoutGrid,
+  List as ListIcon,
+  Images,
+  ImageOff,
+  MessageSquare,
+  Mic,
+  Square,
+  Play,
+  Waveform,
+} from "lucide-react";
 import {
   Cell,
   Pie,
@@ -40,6 +57,58 @@ function fmtAge(ts: number) {
   return `${h}h ${m}m ago`;
 }
 
+type CustodyEventNote = {
+  id: string;
+  kind: "text" | "voice";
+  body?: string;
+  audioDataUrl?: string;
+  mimeType?: string;
+  durationMs?: number;
+  createdAt: number;
+  author: string;
+};
+
+const CUSTODY_NOTES_STORAGE_KEY = "handler.custody.event-notes.v1";
+
+function pickSupportedMime(): string {
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+  ];
+  if (typeof MediaRecorder === "undefined") return "audio/webm";
+  for (const m of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(m)) return m;
+    } catch {
+      // ignore
+    }
+  }
+  return "audio/webm";
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string) ?? "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function readStoredEventNotes(): Record<string, CustodyEventNote[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CUSTODY_NOTES_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, CustodyEventNote[]>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function Custody() {
   const { mode, assets, session, activeVenue, venues, setActiveVenue, canAccessMode } = useStore();
   // Owner-targeted tamper-spike alert emails link to /custody?venue=<code>.
@@ -68,13 +137,54 @@ export default function Custody() {
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [kpiWindow, setKpiWindow] = useState<"today" | "week" | "month">("today");
   const [view, setView] = useState<"cards" | "list" | "gallery">("cards");
+  const [notesByAsset, setNotesByAsset] = useState<Record<string, CustodyEventNote[]>>(
+    () => readStoredEventNotes(),
+  );
+  const [noteDraft, setNoteDraft] = useState("");
+  const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(true);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordStartRef = useRef<number>(0);
+  const recordAssetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     const t = setTimeout(() => setLoading(false), 220);
     return () => clearTimeout(t);
   }, [mode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(CUSTODY_NOTES_STORAGE_KEY, JSON.stringify(notesByAsset));
+    } catch {
+      // ignore persistence errors
+    }
+  }, [notesByAsset]);
+
+  useEffect(() => {
+    setNoteDraft("");
+  }, [selected?.id]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (recorderRef.current?.state === "recording") {
+          recorderRef.current.stop();
+        }
+      } catch {
+        // ignore
+      }
+      if (streamRef.current) {
+        for (const t of streamRef.current.getTracks()) t.stop();
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const list = useMemo(() => {
     let active = assets.filter((a) => a.mode === mode && a.status === "active");
@@ -251,6 +361,119 @@ export default function Custody() {
       tone: "rose",
     },
   ] as const;
+
+  const selectedEventNotes = useMemo<CustodyEventNote[]>(() => {
+    if (!selected) return [];
+    const seededFieldNotes: CustodyEventNote[] = Object.entries(selected.fields)
+      .filter(([key, value]) => {
+        if (typeof value !== "string") return false;
+        const k = key.toLowerCase();
+        return ["notes", "note", "contents", "accessories"].includes(k) && value.trim().length > 0;
+      })
+      .map(([key, value], idx) => ({
+        id: `seed-${selected.id}-${key}-${idx}`,
+        kind: "text",
+        body: String(value),
+        createdAt: selected.intakeAt,
+        author: selected.handler,
+      }));
+
+    const custom = notesByAsset[selected.id] ?? [];
+    return [...seededFieldNotes, ...custom].sort((a, b) => b.createdAt - a.createdAt);
+  }, [selected, notesByAsset]);
+
+  const addTextNote = (assetId: string) => {
+    const body = noteDraft.trim();
+    if (!body) return;
+    const note: CustodyEventNote = {
+      id: `${assetId}-text-${Date.now()}`,
+      kind: "text",
+      body,
+      createdAt: Date.now(),
+      author: session?.handlerName ?? "Handler",
+    };
+    setNotesByAsset((prev) => ({
+      ...prev,
+      [assetId]: [note, ...(prev[assetId] ?? [])],
+    }));
+    setNoteDraft("");
+  };
+
+  const speakTextNote = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (!text.trim()) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1;
+    utter.pitch = 1;
+    window.speechSynthesis.speak(utter);
+  };
+
+  const startVoiceNote = async (assetId: string) => {
+    if (recording || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = pickSupportedMime();
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recorderRef.current = recorder;
+      streamRef.current = stream;
+      chunksRef.current = [];
+      recordStartRef.current = Date.now();
+      recordAssetIdRef.current = assetId;
+
+      recorder.ondataavailable = (ev: BlobEvent) => {
+        if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data);
+      };
+
+      recorder.onstop = async () => {
+        try {
+          const targetAssetId = recordAssetIdRef.current;
+          if (!targetAssetId) return;
+          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mimeType });
+          if (blob.size < 1) return;
+          const dataUrl = await blobToDataUrl(blob);
+          const note: CustodyEventNote = {
+            id: `${targetAssetId}-voice-${Date.now()}`,
+            kind: "voice",
+            audioDataUrl: dataUrl,
+            mimeType: blob.type || mimeType,
+            durationMs: Math.max(1000, Date.now() - recordStartRef.current),
+            createdAt: Date.now(),
+            author: session?.handlerName ?? "Handler",
+          };
+          setNotesByAsset((prev) => ({
+            ...prev,
+            [targetAssetId]: [note, ...(prev[targetAssetId] ?? [])],
+          }));
+        } finally {
+          chunksRef.current = [];
+          recordAssetIdRef.current = null;
+          setRecording(false);
+          if (streamRef.current) {
+            for (const t of streamRef.current.getTracks()) t.stop();
+            streamRef.current = null;
+          }
+        }
+      };
+
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setRecording(false);
+    }
+  };
+
+  const stopVoiceNote = () => {
+    try {
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.stop();
+      }
+    } catch {
+      setRecording(false);
+    }
+  };
 
   if (!canAccessMode(mode)) {
     return (
@@ -663,36 +886,136 @@ export default function Custody() {
                   </Badge>
                 </SheetTitle>
               </SheetHeader>
-              <div className="mt-6 space-y-5">
-                <div className="flex items-center justify-center">
-                  <QrTag ticketId={selected.ticketId} signature={selected.signature} size={160} />
-                </div>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                  <div>
-                    <div className="text-xs font-mono uppercase tracking-wide text-slate">Patron</div>
-                    <div className="text-white font-semibold">{selected.patron.name}</div>
-                    <div className="text-xs text-slate font-mono">{selected.patron.phone || "—"}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-mono uppercase tracking-wide text-slate">Handler</div>
-                    <div className="text-white font-semibold">{selected.handler}</div>
-                    <div className="text-xs text-slate font-mono">{fmtAge(selected.intakeAt)}</div>
-                  </div>
-                  {MODE_BY_ID[selected.mode].fields.map((f) => (
-                    <div key={f.key}>
-                      <div className="text-xs font-mono uppercase tracking-wide text-slate">{f.label}</div>
-                      <div className={`text-white ${f.mono ? "font-mono" : ""}`}>
-                        {f.type === "checkbox"
-                          ? selected.fields[f.key]
-                            ? "Yes"
-                            : "No"
-                          : String(selected.fields[f.key] ?? "—")}
-                      </div>
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl border border-lime/25 bg-gradient-to-br from-lime/10 to-steel/40 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Custody event</div>
+                      <div className="text-base font-semibold text-white">{selected.patron.name}</div>
+                      <div className="text-xs text-slate font-mono">{selected.patron.phone || "No phone"}</div>
                     </div>
-                  ))}
+                    <QrTag ticketId={selected.ticketId} signature={selected.signature} size={96} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-white/10 bg-obsidian/50 px-2 py-1.5">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Intake</div>
+                      <div className="text-xs text-white font-mono">{new Date(selected.intakeAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-obsidian/50 px-2 py-1.5">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Age</div>
+                      <div className="text-xs text-white font-mono">{fmtAge(selected.intakeAt)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-obsidian/50 px-2 py-1.5">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Handler</div>
+                      <div className="text-xs text-white truncate">{selected.handler}</div>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="rounded-2xl border border-white/10 bg-steel/35 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="w-4 h-4 text-lime" />
+                    <div className="text-xs font-mono uppercase tracking-wider text-slate">Event notes</div>
+                  </div>
+                  <textarea
+                    value={noteDraft}
+                    onChange={(e) => setNoteDraft(e.target.value)}
+                    placeholder="Add a text note for this custody event..."
+                    className="w-full min-h-[72px] rounded-xl border border-white/10 bg-obsidian/60 px-3 py-2 text-sm text-white placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40"
+                    data-testid="input-custody-note"
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => addTextNote(selected.id)}
+                      className="rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate"
+                      data-testid="button-add-text-note"
+                    >
+                      Add text note
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => (recording ? stopVoiceNote() : startVoiceNote(selected.id))}
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
+                        recording
+                          ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                          : "border-white/10 bg-obsidian/50 text-paper"
+                      }`}
+                      data-testid="button-toggle-voice-note"
+                    >
+                      {recording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                      {recording ? "Stop recording" : "Record voice note"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2" data-testid="custody-event-notes-list">
+                  {selectedEventNotes.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-obsidian/30 p-3 text-xs text-slate">
+                      No notes yet. Add text or record a voice note to enrich this custody event.
+                    </div>
+                  ) : (
+                    selectedEventNotes.map((note) => (
+                      <div key={note.id} className="rounded-xl border border-white/10 bg-obsidian/45 p-3">
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+                            {note.kind === "voice" ? "Voice note" : "Text note"} · {note.author}
+                          </div>
+                          <div className="text-[10px] font-mono text-slate">
+                            {new Date(note.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                        {note.kind === "voice" ? (
+                          <div className="space-y-1.5">
+                            <div className="inline-flex items-center gap-1 text-xs text-slate">
+                              <Waveform className="w-3.5 h-3.5" />
+                              {note.durationMs ? `${Math.max(1, Math.round(note.durationMs / 1000))}s` : "Voice clip"}
+                            </div>
+                            {note.audioDataUrl ? (
+                              <audio controls src={note.audioDataUrl} className="w-full h-8" />
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-sm text-paper leading-relaxed">{note.body}</p>
+                            <button
+                              type="button"
+                              onClick={() => speakTextNote(note.body ?? "")}
+                              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+                              data-testid={`button-listen-note-${note.id}`}
+                            >
+                              <Play className="w-3 h-3" />
+                              Listen
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    {MODE_BY_ID[selected.mode].fields.map((f) => (
+                      <div key={f.key}>
+                        <div className="text-xs font-mono uppercase tracking-wide text-slate">{f.label}</div>
+                        <div className={`text-white ${f.mono ? "font-mono" : ""}`}>
+                          {f.type === "checkbox"
+                            ? selected.fields[f.key]
+                              ? "Yes"
+                              : "No"
+                            : String(selected.fields[f.key] ?? "—")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {selected.photos.length > 0 && (
-                  <div>
+                  <div className="rounded-2xl border border-white/10 bg-steel/25 p-3">
                     <div className="text-xs font-mono uppercase tracking-wide text-slate mb-2">Photos</div>
                     <div className="grid grid-cols-3 gap-2">
                       {selected.photos.map((p, i) => (
