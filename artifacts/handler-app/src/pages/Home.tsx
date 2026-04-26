@@ -424,17 +424,6 @@ export default function Home() {
         )}
       </motion.div>
 
-      {/* Command Station — circular hub: top half = capture (Manual/Camera),
-          bottom half = quick-issue ClaimTag (NFC/BLE, QR, SMS/WA) */}
-      <CommandStation
-        onManual={() => navigate("/intake")}
-        onCamera={() => navigate("/release")}
-        onNfc={() => navigate("/issue/nfc")}
-        onQr={() => navigate("/issue/qr")}
-        onSms={() => navigate("/issue/sms")}
-        modeCount={effectiveModes.length}
-      />
-
       {/* Assignments — 4 icon tiles with badge counts */}
       <section className="rounded-3xl border border-white/10 bg-steel/40 p-4 sm:p-5" data-testid="card-assignments">
         <div className="flex items-center justify-between mb-3">
@@ -450,7 +439,7 @@ export default function Home() {
           <AssignmentIcon
             to="/assignments/patron"
             Icon={Inbox}
-            label="Patron"
+            label="Assignments"
             tone="violet"
             badge={openServicesCount}
             testId="assign-patron"
@@ -458,7 +447,7 @@ export default function Home() {
           <AssignmentIcon
             to="/assignments/supervisor"
             Icon={Briefcase}
-            label="Supervisor"
+            label="Tasks"
             tone="amber"
             badge={0}
             testId="assign-supervisor"
@@ -466,7 +455,7 @@ export default function Home() {
           <AssignmentIcon
             to="/services"
             Icon={Wrench}
-            label="Service"
+            label="Jobs"
             tone="indigo"
             badge={openServicesCount}
             testId="assign-service"
@@ -481,6 +470,17 @@ export default function Home() {
           />
         </div>
       </section>
+
+      {/* Command Station — circular hub: top half = capture (Manual/Camera),
+          bottom half = quick-issue ClaimTag (NFC/BLE, QR, SMS/WA) */}
+      <CommandStation
+        onManual={() => navigate("/intake")}
+        onCamera={() => navigate("/release")}
+        onNfc={() => navigate("/issue/nfc")}
+        onQr={() => navigate("/issue/qr")}
+        onSms={() => navigate("/issue/sms")}
+        modeCount={effectiveModes.length}
+      />
 
       {/* First-sign-in gesture tour (one-time, gated by localStorage) */}
       <FirstSignInTour />

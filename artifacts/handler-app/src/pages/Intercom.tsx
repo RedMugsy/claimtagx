@@ -68,6 +68,7 @@ export default function IntercomPage() {
   const [targets, setTargets] = useState<Set<string>>(
     () => new Set([TARGET_STATION]),
   );
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [lastHeard, setLastHeard] = useState<IntercomTransmission | null>(null);
   const [nowTalking, setNowTalking] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -420,35 +421,49 @@ export default function IntercomPage() {
 
       {/* Target selector */}
       <section
-        className="rounded-3xl border border-white/10 bg-steel/30 p-4"
+        className="rounded-3xl border border-white/10 bg-steel/35 p-4"
         data-testid="card-targets"
       >
-        <div className="flex items-center gap-2 mb-3 text-[11px] font-mono uppercase tracking-wider text-slate">
-          <Users className="w-3.5 h-3.5 text-emerald-300" /> Talk to
-          <span className="ml-auto text-paper">{targetSummary}</span>
+        <div className="flex items-center gap-2 mb-2 text-[11px] font-mono uppercase tracking-wider text-slate">
+          <Users className="w-3.5 h-3.5 text-emerald-300" /> Select recipients
         </div>
-        <div className="flex flex-wrap gap-2">
-          <TargetChip
-            label="Whole station"
-            active={stationSelected}
-            onClick={() => toggleTarget(TARGET_STATION)}
-            testId="chip-target-station"
-          />
-          {presenceList.map((p) => (
-            <TargetChip
-              key={p.handlerUserId}
-              label={p.handlerName}
-              active={targets.has(p.handlerUserId)}
-              onClick={() => toggleTarget(p.handlerUserId)}
-              testId={`chip-target-${p.handlerUserId}`}
-            />
-          ))}
-          {presenceList.length === 0 && (
-            <div className="text-xs text-slate">
-              No other handlers on the channel yet.
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-obsidian/35 px-3 py-2">
+          <div className="text-sm font-semibold text-paper truncate">{targetSummary}</div>
+          <button
+            type="button"
+            onClick={() => setTargetPickerOpen((v) => !v)}
+            className="shrink-0 rounded-xl border border-white/10 bg-steel/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+            data-testid="button-toggle-target-picker"
+          >
+            {targetPickerOpen ? "Hide" : "Choose"}
+          </button>
+        </div>
+        {targetPickerOpen ? (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-obsidian/25 p-2.5">
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1">
+              <TargetChip
+                label="Whole station"
+                active={stationSelected}
+                onClick={() => toggleTarget(TARGET_STATION)}
+                testId="chip-target-station"
+              />
+              {presenceList.map((p) => (
+                <TargetChip
+                  key={p.handlerUserId}
+                  label={p.handlerName}
+                  active={targets.has(p.handlerUserId)}
+                  onClick={() => toggleTarget(p.handlerUserId)}
+                  testId={`chip-target-${p.handlerUserId}`}
+                />
+              ))}
+              {presenceList.length === 0 && (
+                <div className="text-xs text-slate px-1 py-1">
+                  No other handlers on the channel yet.
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        ) : null}
         {!stationSelected && (
           <div
             className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100/90 leading-relaxed"
@@ -463,10 +478,10 @@ export default function IntercomPage() {
 
       {/* Sticky bottom PTT zone — ergonomic thumb-reach. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-gradient-to-t from-obsidian via-obsidian/95 to-obsidian/70 backdrop-blur px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 bottom-3 z-30 px-4"
         data-testid="bar-ptt"
       >
-        <div className="mx-auto max-w-md flex flex-col items-center">
+        <div className="mx-auto max-w-md rounded-3xl border border-white/10 bg-gradient-to-t from-obsidian via-obsidian/95 to-obsidian/75 backdrop-blur px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex flex-col items-center shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate mb-2">
             Hold to talk · max 15 s ·{" "}
             <span className="text-paper">{targetSummary}</span>
