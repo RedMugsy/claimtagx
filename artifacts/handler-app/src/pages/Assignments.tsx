@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Briefcase, Clock3, PlayCircle, CheckCircle2, PackageCheck, Flag } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
 import {
   getListServiceRequestsQueryKey,
   listServiceRequests,
   type ServiceRequestKind,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
+
+const TODO_TYPE_COLORS = ["#a3e635", "#facc15", "#38bdf8", "#c084fc", "#f97316"];
 
 type WorkflowStage = "idle" | "started" | "collected" | "arrived" | "ready";
 
@@ -177,6 +179,54 @@ export default function AssignmentsPage() {
   const taskCount = inProgressByMe.length;
   const jobCount = items.filter((r) => r.status === "claimed").length;
   const allCount = items.length;
+  const totalAssignedToHandler = inProgressByMe.length;
+  const completedAssignedCount = inProgressByMe.filter(
+    (row) => (workflowById[row.id]?.stage ?? "idle") === "ready",
+  ).length;
+  const remainingAssignedCount = Math.max(totalAssignedToHandler - completedAssignedCount, 0);
+
+  const assignedByTypeData = useMemo(() => {
+    const grouped = new Map<string, number>();
+    inProgressByMe.forEach((row) => {
+      const label = KIND_LABEL[row.kind];
+      grouped.set(label, (grouped.get(label) ?? 0) + 1);
+    });
+
+    return Array.from(grouped.entries()).map(([name, value], index) => ({
+      name,
+      value,
+      fill: TODO_TYPE_COLORS[index % TODO_TYPE_COLORS.length],
+    }));
+  }, [inProgressByMe]);
+
+  const inboxAgingData = useMemo(() => {
+    const buckets = [
+      { name: "Now", value: 0 },
+      { name: "Soon", value: 0 },
+      { name: "Late", value: 0 },
+    ];
+
+    items.forEach((row) => {
+      const ageMinutes = Math.max(0, (now - row.createdAt) / 60000);
+      if (ageMinutes < 5) {
+        buckets[0].value += 1;
+      } else if (ageMinutes < 15) {
+        buckets[1].value += 1;
+      } else {
+        buckets[2].value += 1;
+      }
+    });
+
+    return buckets;
+  }, [items, now]);
+
+  const completionData = useMemo(
+    () => [
+      { name: "Completed", value: completedAssignedCount, fill: "#a3e635" },
+      { name: "Pending", value: remainingAssignedCount, fill: "rgba(148, 163, 184, 0.28)" },
+    ],
+    [completedAssignedCount, remainingAssignedCount],
+  );
 
   const currentStageStart =
     currentStage === "started"
@@ -291,97 +341,118 @@ export default function AssignmentsPage() {
       </header>
 
       {!currentMode ? (
-        <section className="rounded-3xl border border-white/10 bg-steel/40 px-4 py-4 sm:px-5 sm:py-5" data-testid="card-todos-dashboard">
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Todo dashboard</div>
-            <div className="rounded-full border border-white/10 bg-obsidian/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-paper">
-              {allCount} active
-            </div>
-          </div>
+        <section className="rounded-3xl border border-white/10 bg-steel/40 px-3 py-3 sm:px-4 sm:py-4" data-testid="card-todos-dashboard">
+          <div className="mb-3 text-[11px] font-mono uppercase tracking-wider text-slate">Todo dashboard</div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Donut Chart - Distribution */}
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-obsidian/30 p-3">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-2">Distribution</div>
-              <ResponsiveContainer width="100%" height={160}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "Assignments", value: assignmentCount, fill: "#a3e635" },
-                      { name: "Tasks", value: taskCount, fill: "#94a3b8" },
-                      { name: "Jobs", value: jobCount, fill: "#475569" },
-                    ].filter((d) => d.value > 0)}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {[
-                      { name: "Assignments", value: assignmentCount, fill: "#a3e635" },
-                      { name: "Tasks", value: taskCount, fill: "#94a3b8" },
-                      { name: "Jobs", value: jobCount, fill: "#475569" },
-                    ]
-                      .filter((d) => d.value > 0)
-                      .map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-breakdown">
+              <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate">By type</div>
+              <div className="relative mt-2 h-[88px] sm:h-[96px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={assignedByTypeData.length > 0 ? assignedByTypeData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={22}
+                      outerRadius={34}
+                      stroke="none"
+                      dataKey="value"
+                    >
+                      {(assignedByTypeData.length > 0 ? assignedByTypeData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]).map((entry, index) => (
+                        <Cell key={`type-cell-${index}`} fill={entry.fill} />
                       ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Bar Chart - Comparison */}
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-obsidian/30 p-3">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-2">Types</div>
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart
-                  data={[
-                    { name: "Asg", value: assignmentCount },
-                    { name: "Tsk", value: taskCount },
-                    { name: "Job", value: jobCount },
-                  ]}
-                  margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                  <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} width={30} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0f172a",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "8px",
-                    }}
-                    labelStyle={{ color: "#e0e7ff" }}
-                  />
-                  <Bar dataKey="value" fill="#a3e635" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-obsidian/30 p-3 h-full">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-3">Summary</div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate">Assignments</span>
-                  <span className="text-lg font-extrabold font-mono text-lime">{assignmentCount}</span>
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-lg font-extrabold font-mono leading-none text-white">{totalAssignedToHandler}</div>
+                  <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Assigned</div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate">Tasks</span>
-                  <span className="text-lg font-extrabold font-mono text-paper">{taskCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate">Jobs</span>
-                  <span className="text-lg font-extrabold font-mono text-slate">{jobCount}</span>
-                </div>
-                <div className="pt-2 border-t border-white/10">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-paper">Total</span>
-                    <span className="text-xl font-extrabold font-mono text-lime">{allCount}</span>
+              </div>
+              <div className="mt-1 space-y-1">
+                {(assignedByTypeData.length > 0 ? assignedByTypeData : [{ name: "No assigned todos", value: 0, fill: "rgba(148, 163, 184, 0.35)" }]).slice(0, 2).map((entry, index) => (
+                  <div key={entry.name} className="flex items-center justify-between gap-1 text-[9px] text-slate">
+                    <span className="inline-flex min-w-0 items-center gap-1 truncate">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          index === 0
+                            ? "bg-lime"
+                            : index === 1
+                              ? "bg-yellow-400"
+                              : "bg-slate"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{entry.name}</span>
+                    </span>
+                    <span className="font-mono text-paper">{entry.value}</span>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-aging">
+              <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate">Inbox age</div>
+              <div className="mt-2 h-[88px] sm:h-[96px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={inboxAgingData} margin={{ top: 6, right: 0, left: -18, bottom: -8 }}>
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 9, fill: "#94a3b8" }}
+                    />
+                    <YAxis hide domain={[0, "dataMax + 1"]} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {inboxAgingData.map((entry, index) => (
+                        <Cell
+                          key={`aging-cell-${index}`}
+                          fill={index === 2 ? "#f97316" : index === 1 ? "#facc15" : "#38bdf8"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[9px] text-slate">
+                <span>Pending</span>
+                <span className="font-mono text-paper">{items.length}</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-completion">
+              <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate">Completed</div>
+              <div className="relative mt-2 h-[88px] sm:h-[96px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={completionData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={24}
+                      outerRadius={34}
+                      stroke="none"
+                      startAngle={90}
+                      endAngle={-270}
+                      dataKey="value"
+                    >
+                      {completionData.map((entry, index) => (
+                        <Cell key={`completion-cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-base font-extrabold font-mono leading-none text-white">{completedAssignedCount}</div>
+                  <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Done</div>
                 </div>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[9px] text-slate">
+                <span>Assigned done</span>
+                <span className="font-mono text-paper">
+                  {totalAssignedToHandler === 0 ? "0%" : `${Math.round((completedAssignedCount / totalAssignedToHandler) * 100)}%`}
+                </span>
               </div>
             </div>
           </div>
