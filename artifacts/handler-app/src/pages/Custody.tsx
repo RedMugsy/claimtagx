@@ -16,6 +16,7 @@ import {
   List as ListIcon,
   Images,
   ImageOff,
+  Star,
   MessageSquare,
   Mic,
   Square,
@@ -979,6 +980,9 @@ export default function Custody() {
             const priorityChrome = isPriority
               ? "shadow-[0_0_0_1px_rgba(251,191,36,0.2),0_10px_30px_rgba(245,158,11,0.08)]"
               : "";
+            const priorityBanner = isPriority
+              ? "from-amber-500/12 to-transparent"
+              : "from-indigo-500/8 to-transparent";
             const badgeCls =
               band === "overdue"
                 ? "bg-rose-500/15 text-rose-200 border border-rose-400/30"
@@ -1005,6 +1009,7 @@ export default function Custody() {
                   data-band={band}
                 >
                   {isPriority ? <div className="absolute inset-y-0 left-0 w-1 bg-amber-300/80" /> : null}
+                  <div className={`absolute inset-x-0 top-0 h-10 bg-gradient-to-b ${priorityBanner} pointer-events-none`} />
                   <div className="font-mono text-xs text-lime tracking-wider w-20 shrink-0 truncate">{a.ticketId}</div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
@@ -1013,7 +1018,8 @@ export default function Custody() {
                     </div>
                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       {serviceClass ? (
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                          {isPriority ? <Star className="w-2.5 h-2.5" /> : null}
                           {serviceClass}
                         </span>
                       ) : null}
@@ -1046,34 +1052,38 @@ export default function Custody() {
                   data-band={band}
                 >
                   {isPriority ? <div className="absolute inset-x-0 top-0 h-1 bg-amber-300/80 z-10" /> : null}
-                  <div className="relative aspect-square bg-obsidian/60 flex items-center justify-center">
+                  <div className="relative aspect-[4/5] bg-obsidian/60 flex items-center justify-center">
                     {photo ? (
                       <img src={photo} alt={a.ticketId} className="w-full h-full object-cover" />
                     ) : (
                       <ImageOff className="w-6 h-6 text-slate" />
                     )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-obsidian/90 via-obsidian/20 to-transparent" />
                     <Badge
                       variant="secondary"
                       className={`absolute top-2 right-2 font-mono text-[10px] ${badgeCls}`}
                     >
                       {badgeLabel}
                     </Badge>
-                  </div>
-                  <div className="p-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="font-mono text-xs text-lime tracking-wider truncate">{a.ticketId}</div>
-                      {serviceClass ? (
-                        <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
-                          {serviceClass}
-                        </span>
+                    <div className="absolute left-2.5 right-2.5 bottom-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-mono text-xs text-lime tracking-wider truncate">{a.ticketId}</div>
+                        {serviceClass ? (
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                            {isPriority ? <Star className="w-2.5 h-2.5" /> : null}
+                            {serviceClass}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="text-sm text-white font-semibold truncate mt-1">{a.patron.name}</div>
+                      {patronType ? (
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate mt-1 truncate">
+                          {patronType}
+                        </div>
                       ) : null}
                     </div>
-                    <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
-                    {patronType ? (
-                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate mt-1 truncate">
-                        {patronType}
-                      </div>
-                    ) : null}
+                  </div>
+                  <div className="p-2.5 pt-2">
                     <div className="flex items-center gap-1 text-[11px] text-slate font-mono mt-1">
                       <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)}
                     </div>
@@ -1094,11 +1104,13 @@ export default function Custody() {
                 data-band={band}
               >
                 {isPriority ? <div className="absolute inset-x-0 top-0 h-1 bg-amber-300/80" /> : null}
+                <div className={`absolute inset-x-0 top-0 h-16 bg-gradient-to-b ${priorityBanner} pointer-events-none`} />
                 <div className="flex items-center justify-between mb-2">
                   <div className="font-mono text-sm text-lime tracking-wider">{a.ticketId}</div>
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {serviceClass ? (
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                        {isPriority ? <Star className="w-3 h-3" /> : null}
                         {serviceClass}
                       </span>
                     ) : null}
@@ -1107,7 +1119,7 @@ export default function Custody() {
                     </Badge>
                   </div>
                 </div>
-                <div className="text-white font-semibold mb-1">{a.patron.name}</div>
+                <div className={`text-white ${isPriority ? "text-[15px] font-bold" : "font-semibold"} mb-1`}>{a.patron.name}</div>
                 {patronType ? (
                   <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-2">{patronType}</div>
                 ) : null}
@@ -1381,7 +1393,8 @@ export default function Custody() {
                       {selected.ticketId}
                     </Badge>
                     {serviceClass ? (
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                        {isPriority ? <Star className="w-3 h-3" /> : null}
                         {serviceClass}
                       </span>
                     ) : null}
@@ -1403,6 +1416,9 @@ export default function Custody() {
                   <div className="absolute bottom-3 left-4 right-4">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate/80">{cfg.label}</div>
                     <div className="text-2xl font-extrabold font-mono text-white tracking-tight">{cfg.short}</div>
+                    {isPriority ? (
+                      <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-amber-200">Priority handling</div>
+                    ) : null}
                     {heroMedia.length > 1 ? (
                       <div className="mt-2 inline-flex items-center gap-1.5">
                         {heroMedia.map((_, index) => (
