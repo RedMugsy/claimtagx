@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getListServiceRequestsQueryKey,
   listServiceRequests,
-  type ServiceRequest,
   type ServiceRequestKind,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
@@ -29,6 +28,13 @@ const KIND_LABEL: Record<ServiceRequestKind, string> = {
   deliver_to_table: "Deliver to table",
   other: "Other request",
 };
+
+const TODO_SCOPE_FILTERS = [
+  { key: "assignments", label: "Assignments", href: "/assignments/assignments" },
+  { key: "tasks", label: "Tasks", href: "/assignments/tasks" },
+  { key: "jobs", label: "Jobs", href: "/assignments/jobs" },
+  { key: "all", label: "All", href: "/assignments" },
+] as const;
 
 function readWorkflowState(): Record<string, WorkflowState> {
   if (typeof window === "undefined") return {};
@@ -121,7 +127,7 @@ export default function AssignmentsPage() {
         : scope === "jobs"
           ? "Jobs"
           : scope === "current"
-            ? "Current assignment"
+            ? "Active Todo"
             : "All Todos";
 
   const visibleItems = useMemo(() => {
@@ -151,6 +157,25 @@ export default function AssignmentsPage() {
 
   const currentWorkflow = currentAssignment ? workflowById[currentAssignment.id] : undefined;
   const currentStage: WorkflowStage = currentWorkflow?.stage ?? "idle";
+  const activeCount = currentMode ? inProgressByMe.length : visibleItems.length;
+
+  const activeTodo = inProgressByMe[0] ?? null;
+  const activeTodoWorkflow = activeTodo ? workflowById[activeTodo.id] : undefined;
+  const activeTodoStage: WorkflowStage = activeTodoWorkflow?.stage ?? "idle";
+  const activeTodoStageStart =
+    activeTodoStage === "started"
+      ? activeTodoWorkflow?.startedAt
+      : activeTodoStage === "collected"
+        ? activeTodoWorkflow?.collectedAt
+        : activeTodoStage === "arrived"
+          ? activeTodoWorkflow?.arrivedAt
+          : activeTodo?.claimedAt;
+  const activeTodoTimer = activeTodoStageStart ? msToMmSs(now - activeTodoStageStart) : null;
+
+  const assignmentCount = items.filter((r) => r.status === "open").length;
+  const taskCount = inProgressByMe.length;
+  const jobCount = items.filter((r) => r.status === "claimed").length;
+  const allCount = items.length;
 
   const currentStageStart =
     currentStage === "started"
@@ -202,6 +227,44 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-4" data-testid="page-assignments">
+      <header className="mb-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-11 h-11 rounded-2xl bg-lime/15 border border-lime/30 flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-lime" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-mono uppercase tracking-wider text-slate">Active todo</div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">
+                {scopeTitle}
+              </h1>
+            </div>
+          </div>
+
+          {!currentMode ? (
+            <button
+              type="button"
+              onClick={() => navigate("/assignments/current")}
+              className={`relative inline-flex items-center justify-center w-10 h-10 rounded-2xl border hover-elevate ${
+                activeTodo
+                  ? "border-lime/40 bg-lime/15 text-lime"
+                  : "border-white/10 bg-steel/40 text-slate"
+              }`}
+              data-testid="button-open-current-assignment"
+              aria-label="Open active todo"
+              title={activeTodo ? "Active todo in progress" : "No active todo in progress"}
+            >
+              <PlayCircle className="w-4 h-4" />
+              {activeTodo ? (
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-lime/35 bg-obsidian/90 px-1.5 py-0.5 text-[9px] font-mono font-bold text-lime tabular-nums whitespace-nowrap">
+                  {activeTodoTimer ?? "00:00"}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+        </div>
+      </header>
+
       <div className="flex items-center justify-between">
         <Link
           href="/"
@@ -210,38 +273,99 @@ export default function AssignmentsPage() {
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Command Center
         </Link>
-
-        <button
-          type="button"
-          onClick={() => navigate("/assignments/current")}
-          className="inline-flex items-center gap-1 rounded-xl border border-lime/30 bg-lime/10 text-lime px-3 py-1.5 text-xs font-semibold hover-elevate"
-          data-testid="button-open-current-assignment"
-        >
-          <PlayCircle className="w-3.5 h-3.5" /> Current assignment
-        </button>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-steel/40 p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 flex items-center justify-center">
-            <Briefcase className="w-6 h-6 text-indigo-200" />
+      {!currentMode ? (
+        <section className="rounded-3xl border border-white/10 bg-steel/40 px-4 py-3 sm:px-5 sm:py-4" data-testid="card-todos-dashboard">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Todo dashboard</div>
+            <div className="rounded-full border border-white/10 bg-obsidian/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-paper">
+              {allCount} active
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Assignments / Tasks / Jobs</div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">{scopeTitle}</h1>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Assignments</div>
+              <div className="text-lg font-extrabold font-mono text-white">{assignmentCount}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Tasks</div>
+              <div className="text-lg font-extrabold font-mono text-white">{taskCount}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Jobs</div>
+              <div className="text-lg font-extrabold font-mono text-white">{jobCount}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">All</div>
+              <div className="text-lg font-extrabold font-mono text-white">{allCount}</div>
+            </div>
           </div>
-          <span className="rounded-full border border-white/10 bg-obsidian/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-paper">
-            {currentMode ? inProgressByMe.length : visibleItems.length} open
-          </span>
+        </section>
+      ) : (
+        <div className="rounded-3xl border border-white/10 bg-steel/40 p-4">
+          <div className="flex items-center gap-3">
+            <div className="relative w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 flex items-center justify-center">
+              <Briefcase className="w-6 h-6 text-indigo-200" />
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-lime text-obsidian text-[10px] font-mono font-bold inline-flex items-center justify-center border border-obsidian">
+                {activeCount}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Active todo</div>
+              <h1 className="text-xl font-extrabold text-white tracking-tight">{scopeTitle}</h1>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!currentMode ? (
+        <section className="overflow-x-auto" data-testid="todos-filter-rail">
+          <div className="inline-flex min-w-full sm:min-w-0 items-center gap-1 rounded-2xl border border-white/10 bg-steel/35 p-1.5">
+            {TODO_SCOPE_FILTERS.map((filter) => {
+              const isActive =
+                (scope === "all" && filter.key === "all") ||
+                (scope === filter.key);
+              const count =
+                filter.key === "assignments"
+                  ? assignmentCount
+                  : filter.key === "tasks"
+                    ? taskCount
+                    : filter.key === "jobs"
+                      ? jobCount
+                      : allCount;
+              return (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={() => navigate(filter.href)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-mono uppercase tracking-wider whitespace-nowrap hover-elevate ${
+                    isActive
+                      ? "border border-lime/35 bg-lime/15 text-lime"
+                      : "border border-transparent text-slate hover:text-paper"
+                  }`}
+                  data-testid={`todos-filter-${filter.key}`}
+                >
+                  <span>{filter.label}</span>
+                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[10px] font-bold ${
+                    isActive ? "bg-lime text-obsidian" : "bg-obsidian/60 text-slate"
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {!currentMode ? (
         <section className="space-y-2" data-testid="assignments-all-list">
           {list.isLoading ? (
-            <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">Loading assignments…</div>
+            <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">Loading todos…</div>
           ) : visibleItems.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">No active assignments right now.</div>
+            <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">No active todos right now.</div>
           ) : (
             visibleItems.map((row) => {
               const flow = workflowById[row.id];
