@@ -238,7 +238,9 @@ export default function Home() {
     const dy = t.clientY - start.y;
     const dt = Date.now() - start.at;
     const rightSwipe = dx >= 70 && Math.abs(dy) <= 90 && dt <= 550;
+    const downSwipe = dy >= 70 && Math.abs(dx) <= 90 && dt <= 550;
     if (rightSwipe) navigate("/custody");
+    if (downSwipe) navigate("/assignments/all");
   };
 
   return (

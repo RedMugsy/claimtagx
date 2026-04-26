@@ -180,6 +180,8 @@ function AuthedRoutes() {
         <Route path="/messages" component={MessagesPage} />
         <Route path="/intercom" component={IntercomPage} />
         <Route path="/services" component={ServicesPage} />
+        <Route path="/assignments" component={ServicesPage} />
+        <Route path="/assignments/:scope" component={ServicesPage} />
         <Route path="/station" component={StationPage} />
         <Route path="/pre-shift" component={PreShiftPage} />
         <Route path="/checkout" component={CheckoutPage} />

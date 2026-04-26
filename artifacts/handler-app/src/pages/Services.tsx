@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
   ConciergeBell,
@@ -44,6 +44,7 @@ function timeAgo(ts: number): string {
 
 export default function ServicesPage() {
   const { activeVenue } = useStore();
+  const [location] = useLocation();
   const venueCode = activeVenue?.code ?? "";
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
@@ -119,6 +120,18 @@ export default function ServicesPage() {
   const items = list.data ?? [];
   const open = items.filter((r) => r.status === "open" || r.status === "claimed");
   const recent = items.filter((r) => r.status !== "open" && r.status !== "claimed").slice(0, 10);
+  const assignmentsMode = location.startsWith("/assignments");
+  const scope = assignmentsMode ? location.split("/")[2] ?? "all" : "services";
+  const scopeLabel =
+    scope === "patron"
+      ? "Assignments"
+      : scope === "supervisor"
+        ? "Tasks"
+        : scope === "all"
+          ? "All"
+          : scope === "services"
+            ? "Jobs"
+            : "Assignments";
 
   return (
     <div className="space-y-4" data-testid="page-services">
@@ -147,12 +160,17 @@ export default function ServicesPage() {
           </div>
           <div>
             <div className="text-[11px] font-mono uppercase tracking-wider text-slate">
-              Patron requests on tickets
+              {assignmentsMode ? "Assignment list" : "Patron requests on tickets"}
             </div>
             <h1 className="text-xl font-extrabold text-white tracking-tight">
-              Services
+              {assignmentsMode ? "Assignments" : "Services"}
             </h1>
           </div>
+          {assignmentsMode ? (
+            <div className="ml-auto rounded-full border border-white/10 bg-obsidian/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-paper">
+              {scopeLabel}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -182,6 +200,7 @@ export default function ServicesPage() {
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as ServiceRequestKind)}
+            aria-label="Service request type"
             className="w-full rounded-xl border border-white/10 bg-obsidian/60 px-3 py-2 text-sm text-white"
             data-testid="select-kind"
           >
