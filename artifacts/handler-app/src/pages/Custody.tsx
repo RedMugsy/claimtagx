@@ -18,6 +18,7 @@ import {
   Square,
   Play,
   Volume2,
+  QrCode,
 } from "lucide-react";
 import {
   Cell,
@@ -142,6 +143,8 @@ export default function Custody() {
   );
   const [noteDraft, setNoteDraft] = useState("");
   const [recording, setRecording] = useState(false);
+  const [notesSubpageOpen, setNotesSubpageOpen] = useState(false);
+  const [qrPopoverOpen, setQrPopoverOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -166,6 +169,8 @@ export default function Custody() {
 
   useEffect(() => {
     setNoteDraft("");
+    setNotesSubpageOpen(false);
+    setQrPopoverOpen(false);
   }, [selected?.id]);
 
   useEffect(() => {
@@ -874,159 +879,278 @@ export default function Custody() {
         </div>
       )}
 
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-md bg-obsidian border-l border-white/10 text-white">
-          {selected && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="text-white flex items-center gap-3">
-                  <span className="font-mono text-lime">{selected.ticketId}</span>
-                  <Badge variant="secondary" className="font-mono text-[10px] bg-lime/10 text-lime border border-lime/20">
-                    ACTIVE
-                  </Badge>
-                </SheetTitle>
-              </SheetHeader>
-              <div className="mt-5 space-y-4">
-                <div className="rounded-2xl border border-lime/25 bg-gradient-to-br from-lime/10 to-steel/40 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Custody event</div>
-                      <div className="text-base font-semibold text-white">{selected.patron.name}</div>
-                      <div className="text-xs text-slate font-mono">{selected.patron.phone || "No phone"}</div>
-                    </div>
-                    <QrTag ticketId={selected.ticketId} signature={selected.signature} size={96} />
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    <div className="rounded-xl border border-white/10 bg-obsidian/50 px-2 py-1.5">
-                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Intake</div>
-                      <div className="text-xs text-white font-mono">{new Date(selected.intakeAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-obsidian/50 px-2 py-1.5">
-                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Age</div>
-                      <div className="text-xs text-white font-mono">{fmtAge(selected.intakeAt)}</div>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-obsidian/50 px-2 py-1.5">
-                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Handler</div>
-                      <div className="text-xs text-white truncate">{selected.handler}</div>
-                    </div>
-                  </div>
-                </div>
+      <Sheet open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setNotesSubpageOpen(false); setQrPopoverOpen(false); } }}>
+        <SheetContent side="right" className="w-full sm:max-w-md bg-obsidian border-l border-white/10 text-white p-0 overflow-hidden flex flex-col">
+          {selected && (() => {
+            const band = classifyAge(selected.intakeAt, bands);
+            const cfg = MODE_BY_ID[selected.mode];
+            const ModeIcon = MODE_ICONS[selected.mode];
+            const bandColor =
+              band === "overdue" ? "text-rose-300 border-rose-400/40 bg-rose-500/10"
+              : band === "watch" ? "text-amber-300 border-amber-400/40 bg-amber-500/10"
+              : "text-lime border-lime/30 bg-lime/10";
+            const bandLabel = band === "overdue" ? "OVERDUE" : band === "watch" ? "WATCH" : "FRESH";
+            const eventNotes = selectedEventNotes;
+            const hasNotes = eventNotes.length > 0;
+            const assetPhoto = selected.photos?.[0];
 
-                <div className="rounded-2xl border border-white/10 bg-steel/35 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare className="w-4 h-4 text-lime" />
-                    <div className="text-xs font-mono uppercase tracking-wider text-slate">Event notes</div>
-                  </div>
-                  <textarea
-                    value={noteDraft}
-                    onChange={(e) => setNoteDraft(e.target.value)}
-                    placeholder="Add a text note for this custody event..."
-                    className="w-full min-h-[72px] rounded-xl border border-white/10 bg-obsidian/60 px-3 py-2 text-sm text-white placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40"
-                    data-testid="input-custody-note"
-                  />
-                  <div className="mt-2 flex items-center gap-2">
+            /* ── NOTES SUB-PAGE ── */
+            if (notesSubpageOpen) {
+              return (
+                <div className="flex flex-col h-full">
+                  {/* Notes header */}
+                  <div className="flex items-center gap-3 px-4 pt-5 pb-4 border-b border-white/10 shrink-0">
                     <button
                       type="button"
-                      onClick={() => addTextNote(selected.id)}
-                      className="rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate"
-                      data-testid="button-add-text-note"
+                      onClick={() => setNotesSubpageOpen(false)}
+                      className="w-8 h-8 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+                      aria-label="Back to event"
                     >
-                      Add text note
+                      <ArrowUpFromLine className="w-4 h-4 rotate-[-90deg]" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => (recording ? stopVoiceNote() : startVoiceNote(selected.id))}
-                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
-                        recording
-                          ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
-                          : "border-white/10 bg-obsidian/50 text-paper"
-                      }`}
-                      data-testid="button-toggle-voice-note"
-                    >
-                      {recording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                      {recording ? "Stop recording" : "Record voice note"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2" data-testid="custody-event-notes-list">
-                  {selectedEventNotes.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/10 bg-obsidian/30 p-3 text-xs text-slate">
-                      No notes yet. Add text or record a voice note to enrich this custody event.
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Event notes</div>
+                      <div className="text-sm font-semibold text-white font-mono truncate">{selected.ticketId}</div>
                     </div>
-                  ) : (
-                    selectedEventNotes.map((note) => (
-                      <div key={note.id} className="rounded-xl border border-white/10 bg-obsidian/45 p-3">
-                        <div className="flex items-center justify-between gap-3 mb-2">
-                          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
-                            {note.kind === "voice" ? "Voice note" : "Text note"} · {note.author}
-                          </div>
-                          <div className="text-[10px] font-mono text-slate">
-                            {new Date(note.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                        </div>
-                        {note.kind === "voice" ? (
-                          <div className="space-y-1.5">
-                            <div className="inline-flex items-center gap-1 text-xs text-slate">
-                              <Volume2 className="w-3.5 h-3.5" />
-                              {note.durationMs ? `${Math.max(1, Math.round(note.durationMs / 1000))}s` : "Voice clip"}
+                    <Badge variant="secondary" className={`font-mono text-[10px] border ${bandColor}`}>{bandLabel}</Badge>
+                  </div>
+
+                  {/* Note composer */}
+                  <div className="px-4 py-3 border-b border-white/10 shrink-0 space-y-2">
+                    <textarea
+                      value={noteDraft}
+                      onChange={(e) => setNoteDraft(e.target.value)}
+                      placeholder="Add a text note for this custody event…"
+                      className="w-full min-h-[68px] rounded-xl border border-white/10 bg-steel/40 px-3 py-2 text-sm text-white placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40 resize-none"
+                      data-testid="input-custody-note"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addTextNote(selected.id)}
+                        disabled={!noteDraft.trim()}
+                        className="rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate disabled:opacity-40"
+                        data-testid="button-add-text-note"
+                      >
+                        Add note
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => (recording ? stopVoiceNote() : startVoiceNote(selected.id))}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
+                          recording
+                            ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                            : "border-white/10 bg-steel/40 text-paper"
+                        }`}
+                        data-testid="button-toggle-voice-note"
+                      >
+                        {recording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                        {recording ? "Stop" : "Voice note"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notes feed */}
+                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" data-testid="custody-event-notes-list">
+                    {eventNotes.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+                        <MessageSquare className="w-8 h-8 text-slate/50" />
+                        <p className="text-xs text-slate">No notes yet. Start by typing above or recording a voice note.</p>
+                      </div>
+                    ) : (
+                      eventNotes.map((note) => (
+                        <div key={note.id} className="rounded-xl border border-white/10 bg-steel/25 p-3">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-slate">
+                              {note.kind === "voice" ? <Mic className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                              {note.author}
                             </div>
-                            {note.audioDataUrl ? (
-                              <audio controls src={note.audioDataUrl} className="w-full h-8" />
-                            ) : null}
+                            <div className="text-[10px] font-mono text-slate">
+                              {new Date(note.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </div>
                           </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="text-sm text-paper leading-relaxed">{note.body}</p>
-                            <button
-                              type="button"
-                              onClick={() => speakTextNote(note.body ?? "")}
-                              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
-                              data-testid={`button-listen-note-${note.id}`}
-                            >
-                              <Play className="w-3 h-3" />
-                              Listen
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                    {MODE_BY_ID[selected.mode].fields.map((f) => (
-                      <div key={f.key}>
-                        <div className="text-xs font-mono uppercase tracking-wide text-slate">{f.label}</div>
-                        <div className={`text-white ${f.mono ? "font-mono" : ""}`}>
-                          {f.type === "checkbox"
-                            ? selected.fields[f.key]
-                              ? "Yes"
-                              : "No"
-                            : String(selected.fields[f.key] ?? "—")}
+                          {note.kind === "voice" ? (
+                            <div className="space-y-1.5">
+                              <div className="inline-flex items-center gap-1 text-xs text-slate">
+                                <Volume2 className="w-3.5 h-3.5" />
+                                {note.durationMs ? `${Math.max(1, Math.round(note.durationMs / 1000))}s` : "Voice clip"}
+                              </div>
+                              {note.audioDataUrl ? (
+                                <audio controls src={note.audioDataUrl} className="w-full h-8" />
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className="text-sm text-paper leading-relaxed">{note.body}</p>
+                              <button
+                                type="button"
+                                onClick={() => speakTextNote(note.body ?? "")}
+                                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+                                data-testid={`button-listen-note-${note.id}`}
+                              >
+                                <Play className="w-3 h-3" />
+                                Listen
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            /* ── MAIN EVENT PAGE ── */
+            return (
+              <div className="flex flex-col h-full">
+                {/* Hero photo / asset identity */}
+                <div className="relative shrink-0">
+                  {assetPhoto ? (
+                    <img
+                      src={assetPhoto}
+                      alt={selected.ticketId}
+                      className="w-full h-52 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-52 bg-gradient-to-b from-steel/60 to-obsidian flex flex-col items-center justify-center gap-2">
+                      <ModeIcon className="w-14 h-14 text-lime/30" />
+                    </div>
+                  )}
+                  {/* overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/20 to-transparent pointer-events-none" />
+
+                  {/* Band badge top-left */}
+                  <div className="absolute top-3 left-3">
+                    <Badge variant="secondary" className={`font-mono text-[10px] border ${bandColor}`}>{bandLabel}</Badge>
+                  </div>
+
+                  {/* Close top-right */}
+                  <button
+                    type="button"
+                    onClick={() => setSelected(null)}
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-obsidian/60 border border-white/10 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+                    aria-label="Close"
+                  >
+                    <Square className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Ticket id + mode label at bottom of hero */}
+                  <div className="absolute bottom-3 left-4 right-4">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate/80">{cfg.label}</div>
+                    <div className="text-2xl font-extrabold font-mono text-white tracking-tight">{selected.ticketId}</div>
                   </div>
                 </div>
 
-                {selected.photos.length > 0 && (
-                  <div className="rounded-2xl border border-white/10 bg-steel/25 p-3">
-                    <div className="text-xs font-mono uppercase tracking-wide text-slate mb-2">Photos</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {selected.photos.map((p, i) => (
-                        <img key={i} src={p} alt={`Photo ${i + 1}`} className="rounded-xl border border-white/10 aspect-square object-cover" />
+                {/* Scrollable body */}
+                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                  {/* 3 quick stat pills */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl border border-white/10 bg-steel/30 px-3 py-2.5 text-center">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-0.5">Intake</div>
+                      <div className="text-sm font-bold font-mono text-white">
+                        {new Date(selected.intakeAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-steel/30 px-3 py-2.5 text-center">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-0.5">Age</div>
+                      <div className="text-sm font-bold font-mono text-white">{fmtAge(selected.intakeAt)}</div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-steel/30 px-3 py-2.5 text-center">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-0.5">By</div>
+                      <div className="text-sm font-bold text-white truncate">{selected.handler.split(" ")[0]}</div>
+                    </div>
+                  </div>
+
+                  {/* Asset fields */}
+                  <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Asset details</div>
+                    <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+                      {MODE_BY_ID[selected.mode].fields.map((f) => (
+                        <div key={f.key} className={f.type === "textarea" ? "col-span-2" : ""}>
+                          <div className="text-[10px] font-mono uppercase tracking-wide text-slate">{f.label}</div>
+                          <div className={`text-sm text-white mt-0.5 ${f.mono ? "font-mono" : "font-medium"}`}>
+                            {f.type === "checkbox"
+                              ? selected.fields[f.key] ? "Yes" : "No"
+                              : String(selected.fields[f.key] ?? "—")}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
-                )}
+
+                  {/* Patron row */}
+                  <div className="rounded-2xl border border-white/10 bg-steel/25 px-4 py-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-slate/20 border border-white/10 flex items-center justify-center shrink-0 text-sm font-bold text-white">
+                      {selected.patron.name.trim().charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Patron</div>
+                      <div className="text-sm font-semibold text-white truncate">{selected.patron.name}</div>
+                      {selected.patron.phone ? (
+                        <div className="text-xs text-slate font-mono">{selected.patron.phone}</div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Extra photos (if more than 1) */}
+                  {selected.photos.length > 1 && (
+                    <div className="rounded-2xl border border-white/10 bg-steel/25 p-3">
+                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-2">Photos</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {selected.photos.slice(1).map((p, i) => (
+                          <img key={i} src={p} alt={`Photo ${i + 2}`} className="rounded-xl border border-white/10 aspect-square object-cover" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom action bar */}
+                <div className="shrink-0 border-t border-white/10 px-4 py-3 flex items-center justify-between gap-3">
+                  {/* Notes button */}
+                  <button
+                    type="button"
+                    onClick={() => setNotesSubpageOpen(true)}
+                    className="relative inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-4 py-2.5 text-sm font-medium text-paper hover-elevate"
+                    data-testid="button-open-notes"
+                  >
+                    <MessageSquare className="w-4 h-4 text-lime" />
+                    Notes
+                    {hasNotes ? (
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-lime text-obsidian text-[10px] font-bold font-mono px-1">
+                        {eventNotes.length}
+                      </span>
+                    ) : (
+                      <span className="ml-1 w-2 h-2 rounded-full border border-white/20 bg-transparent" />
+                    )}
+                  </button>
+
+                  {/* QR button */}
+                  <Popover open={qrPopoverOpen} onOpenChange={setQrPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="relative w-11 h-11 rounded-2xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+                        aria-label="Show QR Code"
+                        data-testid="button-show-qr"
+                      >
+                        <QrCode className="w-5 h-5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      side="top"
+                      align="end"
+                      className="w-auto bg-obsidian border-white/10 p-3"
+                    >
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-2 text-center">{selected.ticketId}</div>
+                      <QrTag ticketId={selected.ticketId} signature={selected.signature} size={180} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
-            </>
-          )}
+            );
+          })()}
         </SheetContent>
       </Sheet>
     </div>
