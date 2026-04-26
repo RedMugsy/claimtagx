@@ -93,6 +93,9 @@ type AssetTimelineEntry = {
 
 const CUSTODY_NOTES_STORAGE_KEY = "handler.custody.event-notes.v1";
 const CUSTODY_VIEW_STORAGE_KEY = "handler.custody.view.v1";
+const INTERACTIVE_FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/50 focus-visible:ring-offset-2 focus-visible:ring-offset-obsidian";
+const INTERACTIVE_PRESS = "transition-all duration-200 ease-out active:scale-[0.98]";
 
 function pickSupportedMime(): string {
   const candidates = [
@@ -798,7 +801,7 @@ export default function Custody() {
             setLoading(true);
             window.setTimeout(() => setLoading(false), 220);
           }}
-          className="w-10 h-10 shrink-0 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+          className={`w-10 h-10 shrink-0 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
           aria-label="Refresh list"
           data-testid="button-refresh"
         >
@@ -808,7 +811,7 @@ export default function Custody() {
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`relative w-10 h-10 shrink-0 rounded-xl border flex items-center justify-center hover-elevate ${
+              className={`relative w-10 h-10 shrink-0 rounded-xl border flex items-center justify-center hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING} ${
                 filtersActive
                   ? "border-lime/40 bg-lime/15 text-lime"
                   : "border-white/10 bg-steel/40 text-slate hover:text-paper"
@@ -843,7 +846,7 @@ export default function Custody() {
                     key={f.id}
                     type="button"
                     onClick={() => setAgeFilter(f.id as "all" | AgingBand)}
-                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING} ${
                       active ? activeTone : "border-white/10 bg-steel/40 text-slate"
                     }`}
                     data-testid={`filter-age-${f.id}`}
@@ -864,7 +867,7 @@ export default function Custody() {
                   key={s}
                   type="button"
                   onClick={() => setSort(s)}
-                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING} ${
                     sort === s ? "bg-lime/15 text-lime" : "text-slate"
                   }`}
                   data-testid={`sort-${s}`}
@@ -882,7 +885,7 @@ export default function Custody() {
                   setAgeFilter("all");
                   setSort("newest");
                 }}
-                className="mt-4 w-full rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+                className={`mt-4 w-full rounded-xl border border-white/10 bg-steel/40 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                 data-testid="button-filters-reset"
               >
                 Reset filters
@@ -910,7 +913,7 @@ export default function Custody() {
                 type="button"
                 onClick={() => setView(id)}
                 aria-label={label}
-                className={`flex items-center justify-center w-8 h-8 rounded-full hover-elevate ${
+                className={`flex items-center justify-center w-8 h-8 rounded-full hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING} ${
                   view === id ? "bg-lime/15 text-lime" : "text-slate hover:text-paper"
                 }`}
                 data-testid={`view-${id}`}
@@ -1002,9 +1005,11 @@ export default function Custody() {
                   key={a.id}
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.992 }}
                   transition={{ duration: 0.15, delay: i * 0.015 }}
                   onClick={() => setSelected(a)}
-                  className={`relative overflow-hidden flex items-center gap-3 text-left rounded-xl border px-3 py-2.5 hover-elevate ${cardBorder} ${priorityChrome}`}
+                  className={`relative overflow-hidden flex items-center gap-3 text-left rounded-xl border px-3 py-2.5 hover-elevate ${INTERACTIVE_FOCUS_RING} ${cardBorder} ${priorityChrome}`}
                   data-testid={`row-asset-${a.ticketId}`}
                   data-band={band}
                 >
@@ -1045,9 +1050,11 @@ export default function Custody() {
                   key={a.id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.988 }}
                   transition={{ duration: 0.2, delay: i * 0.02 }}
                   onClick={() => setSelected(a)}
-                  className={`relative text-left rounded-2xl border overflow-hidden hover-elevate ${cardBorder} ${priorityChrome}`}
+                  className={`relative text-left rounded-2xl border overflow-hidden hover-elevate ${INTERACTIVE_FOCUS_RING} ${cardBorder} ${priorityChrome}`}
                   data-testid={`tile-asset-${a.ticketId}`}
                   data-band={band}
                 >
@@ -1097,9 +1104,11 @@ export default function Custody() {
                 key={a.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.99 }}
                 transition={{ duration: 0.2, delay: i * 0.02 }}
                 onClick={() => setSelected(a)}
-                className={`relative overflow-hidden text-left rounded-2xl border p-4 hover-elevate ${cardBorder} ${priorityChrome}`}
+                className={`relative overflow-hidden text-left rounded-2xl border p-4 hover-elevate ${INTERACTIVE_FOCUS_RING} ${cardBorder} ${priorityChrome}`}
                 data-testid={`card-asset-${a.ticketId}`}
                 data-band={band}
               >
@@ -1175,7 +1184,7 @@ export default function Custody() {
                     <button
                       type="button"
                       onClick={() => setSheetPage("main")}
-                      className="w-8 h-8 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+                      className={`w-8 h-8 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                       aria-label="Back to event"
                     >
                       <ArrowLeft className="w-4 h-4" />
@@ -1202,7 +1211,7 @@ export default function Custody() {
                             type="button"
                             onClick={() => addTextNote(selected.id)}
                             disabled={!noteDraft.trim()}
-                            className="rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate disabled:opacity-40"
+                            className={`rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate disabled:opacity-40 ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                             data-testid="button-add-text-note"
                           >
                             Add note
@@ -1210,7 +1219,7 @@ export default function Custody() {
                           <button
                             type="button"
                             onClick={() => (recording ? stopVoiceNote() : startVoiceNote(selected.id))}
-                            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
+                            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING} ${
                               recording
                                 ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
                                 : "border-white/10 bg-steel/40 text-paper"
@@ -1257,7 +1266,7 @@ export default function Custody() {
                                   <button
                                     type="button"
                                     onClick={() => speakTextNote(note.body ?? "")}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+                                    className={`inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                                     data-testid={`button-listen-note-${note.id}`}
                                   >
                                     <Play className="w-3 h-3" />
@@ -1407,7 +1416,7 @@ export default function Custody() {
                   <button
                     type="button"
                     onClick={() => setSelected(null)}
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-obsidian/60 border border-white/10 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+                    className={`absolute top-3 right-3 w-8 h-8 rounded-full bg-obsidian/60 border border-white/10 flex items-center justify-center text-slate hover:text-paper hover-elevate ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                     aria-label="Close"
                   >
                     <Square className="w-3.5 h-3.5" />
@@ -1505,7 +1514,7 @@ export default function Custody() {
                     <button
                       type="button"
                       onClick={() => setSheetPage("notes")}
-                      className="relative inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap"
+                      className={`relative inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                       data-testid="button-open-notes"
                     >
                       <MessageSquare className="w-4 h-4 text-lime" />
@@ -1522,7 +1531,7 @@ export default function Custody() {
                     <button
                       type="button"
                       onClick={() => setSheetPage("damage")}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap"
+                      className={`inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                       data-testid="button-open-damage-report"
                     >
                       <AlertTriangle className="w-4 h-4 text-amber-300" />
@@ -1533,7 +1542,7 @@ export default function Custody() {
                     <button
                       type="button"
                       onClick={() => setSheetPage("history")}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap"
+                      className={`inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                       data-testid="button-open-history"
                     >
                       <HistoryIcon className="w-4 h-4 text-indigo-200" />
@@ -1545,7 +1554,7 @@ export default function Custody() {
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="relative w-11 h-11 rounded-2xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate shrink-0"
+                        className={`relative w-11 h-11 rounded-2xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate shrink-0 ${INTERACTIVE_PRESS} ${INTERACTIVE_FOCUS_RING}`}
                         aria-label="Show QR Code"
                         data-testid="button-show-qr"
                       >
