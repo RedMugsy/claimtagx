@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -23,6 +23,8 @@ import {
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
 import { toast } from "@/hooks/use-toast";
+
+const ASSIGNMENTS_LAST_ROUTE_KEY = "handler.assignments.lastRoute.v1";
 
 const KIND_LABEL: Record<ServiceRequestKind, string> = {
   bring_my_car: "Bring my car",
@@ -132,6 +134,16 @@ export default function ServicesPage() {
           : scope === "services"
             ? "Jobs"
             : "Assignments";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!location.startsWith("/assignments") && !location.startsWith("/services")) return;
+    try {
+      localStorage.setItem(ASSIGNMENTS_LAST_ROUTE_KEY, location);
+    } catch {
+      // ignore storage issues
+    }
+  }, [location]);
 
   return (
     <div className="space-y-4" data-testid="page-services">

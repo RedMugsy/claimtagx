@@ -49,6 +49,8 @@ import {
 } from "@/components/ui/tooltip";
 import { FirstSignInTour } from "@/components/handler/FirstSignInTour";
 
+const ASSIGNMENTS_LAST_ROUTE_KEY = "handler.assignments.lastRoute.v1";
+
 function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
@@ -82,59 +84,6 @@ export default function Home() {
   const custodySwipeStart = useRef<{ x: number; y: number; at: number } | null>(
     null,
   );
-  const intercomHandleRef = useRef<HTMLDivElement>(null);
-
-  // Non-passive touchmove on the intercom handle so we can preventDefault()
-  // and block page scroll while detecting the upward flick.
-  useEffect(() => {
-    const el = intercomHandleRef.current;
-    if (!el) return;
-    let start: { x: number; y: number; at: number } | null = null;
-    let triggered = false;
-
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.touches[0];
-      start = { x: t.clientX, y: t.clientY, at: Date.now() };
-      triggered = false;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!start || triggered) return;
-      const t = e.touches[0];
-      const dy = t.clientY - start.y;
-      const dx = t.clientX - start.x;
-      const dt = Date.now() - start.at;
-      // If the gesture looks upward, block page scroll
-      if (dy < -6 && Math.abs(dy) > Math.abs(dx) * 0.5) e.preventDefault();
-      const upFlick = dy <= -80 && Math.abs(dy) > Math.abs(dx) * 1.5 && dt <= 700;
-      if (upFlick) {
-        triggered = true;
-        start = null;
-        navigate("/intercom");
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (triggered) { triggered = false; start = null; return; }
-      if (!start) return;
-      const t = e.changedTouches[0];
-      const dy = t.clientY - start.y;
-      const dx = t.clientX - start.x;
-      const dt = Date.now() - start.at;
-      start = null;
-      const upFlick = dy <= -80 && Math.abs(dy) > Math.abs(dx) * 1.5 && dt <= 700;
-      if (upFlick) navigate("/intercom");
-    };
-
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [navigate]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000 * 30);
@@ -237,12 +186,43 @@ export default function Home() {
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     const dt = Date.now() - start.at;
-    const rightSwipe = dx >= 70 && Math.abs(dy) <= 90 && dt <= 550;
-    const downSwipe = dy >= 70 && Math.abs(dx) <= 90 && dt <= 550;
-    const upSwipe = dy <= -80 && Math.abs(dx) <= 80 && dt <= 550;
-    if (rightSwipe) navigate("/custody");
-    if (downSwipe) navigate("/assignments/all");
-    if (upSwipe) navigate("/intercom");
+    if (dt > 650) return;
+
+    const minDistance = 70;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (absX < minDistance && absY < minDistance) return;
+
+    const readAssignmentRoute = () => {
+      if (typeof window === "undefined") return "/assignments/all";
+      try {
+        const stored = localStorage.getItem(ASSIGNMENTS_LAST_ROUTE_KEY) ?? "";
+        if (stored.startsWith("/assignments") || stored.startsWith("/services")) {
+          return stored;
+        }
+      } catch {
+        // ignore storage issues
+      }
+      return "/assignments/all";
+    };
+
+    // Require a clearly dominant axis so only one action fires.
+    if (absX > absY * 1.15) {
+      if (dx > 0) {
+        navigate("/custody");
+      } else {
+        navigate(readAssignmentRoute());
+      }
+      return;
+    }
+
+    if (absY > absX * 1.15) {
+      if (dy < 0) {
+        navigate("/intercom");
+      } else {
+        navigate("/assignments/all");
+      }
+    }
   };
 
   return (
@@ -491,8 +471,7 @@ export default function Home() {
 
       {/* Intercom pull-up handle — non-passive touchmove attached via useEffect */}
       <div
-        ref={intercomHandleRef}
-        className="flex flex-col items-center gap-2 py-4 select-none touch-pan-x"
+        className="flex flex-col items-center gap-2 py-4 select-none"
         data-testid="intercom-pull-handle"
         aria-label="Swipe up to open Intercom"
       >
