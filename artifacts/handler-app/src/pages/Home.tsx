@@ -106,7 +106,7 @@ export default function Home() {
       const dt = Date.now() - start.at;
       // If the gesture looks upward, block page scroll
       if (dy < -6 && Math.abs(dy) > Math.abs(dx) * 0.5) e.preventDefault();
-      const upFlick = dy <= -40 && Math.abs(dy) > Math.abs(dx) * 1.2 && dt <= 900;
+      const upFlick = dy <= -80 && Math.abs(dy) > Math.abs(dx) * 1.5 && dt <= 700;
       if (upFlick) {
         triggered = true;
         start = null;
@@ -122,7 +122,7 @@ export default function Home() {
       const dx = t.clientX - start.x;
       const dt = Date.now() - start.at;
       start = null;
-      const upFlick = dy <= -40 && Math.abs(dy) > Math.abs(dx) * 1.2 && dt <= 900;
+      const upFlick = dy <= -80 && Math.abs(dy) > Math.abs(dx) * 1.5 && dt <= 700;
       if (upFlick) navigate("/intercom");
     };
 
@@ -239,8 +239,10 @@ export default function Home() {
     const dt = Date.now() - start.at;
     const rightSwipe = dx >= 70 && Math.abs(dy) <= 90 && dt <= 550;
     const downSwipe = dy >= 70 && Math.abs(dx) <= 90 && dt <= 550;
+    const upSwipe = dy <= -80 && Math.abs(dx) <= 80 && dt <= 550;
     if (rightSwipe) navigate("/custody");
     if (downSwipe) navigate("/assignments/all");
+    if (upSwipe) navigate("/intercom");
   };
 
   return (
