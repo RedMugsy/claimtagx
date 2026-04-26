@@ -196,6 +196,10 @@ function getServiceClassTone(serviceClass: string | null) {
   return "border-indigo-300/40 bg-indigo-500/15 text-indigo-200";
 }
 
+function isPriorityServiceClass(serviceClass: string | null) {
+  return !!serviceClass && /vip|premium|elite|priority/i.test(serviceClass);
+}
+
 function getDamageEntries(asset: CustodyAsset) {
   const captured = Object.entries(asset.fields).filter(([key, value]) => {
     if (value == null || value === "") return false;
@@ -965,12 +969,16 @@ export default function Custody() {
             const band = classifyAge(a.intakeAt, bands);
             const serviceClass = getAssetServiceClass(a);
             const patronType = getAssetPatronType(a);
+            const isPriority = isPriorityServiceClass(serviceClass);
             const cardBorder =
               band === "overdue"
                 ? "border-rose-400/40 bg-rose-500/5"
                 : band === "watch"
                   ? "border-amber-400/40 bg-amber-500/5"
                   : "border-white/10 bg-steel/40";
+            const priorityChrome = isPriority
+              ? "shadow-[0_0_0_1px_rgba(251,191,36,0.2),0_10px_30px_rgba(245,158,11,0.08)]"
+              : "";
             const badgeCls =
               band === "overdue"
                 ? "bg-rose-500/15 text-rose-200 border border-rose-400/30"
@@ -992,10 +1000,11 @@ export default function Custody() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15, delay: i * 0.015 }}
                   onClick={() => setSelected(a)}
-                  className={`flex items-center gap-3 text-left rounded-xl border px-3 py-2.5 hover-elevate ${cardBorder}`}
+                  className={`relative overflow-hidden flex items-center gap-3 text-left rounded-xl border px-3 py-2.5 hover-elevate ${cardBorder} ${priorityChrome}`}
                   data-testid={`row-asset-${a.ticketId}`}
                   data-band={band}
                 >
+                  {isPriority ? <div className="absolute inset-y-0 left-0 w-1 bg-amber-300/80" /> : null}
                   <div className="font-mono text-xs text-lime tracking-wider w-20 shrink-0 truncate">{a.ticketId}</div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
@@ -1032,10 +1041,11 @@ export default function Custody() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.02 }}
                   onClick={() => setSelected(a)}
-                  className={`text-left rounded-2xl border overflow-hidden hover-elevate ${cardBorder}`}
+                  className={`relative text-left rounded-2xl border overflow-hidden hover-elevate ${cardBorder} ${priorityChrome}`}
                   data-testid={`tile-asset-${a.ticketId}`}
                   data-band={band}
                 >
+                  {isPriority ? <div className="absolute inset-x-0 top-0 h-1 bg-amber-300/80 z-10" /> : null}
                   <div className="relative aspect-square bg-obsidian/60 flex items-center justify-center">
                     {photo ? (
                       <img src={photo} alt={a.ticketId} className="w-full h-full object-cover" />
@@ -1079,10 +1089,11 @@ export default function Custody() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: i * 0.02 }}
                 onClick={() => setSelected(a)}
-                className={`text-left rounded-2xl border p-4 hover-elevate ${cardBorder}`}
+                className={`relative overflow-hidden text-left rounded-2xl border p-4 hover-elevate ${cardBorder} ${priorityChrome}`}
                 data-testid={`card-asset-${a.ticketId}`}
                 data-band={band}
               >
+                {isPriority ? <div className="absolute inset-x-0 top-0 h-1 bg-amber-300/80" /> : null}
                 <div className="flex items-center justify-between mb-2">
                   <div className="font-mono text-sm text-lime tracking-wider">{a.ticketId}</div>
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
@@ -1129,6 +1140,9 @@ export default function Custody() {
             const patronType = getAssetPatronType(selected);
             const damageEntries = getDamageEntries(selected);
             const timelineGroups = groupTimelineByDate(selectedEventTimeline);
+            const isPriority = isPriorityServiceClass(serviceClass);
+            const damageIsPlaceholder = damageEntries.length === 1 && damageEntries[0]?.[0] === "damageReport";
+            const historyIsLight = selectedEventTimeline.length <= 1;
             const heroMedia = selected.photos.length > 0 ? selected.photos : [null];
             const bandColor =
               band === "overdue" ? "text-rose-300 border-rose-400/40 bg-rose-500/10"
@@ -1246,8 +1260,15 @@ export default function Custody() {
                     </>
                   ) : sheetPage === "damage" ? (
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" data-testid="custody-event-damage-report">
-                      <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
-                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Damage fields</div>
+                      <div className={`rounded-2xl border p-4 ${damageIsPlaceholder ? "border-dashed border-amber-300/30 bg-amber-500/5" : "border-white/10 bg-steel/25"}`}>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Damage fields</div>
+                          {damageIsPlaceholder ? (
+                            <span className="inline-flex items-center rounded-full border border-amber-300/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-amber-200">
+                              Preview
+                            </span>
+                          ) : null}
+                        </div>
                         {damageEntries.length > 0 ? (
                           <div className="space-y-3">
                             {damageEntries.map(([key, value]) => (
@@ -1263,6 +1284,16 @@ export default function Custody() {
                             No explicit damage notes or diagram metadata were captured for this asset.
                           </div>
                         )}
+                        {damageIsPlaceholder ? (
+                          <div className="mt-4 rounded-xl border border-white/10 bg-obsidian/30 p-3">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-1">Planned layout</div>
+                            <ul className="list-disc pl-4 space-y-1 text-sm text-slate">
+                              <li>Annotated diagram or body-map image</li>
+                              <li>Panel-by-panel notes and severity markers</li>
+                              <li>Reference photos tied to each marked issue</li>
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
@@ -1280,6 +1311,19 @@ export default function Custody() {
                     </div>
                   ) : (
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" data-testid="custody-event-history-list">
+                      {historyIsLight ? (
+                        <div className="rounded-2xl border border-dashed border-indigo-300/30 bg-indigo-500/5 p-4">
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-slate">History preview</div>
+                            <span className="inline-flex items-center rounded-full border border-indigo-300/30 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-indigo-200">
+                              Scaffold
+                            </span>
+                          </div>
+                          <p className="text-sm text-paper leading-relaxed">
+                            This timeline is ready for release events, staff handoffs, damage updates, and patron messages. As actions accumulate, they’ll stack under date headers exactly like a shift log.
+                          </p>
+                        </div>
+                      ) : null}
                       {timelineGroups.map((group) => (
                         <div key={group.label} className="space-y-2">
                           <div className="inline-flex items-center rounded-full border border-white/10 bg-steel/30 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-slate">
@@ -1311,6 +1355,7 @@ export default function Custody() {
             return (
               <div className="flex flex-col h-full">
                 <div className="relative shrink-0">
+                  {isPriority ? <div className="absolute inset-x-0 top-0 h-1 bg-amber-300/80 z-20" /> : null}
                   <Carousel setApi={setHeroCarouselApi} className="w-full">
                     <CarouselContent className="ml-0">
                       {heroMedia.map((photo, index) => (
@@ -1329,6 +1374,7 @@ export default function Custody() {
                   </Carousel>
 
                   <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/15 to-transparent pointer-events-none" />
+                  {isPriority ? <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 via-transparent to-transparent pointer-events-none" /> : null}
 
                   <div className="absolute top-3 left-3 flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className={`font-mono text-[10px] border bg-obsidian/70 text-paper border-white/10`}>
@@ -1371,6 +1417,21 @@ export default function Custody() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                  {(serviceClass || patronType) ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {serviceClass ? (
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                          {serviceClass}
+                        </span>
+                      ) : null}
+                      {patronType ? (
+                        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate">
+                          {patronType}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <div className="grid grid-cols-3 gap-2">
                     <div className="rounded-2xl border border-white/10 bg-steel/30 px-3 py-2.5 text-center">
                       <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-0.5">Intake</div>
