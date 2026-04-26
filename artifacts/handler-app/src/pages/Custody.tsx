@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/popover";
 import { useStore } from "@/lib/store";
 import {
+  DEFAULT_TA_POLICY,
   MODE_BY_ID,
   MODE_ICONS,
   VENUE_AGING_BANDS,
@@ -156,16 +157,32 @@ function readAssetFieldString(
   return null;
 }
 
+function hashString(value: string) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function pickPolicyValue(values: string[] | undefined, seed: string, fallback: string | null = null) {
+  if (!values || values.length === 0) return fallback;
+  return values[hashString(seed) % values.length] ?? fallback;
+}
+
 function getAssetServiceClass(asset: CustodyAsset): string | null {
   const direct = readAssetFieldString(asset.fields, ["serviceClass", "service_class", "class", "tier"]);
   if (direct) return direct;
   const vip = asset.fields.vip;
   if (vip === true) return "VIP";
-  return null;
+  return pickPolicyValue(DEFAULT_TA_POLICY.serviceClasses, asset.ticketId, "Regular");
 }
 
 function getAssetPatronType(asset: CustodyAsset): string | null {
-  return readAssetFieldString(asset.fields, ["patronType", "patron_type", "guestType", "visitorType"]);
+  return (
+    readAssetFieldString(asset.fields, ["patronType", "patron_type", "guestType", "visitorType"])
+    ?? pickPolicyValue(DEFAULT_TA_POLICY.patronTypes, asset.id || asset.ticketId, "Guest")
+  );
 }
 
 function getServiceClassTone(serviceClass: string | null) {
@@ -180,10 +197,20 @@ function getServiceClassTone(serviceClass: string | null) {
 }
 
 function getDamageEntries(asset: CustodyAsset) {
-  return Object.entries(asset.fields).filter(([key, value]) => {
+  const captured = Object.entries(asset.fields).filter(([key, value]) => {
     if (value == null || value === "") return false;
     return /damage|condition|scratch|dent|scuff|diagram|mark|tear/i.test(key);
   });
+  if (captured.length > 0) return captured;
+
+  return [
+    [
+      "damageReport",
+      asset.mode === "vehicles"
+        ? "Placeholder layout: diagram pins, panel notes, and valet walkaround comments will appear here."
+        : "Placeholder layout: condition notes, diagram markup, and damage media will appear here.",
+    ],
+  ];
 }
 
 function buildAssetTimeline(asset: CustodyAsset, notes: CustodyEventNote[]): AssetTimelineEntry[] {
