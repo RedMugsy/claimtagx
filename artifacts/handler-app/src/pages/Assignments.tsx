@@ -113,6 +113,33 @@ export default function AssignmentsPage() {
     return r.status === "claimed" && claimedBy && claimedBy === currentHandlerName;
   });
 
+  const scopeTitle =
+    scope === "assignments"
+      ? "Assignments"
+      : scope === "tasks"
+        ? "Tasks"
+        : scope === "jobs"
+          ? "Jobs"
+          : scope === "current"
+            ? "Current assignment"
+            : "All Todos";
+
+  const visibleItems = useMemo(() => {
+    if (scope === "assignments") {
+      return items.filter((r) => r.status === "open");
+    }
+    if (scope === "tasks") {
+      return items.filter((r) => {
+        const claimedBy = (r.claimedByName ?? "").trim().toLowerCase();
+        return r.status === "claimed" && claimedBy === currentHandlerName;
+      });
+    }
+    if (scope === "jobs") {
+      return items.filter((r) => r.status === "claimed");
+    }
+    return items;
+  }, [items, scope, currentHandlerName]);
+
   const currentAssignment = useMemo(() => {
     if (items.length === 0) return null;
     if (requestedId) {
@@ -201,10 +228,10 @@ export default function AssignmentsPage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Assignments / Tasks / Jobs</div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">{currentMode ? "Current assignment" : "All assignments"}</h1>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">{scopeTitle}</h1>
           </div>
           <span className="rounded-full border border-white/10 bg-obsidian/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-paper">
-            {items.length} open
+            {currentMode ? inProgressByMe.length : visibleItems.length} open
           </span>
         </div>
       </div>
@@ -213,10 +240,10 @@ export default function AssignmentsPage() {
         <section className="space-y-2" data-testid="assignments-all-list">
           {list.isLoading ? (
             <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">Loading assignments…</div>
-          ) : items.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">No active assignments right now.</div>
           ) : (
-            items.map((row) => {
+            visibleItems.map((row) => {
               const flow = workflowById[row.id];
               const stage = flow?.stage ?? "idle";
               const isMine = (row.claimedByName ?? "").trim().toLowerCase() === currentHandlerName;

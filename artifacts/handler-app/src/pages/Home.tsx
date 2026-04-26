@@ -428,7 +428,7 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-4 gap-2 sm:gap-3">
           <AssignmentIcon
-            to="/assignments/patron"
+            to="/assignments/assignments"
             Icon={Inbox}
             label="Assignments"
             tone="violet"
@@ -436,7 +436,7 @@ export default function Home() {
             testId="assign-patron"
           />
           <AssignmentIcon
-            to="/assignments/supervisor"
+            to="/assignments/tasks"
             Icon={Briefcase}
             label="Tasks"
             tone="amber"
@@ -444,7 +444,7 @@ export default function Home() {
             testId="assign-supervisor"
           />
           <AssignmentIcon
-            to="/services"
+            to="/assignments/jobs"
             Icon={Wrench}
             label="Jobs"
             tone="indigo"
@@ -452,9 +452,9 @@ export default function Home() {
             testId="assign-service"
           />
           <AssignmentIcon
-            to="/assignments/all"
+            to="/assignments"
             Icon={LayoutList}
-            label="All"
+            label="All Todos"
             tone="lime"
             badge={openServicesCount}
             testId="assign-all"
