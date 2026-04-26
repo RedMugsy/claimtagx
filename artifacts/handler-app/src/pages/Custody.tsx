@@ -4,11 +4,14 @@ import { Link } from "wouter";
 import {
   Search,
   Clock,
+  AlertTriangle,
+  ArrowLeft,
   ArrowDownToLine,
   ArrowUpFromLine,
   RefreshCw,
   SlidersHorizontal,
   Check,
+  History as HistoryIcon,
   LayoutGrid,
   List as ListIcon,
   Images,
@@ -47,6 +50,12 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { QrTag } from "@/components/handler/QrTag";
 import { TamperAlerts } from "@/components/handler/TamperAlerts";
+import {
+  type CarouselApi,
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 import type { CustodyAsset } from "@/lib/types";
 
 function fmtAge(ts: number) {
@@ -69,7 +78,19 @@ type CustodyEventNote = {
   author: string;
 };
 
+type CustodyView = "cards" | "list" | "gallery";
+type SheetPage = "main" | "notes" | "damage" | "history";
+
+type AssetTimelineEntry = {
+  id: string;
+  at: number;
+  title: string;
+  actor: string;
+  description: string;
+};
+
 const CUSTODY_NOTES_STORAGE_KEY = "handler.custody.event-notes.v1";
+const CUSTODY_VIEW_STORAGE_KEY = "handler.custody.view.v1";
 
 function pickSupportedMime(): string {
   const candidates = [
@@ -110,6 +131,129 @@ function readStoredEventNotes(): Record<string, CustodyEventNote[]> {
   }
 }
 
+function makeCustodyViewKey(email?: string, venueCode?: string, mode?: string) {
+  return [CUSTODY_VIEW_STORAGE_KEY, email ?? "anon", venueCode ?? "no-venue", mode ?? "no-mode"].join(":");
+}
+
+function readStoredCustodyView(key: string): CustodyView {
+  if (typeof window === "undefined") return "cards";
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === "list" || raw === "gallery" || raw === "cards" ? raw : "cards";
+  } catch {
+    return "cards";
+  }
+}
+
+function readAssetFieldString(
+  fields: Record<string, string | number | boolean>,
+  keys: string[],
+): string | null {
+  for (const key of keys) {
+    const value = fields[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function getAssetServiceClass(asset: CustodyAsset): string | null {
+  const direct = readAssetFieldString(asset.fields, ["serviceClass", "service_class", "class", "tier"]);
+  if (direct) return direct;
+  const vip = asset.fields.vip;
+  if (vip === true) return "VIP";
+  return null;
+}
+
+function getAssetPatronType(asset: CustodyAsset): string | null {
+  return readAssetFieldString(asset.fields, ["patronType", "patron_type", "guestType", "visitorType"]);
+}
+
+function getServiceClassTone(serviceClass: string | null) {
+  if (!serviceClass) return "border-white/10 bg-white/5 text-slate";
+  if (/vip|premium|elite|priority/i.test(serviceClass)) {
+    return "border-amber-300/40 bg-amber-500/15 text-amber-200";
+  }
+  if (/regular|normal|standard|basic|general/i.test(serviceClass)) {
+    return "border-white/10 bg-white/5 text-slate";
+  }
+  return "border-indigo-300/40 bg-indigo-500/15 text-indigo-200";
+}
+
+function getDamageEntries(asset: CustodyAsset) {
+  return Object.entries(asset.fields).filter(([key, value]) => {
+    if (value == null || value === "") return false;
+    return /damage|condition|scratch|dent|scuff|diagram|mark|tear/i.test(key);
+  });
+}
+
+function buildAssetTimeline(asset: CustodyAsset, notes: CustodyEventNote[]): AssetTimelineEntry[] {
+  const cfg = MODE_BY_ID[asset.mode];
+  const primarySummary = cfg.columns
+    .slice(0, 2)
+    .map((column) => String(asset.fields[column.key] ?? "—"))
+    .join(" · ");
+
+  const entries: AssetTimelineEntry[] = [
+    {
+      id: `${asset.id}-intake`,
+      at: asset.intakeAt,
+      title: "Checked in",
+      actor: asset.handler,
+      description: primarySummary,
+    },
+  ];
+
+  for (const note of notes) {
+    entries.push({
+      id: `timeline-${note.id}`,
+      at: note.createdAt,
+      title: note.kind === "voice" ? "Voice note added" : "Message added",
+      actor: note.author,
+      description:
+        note.kind === "voice"
+          ? note.durationMs
+            ? `Voice clip · ${Math.max(1, Math.round(note.durationMs / 1000))}s`
+            : "Voice clip"
+          : note.body?.trim() || "Text note",
+    });
+  }
+
+  if (asset.releasedAt) {
+    entries.push({
+      id: `${asset.id}-release`,
+      at: asset.releasedAt,
+      title: "Released",
+      actor: asset.releasedBy ?? "Handler",
+      description: `Returned to ${asset.patron.name}`,
+    });
+  }
+
+  return entries.sort((a, b) => b.at - a.at);
+}
+
+function groupTimelineByDate(entries: AssetTimelineEntry[]) {
+  const buckets = new Map<string, { label: string; items: AssetTimelineEntry[] }>();
+  for (const entry of entries) {
+    const dt = new Date(entry.at);
+    const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+    const label = dt.toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.items.push(entry);
+    } else {
+      buckets.set(key, { label, items: [entry] });
+    }
+  }
+  return [...buckets.values()].map((bucket) => ({
+    ...bucket,
+    items: bucket.items.sort((a, b) => b.at - a.at),
+  }));
+}
+
 export default function Custody() {
   const { mode, assets, session, activeVenue, venues, setActiveVenue, canAccessMode } = useStore();
   // Owner-targeted tamper-spike alert emails link to /custody?venue=<code>.
@@ -137,14 +281,17 @@ export default function Custody() {
   const [ageFilter, setAgeFilter] = useState<"all" | AgingBand>("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [kpiWindow, setKpiWindow] = useState<"today" | "week" | "month">("today");
-  const [view, setView] = useState<"cards" | "list" | "gallery">("cards");
+  const viewStorageKey = makeCustodyViewKey(session?.email, activeVenue?.code, mode);
+  const [view, setView] = useState<CustodyView>("cards");
   const [notesByAsset, setNotesByAsset] = useState<Record<string, CustodyEventNote[]>>(
     () => readStoredEventNotes(),
   );
   const [noteDraft, setNoteDraft] = useState("");
   const [recording, setRecording] = useState(false);
-  const [notesSubpageOpen, setNotesSubpageOpen] = useState(false);
+  const [sheetPage, setSheetPage] = useState<SheetPage>("main");
   const [qrPopoverOpen, setQrPopoverOpen] = useState(false);
+  const [heroCarouselApi, setHeroCarouselApi] = useState<CarouselApi>();
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -168,10 +315,37 @@ export default function Custody() {
   }, [notesByAsset]);
 
   useEffect(() => {
+    setView(readStoredCustodyView(viewStorageKey));
+  }, [viewStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(viewStorageKey, view);
+    } catch {
+      // ignore persistence errors
+    }
+  }, [viewStorageKey, view]);
+
+  useEffect(() => {
     setNoteDraft("");
-    setNotesSubpageOpen(false);
+    setSheetPage("main");
     setQrPopoverOpen(false);
-  }, [selected?.id]);
+    setHeroSlideIndex(0);
+    heroCarouselApi?.scrollTo(0);
+  }, [selected?.id, heroCarouselApi]);
+
+  useEffect(() => {
+    if (!heroCarouselApi) return;
+    const sync = () => setHeroSlideIndex(heroCarouselApi.selectedScrollSnap());
+    sync();
+    heroCarouselApi.on("select", sync);
+    heroCarouselApi.on("reInit", sync);
+    return () => {
+      heroCarouselApi.off("select", sync);
+      heroCarouselApi.off("reInit", sync);
+    };
+  }, [heroCarouselApi]);
 
   useEffect(() => {
     return () => {
@@ -386,6 +560,11 @@ export default function Custody() {
     const custom = notesByAsset[selected.id] ?? [];
     return [...seededFieldNotes, ...custom].sort((a, b) => b.createdAt - a.createdAt);
   }, [selected, notesByAsset]);
+
+  const selectedEventTimeline = useMemo(() => {
+    if (!selected) return [];
+    return buildAssetTimeline(selected, selectedEventNotes);
+  }, [selected, selectedEventNotes]);
 
   const addTextNote = (assetId: string) => {
     const body = noteDraft.trim();
@@ -757,6 +936,8 @@ export default function Custody() {
         >
           {list.map((a, i) => {
             const band = classifyAge(a.intakeAt, bands);
+            const serviceClass = getAssetServiceClass(a);
+            const patronType = getAssetPatronType(a);
             const cardBorder =
               band === "overdue"
                 ? "border-rose-400/40 bg-rose-500/5"
@@ -793,6 +974,16 @@ export default function Custody() {
                     <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
                     <div className="text-[11px] text-slate font-mono truncate">
                       {cfg.columns.slice(0, 2).map((c) => String(a.fields[c.key] ?? "—")).join(" · ")}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      {serviceClass ? (
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                          {serviceClass}
+                        </span>
+                      ) : null}
+                      {patronType ? (
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-slate">{patronType}</span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate font-mono shrink-0">
@@ -832,8 +1023,20 @@ export default function Custody() {
                     </Badge>
                   </div>
                   <div className="p-2.5">
-                    <div className="font-mono text-xs text-lime tracking-wider truncate">{a.ticketId}</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-mono text-xs text-lime tracking-wider truncate">{a.ticketId}</div>
+                      {serviceClass ? (
+                        <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                          {serviceClass}
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="text-sm text-white font-semibold truncate">{a.patron.name}</div>
+                    {patronType ? (
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate mt-1 truncate">
+                        {patronType}
+                      </div>
+                    ) : null}
                     <div className="flex items-center gap-1 text-[11px] text-slate font-mono mt-1">
                       <Clock className="w-3 h-3" /> {fmtAge(a.intakeAt)}
                     </div>
@@ -855,11 +1058,21 @@ export default function Custody() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="font-mono text-sm text-lime tracking-wider">{a.ticketId}</div>
-                  <Badge variant="secondary" className={`font-mono text-[10px] ${badgeCls}`}>
-                    {badgeLabel}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {serviceClass ? (
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                        {serviceClass}
+                      </span>
+                    ) : null}
+                    <Badge variant="secondary" className={`font-mono text-[10px] ${badgeCls}`}>
+                      {badgeLabel}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="text-white font-semibold mb-1">{a.patron.name}</div>
+                {patronType ? (
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-2">{patronType}</div>
+                ) : null}
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {cfg.columns.slice(0, 3).map((c) => (
                     <div key={c.key}>
@@ -879,12 +1092,17 @@ export default function Custody() {
         </div>
       )}
 
-      <Sheet open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setNotesSubpageOpen(false); setQrPopoverOpen(false); } }}>
+      <Sheet open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setSheetPage("main"); setQrPopoverOpen(false); } }}>
         <SheetContent side="right" className="w-full sm:max-w-md bg-obsidian border-l border-white/10 text-white p-0 overflow-hidden flex flex-col">
           {selected && (() => {
             const band = classifyAge(selected.intakeAt, bands);
             const cfg = MODE_BY_ID[selected.mode];
             const ModeIcon = MODE_ICONS[selected.mode];
+            const serviceClass = getAssetServiceClass(selected);
+            const patronType = getAssetPatronType(selected);
+            const damageEntries = getDamageEntries(selected);
+            const timelineGroups = groupTimelineByDate(selectedEventTimeline);
+            const heroMedia = selected.photos.length > 0 ? selected.photos : [null];
             const bandColor =
               band === "overdue" ? "text-rose-300 border-rose-400/40 bg-rose-500/10"
               : band === "watch" ? "text-amber-300 border-amber-400/40 bg-amber-500/10"
@@ -892,111 +1110,172 @@ export default function Custody() {
             const bandLabel = band === "overdue" ? "OVERDUE" : band === "watch" ? "WATCH" : "FRESH";
             const eventNotes = selectedEventNotes;
             const hasNotes = eventNotes.length > 0;
-            const assetPhoto = selected.photos?.[0];
+            const subpageTitle =
+              sheetPage === "notes" ? "Event notes"
+              : sheetPage === "damage" ? "Damage report"
+              : "Handling history";
 
-            /* ── NOTES SUB-PAGE ── */
-            if (notesSubpageOpen) {
+            if (sheetPage !== "main") {
               return (
                 <div className="flex flex-col h-full">
-                  {/* Notes header */}
                   <div className="flex items-center gap-3 px-4 pt-5 pb-4 border-b border-white/10 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setNotesSubpageOpen(false)}
+                      onClick={() => setSheetPage("main")}
                       className="w-8 h-8 rounded-xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
                       aria-label="Back to event"
                     >
-                      <ArrowUpFromLine className="w-4 h-4 rotate-[-90deg]" />
+                      <ArrowLeft className="w-4 h-4" />
                     </button>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Event notes</div>
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{subpageTitle}</div>
                       <div className="text-sm font-semibold text-white font-mono truncate">{selected.ticketId}</div>
                     </div>
                     <Badge variant="secondary" className={`font-mono text-[10px] border ${bandColor}`}>{bandLabel}</Badge>
                   </div>
 
-                  {/* Note composer */}
-                  <div className="px-4 py-3 border-b border-white/10 shrink-0 space-y-2">
-                    <textarea
-                      value={noteDraft}
-                      onChange={(e) => setNoteDraft(e.target.value)}
-                      placeholder="Add a text note for this custody event…"
-                      className="w-full min-h-[68px] rounded-xl border border-white/10 bg-steel/40 px-3 py-2 text-sm text-white placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40 resize-none"
-                      data-testid="input-custody-note"
-                    />
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => addTextNote(selected.id)}
-                        disabled={!noteDraft.trim()}
-                        className="rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate disabled:opacity-40"
-                        data-testid="button-add-text-note"
-                      >
-                        Add note
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => (recording ? stopVoiceNote() : startVoiceNote(selected.id))}
-                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
-                          recording
-                            ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
-                            : "border-white/10 bg-steel/40 text-paper"
-                        }`}
-                        data-testid="button-toggle-voice-note"
-                      >
-                        {recording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                        {recording ? "Stop" : "Voice note"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Notes feed */}
-                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" data-testid="custody-event-notes-list">
-                    {eventNotes.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
-                        <MessageSquare className="w-8 h-8 text-slate/50" />
-                        <p className="text-xs text-slate">No notes yet. Start by typing above or recording a voice note.</p>
-                      </div>
-                    ) : (
-                      eventNotes.map((note) => (
-                        <div key={note.id} className="rounded-xl border border-white/10 bg-steel/25 p-3">
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <div className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-slate">
-                              {note.kind === "voice" ? <Mic className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
-                              {note.author}
-                            </div>
-                            <div className="text-[10px] font-mono text-slate">
-                              {new Date(note.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </div>
-                          </div>
-                          {note.kind === "voice" ? (
-                            <div className="space-y-1.5">
-                              <div className="inline-flex items-center gap-1 text-xs text-slate">
-                                <Volume2 className="w-3.5 h-3.5" />
-                                {note.durationMs ? `${Math.max(1, Math.round(note.durationMs / 1000))}s` : "Voice clip"}
-                              </div>
-                              {note.audioDataUrl ? (
-                                <audio controls src={note.audioDataUrl} className="w-full h-8" />
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-sm text-paper leading-relaxed">{note.body}</p>
-                              <button
-                                type="button"
-                                onClick={() => speakTextNote(note.body ?? "")}
-                                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
-                                data-testid={`button-listen-note-${note.id}`}
-                              >
-                                <Play className="w-3 h-3" />
-                                Listen
-                              </button>
-                            </div>
-                          )}
+                  {sheetPage === "notes" ? (
+                    <>
+                      <div className="px-4 py-3 border-b border-white/10 shrink-0 space-y-2">
+                        <textarea
+                          value={noteDraft}
+                          onChange={(e) => setNoteDraft(e.target.value)}
+                          placeholder="Add a text note for this custody event…"
+                          className="w-full min-h-[68px] rounded-xl border border-white/10 bg-steel/40 px-3 py-2 text-sm text-white placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40 resize-none"
+                          data-testid="input-custody-note"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => addTextNote(selected.id)}
+                            disabled={!noteDraft.trim()}
+                            className="rounded-xl border border-lime/30 bg-lime/10 px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-lime hover-elevate disabled:opacity-40"
+                            data-testid="button-add-text-note"
+                          >
+                            Add note
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => (recording ? stopVoiceNote() : startVoiceNote(selected.id))}
+                            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
+                              recording
+                                ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                                : "border-white/10 bg-steel/40 text-paper"
+                            }`}
+                            data-testid="button-toggle-voice-note"
+                          >
+                            {recording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                            {recording ? "Stop" : "Voice note"}
+                          </button>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" data-testid="custody-event-notes-list">
+                        {eventNotes.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+                            <MessageSquare className="w-8 h-8 text-slate/50" />
+                            <p className="text-xs text-slate">No notes yet. Start by typing above or recording a voice note.</p>
+                          </div>
+                        ) : (
+                          eventNotes.map((note) => (
+                            <div key={note.id} className="rounded-xl border border-white/10 bg-steel/25 p-3">
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <div className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-slate">
+                                  {note.kind === "voice" ? <Mic className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                                  {note.author}
+                                </div>
+                                <div className="text-[10px] font-mono text-slate">
+                                  {new Date(note.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </div>
+                              </div>
+                              {note.kind === "voice" ? (
+                                <div className="space-y-1.5">
+                                  <div className="inline-flex items-center gap-1 text-xs text-slate">
+                                    <Volume2 className="w-3.5 h-3.5" />
+                                    {note.durationMs ? `${Math.max(1, Math.round(note.durationMs / 1000))}s` : "Voice clip"}
+                                  </div>
+                                  {note.audioDataUrl ? (
+                                    <audio controls src={note.audioDataUrl} className="w-full h-8" />
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <p className="text-sm text-paper leading-relaxed">{note.body}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => speakTextNote(note.body ?? "")}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-steel/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
+                                    data-testid={`button-listen-note-${note.id}`}
+                                  >
+                                    <Play className="w-3 h-3" />
+                                    Listen
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  ) : sheetPage === "damage" ? (
+                    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" data-testid="custody-event-damage-report">
+                      <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Damage fields</div>
+                        {damageEntries.length > 0 ? (
+                          <div className="space-y-3">
+                            {damageEntries.map(([key, value]) => (
+                              <div key={key}>
+                                <div className="text-[10px] font-mono uppercase tracking-wide text-slate">{key.replace(/([A-Z])/g, " $1")}</div>
+                                <div className="text-sm text-white mt-0.5 break-words">{String(value)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-sm text-slate">
+                            <AlertTriangle className="w-4 h-4 text-slate" />
+                            No explicit damage notes or diagram metadata were captured for this asset.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Attached media</div>
+                        {selected.photos.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {selected.photos.map((p, i) => (
+                              <img key={i} src={p} alt={`Asset media ${i + 1}`} className="rounded-xl border border-white/10 aspect-square object-cover" />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate">No photos or diagrams attached.</div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" data-testid="custody-event-history-list">
+                      {timelineGroups.map((group) => (
+                        <div key={group.label} className="space-y-2">
+                          <div className="inline-flex items-center rounded-full border border-white/10 bg-steel/30 px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-slate">
+                            {group.label}
+                          </div>
+                          <ul className="space-y-2 list-disc pl-5">
+                            {group.items.map((entry) => (
+                              <li key={entry.id} className="rounded-xl border border-white/10 bg-steel/25 p-3 list-item">
+                                <div className="flex items-center justify-between gap-3 mb-1.5">
+                                  <div className="text-sm font-semibold text-white">{entry.title}</div>
+                                  <div className="text-[10px] font-mono text-slate">
+                                    {new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                  </div>
+                                </div>
+                                <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-1">{entry.actor}</div>
+                                <div className="text-sm text-paper leading-relaxed">{entry.description}</div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             }
@@ -1004,28 +1283,41 @@ export default function Custody() {
             /* ── MAIN EVENT PAGE ── */
             return (
               <div className="flex flex-col h-full">
-                {/* Hero photo / asset identity */}
                 <div className="relative shrink-0">
-                  {assetPhoto ? (
-                    <img
-                      src={assetPhoto}
-                      alt={selected.ticketId}
-                      className="w-full h-52 object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-52 bg-gradient-to-b from-steel/60 to-obsidian flex flex-col items-center justify-center gap-2">
-                      <ModeIcon className="w-14 h-14 text-lime/30" />
-                    </div>
-                  )}
-                  {/* overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/20 to-transparent pointer-events-none" />
+                  <Carousel setApi={setHeroCarouselApi} className="w-full">
+                    <CarouselContent className="ml-0">
+                      {heroMedia.map((photo, index) => (
+                        <CarouselItem key={`${selected.id}-hero-${index}`} className="pl-0">
+                          {photo ? (
+                            <img src={photo} alt={`${selected.ticketId} ${index + 1}`} className="w-full h-56 object-cover" />
+                          ) : (
+                            <div className="w-full h-56 bg-gradient-to-b from-steel/60 to-obsidian flex flex-col items-center justify-center gap-2">
+                              <ModeIcon className="w-14 h-14 text-lime/30" />
+                              <div className="text-[10px] font-mono uppercase tracking-wider text-slate">No photo on file</div>
+                            </div>
+                          )}
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
 
-                  {/* Band badge top-left */}
-                  <div className="absolute top-3 left-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/15 to-transparent pointer-events-none" />
+
+                  <div className="absolute top-3 left-3 flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className={`font-mono text-[10px] border bg-obsidian/70 text-paper border-white/10`}>
+                      {selected.ticketId}
+                    </Badge>
+                    {serviceClass ? (
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${getServiceClassTone(serviceClass)}`}>
+                        {serviceClass}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="absolute top-3 right-12">
                     <Badge variant="secondary" className={`font-mono text-[10px] border ${bandColor}`}>{bandLabel}</Badge>
                   </div>
 
-                  {/* Close top-right */}
                   <button
                     type="button"
                     onClick={() => setSelected(null)}
@@ -1035,16 +1327,23 @@ export default function Custody() {
                     <Square className="w-3.5 h-3.5" />
                   </button>
 
-                  {/* Ticket id + mode label at bottom of hero */}
                   <div className="absolute bottom-3 left-4 right-4">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate/80">{cfg.label}</div>
-                    <div className="text-2xl font-extrabold font-mono text-white tracking-tight">{selected.ticketId}</div>
+                    <div className="text-2xl font-extrabold font-mono text-white tracking-tight">{cfg.short}</div>
+                    {heroMedia.length > 1 ? (
+                      <div className="mt-2 inline-flex items-center gap-1.5">
+                        {heroMedia.map((_, index) => (
+                          <span
+                            key={`${selected.id}-dot-${index}`}
+                            className={`w-1.5 h-1.5 rounded-full ${index === heroSlideIndex ? "bg-lime" : "bg-white/25"}`}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                  {/* 3 quick stat pills */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="rounded-2xl border border-white/10 bg-steel/30 px-3 py-2.5 text-center">
                       <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-0.5">Intake</div>
@@ -1062,7 +1361,6 @@ export default function Custody() {
                     </div>
                   </div>
 
-                  {/* Asset fields */}
                   <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Asset details</div>
                     <div className="grid grid-cols-2 gap-x-5 gap-y-3">
@@ -1079,59 +1377,71 @@ export default function Custody() {
                     </div>
                   </div>
 
-                  {/* Patron row */}
-                  <div className="rounded-2xl border border-white/10 bg-steel/25 px-4 py-3 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-slate/20 border border-white/10 flex items-center justify-center shrink-0 text-sm font-bold text-white">
-                      {selected.patron.name.trim().charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Patron</div>
-                      <div className="text-sm font-semibold text-white truncate">{selected.patron.name}</div>
-                      {selected.patron.phone ? (
-                        <div className="text-xs text-slate font-mono">{selected.patron.phone}</div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Extra photos (if more than 1) */}
-                  {selected.photos.length > 1 && (
-                    <div className="rounded-2xl border border-white/10 bg-steel/25 p-3">
-                      <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-2">Photos</div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {selected.photos.slice(1).map((p, i) => (
-                          <img key={i} src={p} alt={`Photo ${i + 2}`} className="rounded-xl border border-white/10 aspect-square object-cover" />
-                        ))}
+                  <div className="rounded-2xl border border-white/10 bg-steel/25 p-4">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Patron</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate/20 border border-white/10 flex items-center justify-center shrink-0 text-sm font-bold text-white">
+                        {selected.patron.name.trim().charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white truncate">{selected.patron.name}</div>
+                        {patronType ? (
+                          <div className="text-[10px] font-mono uppercase tracking-wider text-slate mt-0.5">{patronType}</div>
+                        ) : null}
+                        {selected.patron.phone ? (
+                          <div className="text-xs text-slate font-mono mt-0.5">{selected.patron.phone}</div>
+                        ) : null}
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Bottom action bar */}
                 <div className="shrink-0 border-t border-white/10 px-4 py-3 flex items-center justify-between gap-3">
-                  {/* Notes button */}
-                  <button
-                    type="button"
-                    onClick={() => setNotesSubpageOpen(true)}
-                    className="relative inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-4 py-2.5 text-sm font-medium text-paper hover-elevate"
-                    data-testid="button-open-notes"
-                  >
-                    <MessageSquare className="w-4 h-4 text-lime" />
-                    Notes
-                    {hasNotes ? (
-                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-lime text-obsidian text-[10px] font-bold font-mono px-1">
-                        {eventNotes.length}
-                      </span>
-                    ) : (
-                      <span className="ml-1 w-2 h-2 rounded-full border border-white/20 bg-transparent" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    <button
+                      type="button"
+                      onClick={() => setSheetPage("notes")}
+                      className="relative inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap"
+                      data-testid="button-open-notes"
+                    >
+                      <MessageSquare className="w-4 h-4 text-lime" />
+                      Notes
+                      {hasNotes ? (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-lime text-obsidian text-[10px] font-bold font-mono px-1">
+                          {eventNotes.length}
+                        </span>
+                      ) : (
+                        <span className="w-2 h-2 rounded-full border border-white/20 bg-transparent" />
+                      )}
+                    </button>
 
-                  {/* QR button */}
+                    <button
+                      type="button"
+                      onClick={() => setSheetPage("damage")}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap"
+                      data-testid="button-open-damage-report"
+                    >
+                      <AlertTriangle className="w-4 h-4 text-amber-300" />
+                      Damage
+                      <span className="text-[10px] font-mono text-slate">{damageEntries.length || selected.photos.length}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSheetPage("history")}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-steel/40 px-3 py-2 text-sm font-medium text-paper hover-elevate whitespace-nowrap"
+                      data-testid="button-open-history"
+                    >
+                      <HistoryIcon className="w-4 h-4 text-indigo-200" />
+                      History
+                    </button>
+                  </div>
+
                   <Popover open={qrPopoverOpen} onOpenChange={setQrPopoverOpen}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="relative w-11 h-11 rounded-2xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate"
+                        className="relative w-11 h-11 rounded-2xl border border-white/10 bg-steel/40 flex items-center justify-center text-slate hover:text-paper hover-elevate shrink-0"
                         aria-label="Show QR Code"
                         data-testid="button-show-qr"
                       >

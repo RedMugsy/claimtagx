@@ -488,16 +488,14 @@ export default function Home() {
       {/* Intercom pull-up handle — non-passive touchmove attached via useEffect */}
       <div
         ref={intercomHandleRef}
-        className="flex flex-col items-center gap-2 py-4 select-none cursor-pointer touch-pan-x"
-        onClick={() => navigate("/intercom")}
+        className="flex flex-col items-center gap-2 py-4 select-none touch-pan-x"
         data-testid="intercom-pull-handle"
-        role="button"
-        aria-label="Open Intercom"
+        aria-label="Swipe up to open Intercom"
       >
         <ChevronUp className="w-5 h-5 text-slate/50" />
         <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-slate/50">
           <MessageCircle className="w-3 h-3" />
-          Intercom
+          Swipe up for intercom
         </div>
         <div className="w-10 h-1 rounded-full bg-white/10" />
       </div>

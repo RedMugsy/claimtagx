@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useMemo, useState } from "react";
+import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +15,14 @@ import type { CustodyAsset } from "@/lib/types";
 type Step = "details" | "review" | "done";
 
 export default function Intake() {
+  const search = useSearch();
   const { mode, intake, activeVenue, canAccessMode } = useStore();
   const cfg = MODE_BY_ID[mode];
   const ModeIcon = MODE_ICONS[mode];
   const copy = VENUE_COPY[activeVenue?.venueType ?? "other"];
+  const onboardingParams = useMemo(() => new URLSearchParams(search), [search]);
+  const selectedServiceClass = onboardingParams.get("class")?.trim() ?? "";
+  const selectedPatronType = onboardingParams.get("patronType")?.trim() ?? "";
 
   const [step, setStep] = useState<Step>("details");
   const [patron, setPatron] = useState({ name: "", phone: "" });
@@ -47,6 +51,8 @@ export default function Intake() {
     for (const [k, v] of Object.entries(fields)) {
       if (v !== undefined) cleanFields[k] = v;
     }
+    if (selectedServiceClass) cleanFields.serviceClass = selectedServiceClass;
+    if (selectedPatronType) cleanFields.patronType = selectedPatronType;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -221,11 +227,21 @@ export default function Intake() {
                 <div className="text-xs font-mono uppercase tracking-wide text-slate mb-2">Patron</div>
                 <div className="text-white font-semibold">{patron.name}</div>
                 <div className="text-sm text-slate font-mono">{patron.phone || "—"}</div>
+                {selectedPatronType ? (
+                  <div className="mt-2 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate">
+                    {selectedPatronType}
+                  </div>
+                ) : null}
               </div>
               <div>
                 <div className="text-xs font-mono uppercase tracking-wide text-slate mb-2">Mode</div>
                 <div className="text-white font-semibold">{cfg.label}</div>
                 <div className="text-sm text-slate">{cfg.short}</div>
+                {selectedServiceClass ? (
+                  <div className="mt-2 inline-flex items-center rounded-full border border-amber-300/40 bg-amber-500/15 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-200">
+                    {selectedServiceClass}
+                  </div>
+                ) : null}
               </div>
               {cfg.fields.map((f) => {
                 const val = fields[f.key];
