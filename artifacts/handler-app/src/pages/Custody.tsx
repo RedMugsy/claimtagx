@@ -17,7 +17,7 @@ import {
   Mic,
   Square,
   Play,
-  Waveform,
+  Volume2,
 } from "lucide-react";
 import {
   Cell,
@@ -971,7 +971,7 @@ export default function Custody() {
                         {note.kind === "voice" ? (
                           <div className="space-y-1.5">
                             <div className="inline-flex items-center gap-1 text-xs text-slate">
-                              <Waveform className="w-3.5 h-3.5" />
+                              <Volume2 className="w-3.5 h-3.5" />
                               {note.durationMs ? `${Math.max(1, Math.round(note.durationMs / 1000))}s` : "Voice clip"}
                             </div>
                             {note.audioDataUrl ? (
