@@ -26,6 +26,7 @@ import SettingsSecurity from "@/pages/settings/Security";
 import MessagesPage from "@/pages/Messages";
 import IntercomPage from "@/pages/Intercom";
 import ServicesPage from "@/pages/Services";
+import AssignmentsPage from "@/pages/Assignments";
 import StationPage from "@/pages/Station";
 import PreShiftPage from "@/pages/PreShift";
 import CheckoutPage from "@/pages/Checkout";
@@ -180,8 +181,8 @@ function AuthedRoutes() {
         <Route path="/messages" component={MessagesPage} />
         <Route path="/intercom" component={IntercomPage} />
         <Route path="/services" component={ServicesPage} />
-        <Route path="/assignments" component={ServicesPage} />
-        <Route path="/assignments/:scope" component={ServicesPage} />
+        <Route path="/assignments" component={AssignmentsPage} />
+        <Route path="/assignments/:scope" component={AssignmentsPage} />
         <Route path="/station" component={StationPage} />
         <Route path="/pre-shift" component={PreShiftPage} />
         <Route path="/checkout" component={CheckoutPage} />

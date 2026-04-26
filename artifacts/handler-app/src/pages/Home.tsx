@@ -49,8 +49,6 @@ import {
 } from "@/components/ui/tooltip";
 import { FirstSignInTour } from "@/components/handler/FirstSignInTour";
 
-const ASSIGNMENTS_LAST_ROUTE_KEY = "handler.assignments.lastRoute.v1";
-
 function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
@@ -84,6 +82,7 @@ export default function Home() {
   const custodySwipeStart = useRef<{ x: number; y: number; at: number } | null>(
     null,
   );
+  const swipeAxisLock = useRef<"x" | "y" | null>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000 * 30);
@@ -176,6 +175,25 @@ export default function Home() {
   const onCommandCenterTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const t = e.touches[0];
     custodySwipeStart.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+    swipeAxisLock.current = null;
+  };
+
+  const onCommandCenterTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = custodySwipeStart.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    if (!swipeAxisLock.current && (absX > 14 || absY > 14)) {
+      swipeAxisLock.current = absX > absY ? "x" : "y";
+    }
+
+    if (swipeAxisLock.current && (absX > 24 || absY > 24)) {
+      e.preventDefault();
+    }
   };
 
   const onCommandCenterTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -186,6 +204,7 @@ export default function Home() {
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     const dt = Date.now() - start.at;
+    swipeAxisLock.current = null;
     if (dt > 650) return;
 
     const minDistance = 70;
@@ -193,25 +212,12 @@ export default function Home() {
     const absY = Math.abs(dy);
     if (absX < minDistance && absY < minDistance) return;
 
-    const readAssignmentRoute = () => {
-      if (typeof window === "undefined") return "/assignments/all";
-      try {
-        const stored = localStorage.getItem(ASSIGNMENTS_LAST_ROUTE_KEY) ?? "";
-        if (stored.startsWith("/assignments") || stored.startsWith("/services")) {
-          return stored;
-        }
-      } catch {
-        // ignore storage issues
-      }
-      return "/assignments/all";
-    };
-
     // Require a clearly dominant axis so only one action fires.
     if (absX > absY * 1.15) {
       if (dx > 0) {
         navigate("/custody");
       } else {
-        navigate(readAssignmentRoute());
+        navigate("/assignments/current");
       }
       return;
     }
@@ -220,7 +226,7 @@ export default function Home() {
       if (dy < 0) {
         navigate("/intercom");
       } else {
-        navigate("/assignments/all");
+        navigate("/assignments");
       }
     }
   };
@@ -229,6 +235,7 @@ export default function Home() {
     <div
       className="space-y-5"
       onTouchStart={onCommandCenterTouchStart}
+      onTouchMove={onCommandCenterTouchMove}
       onTouchEnd={onCommandCenterTouchEnd}
       data-testid="gesture-command-center"
     >
