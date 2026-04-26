@@ -227,6 +227,16 @@ export default function AssignmentsPage() {
 
   return (
     <div className="space-y-4" data-testid="page-assignments">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate rounded-full px-2 py-1"
+          data-testid="link-back-home"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Command Center
+        </Link>
+      </div>
+
       <header className="mb-1">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -241,7 +251,19 @@ export default function AssignmentsPage() {
             </div>
           </div>
 
-          {!currentMode ? (
+          {currentMode ? (
+            <button
+              type="button"
+              onClick={() => navigate("/assignments")}
+              className="inline-flex flex-col items-center gap-1 text-slate hover:text-paper"
+              data-testid="button-open-all-todos"
+              aria-label="Open all todos"
+              title="Open all todos"
+            >
+              <Briefcase className="w-5 h-5 text-indigo-200/70" />
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate">All Todos</span>
+            </button>
+          ) : (
             <button
               type="button"
               onClick={() => navigate("/assignments/current")}
@@ -261,19 +283,9 @@ export default function AssignmentsPage() {
                 </span>
               ) : null}
             </button>
-          ) : null}
+          )}
         </div>
       </header>
-
-      <div className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate rounded-full px-2 py-1"
-          data-testid="link-back-home"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Command Center
-        </Link>
-      </div>
 
       {!currentMode ? (
         <section className="rounded-3xl border border-white/10 bg-steel/40 px-4 py-3 sm:px-5 sm:py-4" data-testid="card-todos-dashboard">
@@ -303,22 +315,7 @@ export default function AssignmentsPage() {
             </div>
           </div>
         </section>
-      ) : (
-        <div className="rounded-3xl border border-white/10 bg-steel/40 p-4">
-          <div className="flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 flex items-center justify-center">
-              <Briefcase className="w-6 h-6 text-indigo-200" />
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-lime text-obsidian text-[10px] font-mono font-bold inline-flex items-center justify-center border border-obsidian">
-                {activeCount}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Active todo</div>
-              <h1 className="text-xl font-extrabold text-white tracking-tight">{scopeTitle}</h1>
-            </div>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {!currentMode ? (
         <section className="overflow-x-auto" data-testid="todos-filter-rail">
@@ -397,8 +394,10 @@ export default function AssignmentsPage() {
       ) : (
         <section className="space-y-3" data-testid="assignment-current-detail">
           {!currentAssignment ? (
-            <div className="rounded-2xl border border-white/10 bg-steel/30 p-4 text-sm text-slate">
-              No current assignment in progress for this handler.
+            <div className="rounded-2xl border border-white/10 bg-steel/30 p-6 text-center">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Standby timer</div>
+              <div className="mt-1 text-3xl font-extrabold font-mono tracking-tight text-paper tabular-nums">00:00:00</div>
+              <div className="mt-3 text-sm text-slate">No current todo in progress for this handler.</div>
             </div>
           ) : (
             <>
