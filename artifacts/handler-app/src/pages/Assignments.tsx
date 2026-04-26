@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Briefcase, Clock3, PlayCircle, CheckCircle2, PackageCheck, Flag } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer } from "recharts";
 import {
   getListServiceRequestsQueryKey,
   listServiceRequests,
@@ -244,7 +245,9 @@ export default function AssignmentsPage() {
               <Briefcase className="w-5 h-5 text-lime" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-mono uppercase tracking-wider text-slate">Active todo</div>
+              <div className="text-xs font-mono uppercase tracking-wider text-slate">
+                {currentMode ? "Active todo" : "All todos"}
+              </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">
                 {scopeTitle}
               </h1>
@@ -288,30 +291,98 @@ export default function AssignmentsPage() {
       </header>
 
       {!currentMode ? (
-        <section className="rounded-3xl border border-white/10 bg-steel/40 px-4 py-3 sm:px-5 sm:py-4" data-testid="card-todos-dashboard">
-          <div className="flex items-center justify-between gap-2 mb-3">
+        <section className="rounded-3xl border border-white/10 bg-steel/40 px-4 py-4 sm:px-5 sm:py-5" data-testid="card-todos-dashboard">
+          <div className="flex items-center justify-between gap-2 mb-4">
             <div className="text-[11px] font-mono uppercase tracking-wider text-slate">Todo dashboard</div>
             <div className="rounded-full border border-white/10 bg-obsidian/40 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-paper">
               {allCount} active
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Assignments</div>
-              <div className="text-lg font-extrabold font-mono text-white">{assignmentCount}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Donut Chart - Distribution */}
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-obsidian/30 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-2">Distribution</div>
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "Assignments", value: assignmentCount, fill: "#a3e635" },
+                      { name: "Tasks", value: taskCount, fill: "#94a3b8" },
+                      { name: "Jobs", value: jobCount, fill: "#475569" },
+                    ].filter((d) => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={70}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {[
+                      { name: "Assignments", value: assignmentCount, fill: "#a3e635" },
+                      { name: "Tasks", value: taskCount, fill: "#94a3b8" },
+                      { name: "Jobs", value: jobCount, fill: "#475569" },
+                    ]
+                      .filter((d) => d.value > 0)
+                      .map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Tasks</div>
-              <div className="text-lg font-extrabold font-mono text-white">{taskCount}</div>
+
+            {/* Bar Chart - Comparison */}
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-obsidian/30 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-2">Types</div>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart
+                  data={[
+                    { name: "Asg", value: assignmentCount },
+                    { name: "Tsk", value: taskCount },
+                    { name: "Job", value: jobCount },
+                  ]}
+                  margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+                  <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} width={30} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "8px",
+                    }}
+                    labelStyle={{ color: "#e0e7ff" }}
+                  />
+                  <Bar dataKey="value" fill="#a3e635" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">Jobs</div>
-              <div className="text-lg font-extrabold font-mono text-white">{jobCount}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-obsidian/30 px-3 py-2">
-              <div className="text-[10px] font-mono uppercase tracking-wide text-slate">All</div>
-              <div className="text-lg font-extrabold font-mono text-white">{allCount}</div>
+
+            {/* Summary Stats */}
+            <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-obsidian/30 p-3 h-full">
+              <div className="text-[10px] font-mono uppercase tracking-wide text-slate mb-3">Summary</div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate">Assignments</span>
+                  <span className="text-lg font-extrabold font-mono text-lime">{assignmentCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate">Tasks</span>
+                  <span className="text-lg font-extrabold font-mono text-paper">{taskCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate">Jobs</span>
+                  <span className="text-lg font-extrabold font-mono text-slate">{jobCount}</span>
+                </div>
+                <div className="pt-2 border-t border-white/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-paper">Total</span>
+                    <span className="text-xl font-extrabold font-mono text-lime">{allCount}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
