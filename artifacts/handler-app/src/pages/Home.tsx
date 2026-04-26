@@ -20,6 +20,7 @@ import {
   Info,
   Settings as SettingsIcon,
   LogOut,
+  ChevronUp,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -81,10 +82,59 @@ export default function Home() {
   const custodySwipeStart = useRef<{ x: number; y: number; at: number } | null>(
     null,
   );
-  const intercomSwipeStart = useRef<{ x: number; y: number; at: number } | null>(
-    null,
-  );
-  const intercomSwipeTriggered = useRef(false);
+  const intercomHandleRef = useRef<HTMLDivElement>(null);
+
+  // Non-passive touchmove on the intercom handle so we can preventDefault()
+  // and block page scroll while detecting the upward flick.
+  useEffect(() => {
+    const el = intercomHandleRef.current;
+    if (!el) return;
+    let start: { x: number; y: number; at: number } | null = null;
+    let triggered = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY, at: Date.now() };
+      triggered = false;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!start || triggered) return;
+      const t = e.touches[0];
+      const dy = t.clientY - start.y;
+      const dx = t.clientX - start.x;
+      const dt = Date.now() - start.at;
+      // If the gesture looks upward, block page scroll
+      if (dy < -6 && Math.abs(dy) > Math.abs(dx) * 0.5) e.preventDefault();
+      const upFlick = dy <= -40 && Math.abs(dy) > Math.abs(dx) * 1.2 && dt <= 900;
+      if (upFlick) {
+        triggered = true;
+        start = null;
+        navigate("/intercom");
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (triggered) { triggered = false; start = null; return; }
+      if (!start) return;
+      const t = e.changedTouches[0];
+      const dy = t.clientY - start.y;
+      const dx = t.clientX - start.x;
+      const dt = Date.now() - start.at;
+      start = null;
+      const upFlick = dy <= -40 && Math.abs(dy) > Math.abs(dx) * 1.2 && dt <= 900;
+      if (upFlick) navigate("/intercom");
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000 * 30);
@@ -191,57 +241,11 @@ export default function Home() {
     if (rightSwipe) navigate("/custody");
   };
 
-  const onIntercomTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const t = e.touches[0];
-    intercomSwipeStart.current = { x: t.clientX, y: t.clientY, at: Date.now() };
-    intercomSwipeTriggered.current = false;
-  };
-
-  const onIntercomTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    const start = intercomSwipeStart.current;
-    if (!start || intercomSwipeTriggered.current) return;
-    const t = e.touches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    const dt = Date.now() - start.at;
-    const verticalIntent = Math.abs(dy) >= 42 && Math.abs(dy) > Math.abs(dx) * 1.08;
-    const upFlick = dy <= -52 && verticalIntent && dt <= 900;
-    if (upFlick) {
-      intercomSwipeTriggered.current = true;
-      intercomSwipeStart.current = null;
-      navigate("/intercom");
-    }
-  };
-
-  const onIntercomTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    const start = intercomSwipeStart.current;
-    intercomSwipeStart.current = null;
-    if (intercomSwipeTriggered.current) {
-      intercomSwipeTriggered.current = false;
-      return;
-    }
-    if (!start) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    const dt = Date.now() - start.at;
-    const verticalIntent = Math.abs(dy) >= 42 && Math.abs(dy) > Math.abs(dx) * 1.08;
-    const upFlick = dy <= -52 && verticalIntent && dt <= 900;
-    if (upFlick) navigate("/intercom");
-  };
-
   return (
     <div
       className="space-y-5"
-      onTouchStart={(e) => {
-        onCommandCenterTouchStart(e);
-        onIntercomTouchStart(e);
-      }}
-      onTouchEnd={(e) => {
-        onCommandCenterTouchEnd(e);
-        onIntercomTouchEnd(e);
-      }}
-      onTouchMove={onIntercomTouchMove}
+      onTouchStart={onCommandCenterTouchStart}
+      onTouchEnd={onCommandCenterTouchEnd}
       data-testid="gesture-command-center"
     >
       {/* Top action row */}
@@ -480,6 +484,23 @@ export default function Home() {
 
       {/* First-sign-in gesture tour (one-time, gated by localStorage) */}
       <FirstSignInTour />
+
+      {/* Intercom pull-up handle — non-passive touchmove attached via useEffect */}
+      <div
+        ref={intercomHandleRef}
+        className="flex flex-col items-center gap-2 py-4 select-none cursor-pointer touch-pan-x"
+        onClick={() => navigate("/intercom")}
+        data-testid="intercom-pull-handle"
+        role="button"
+        aria-label="Open Intercom"
+      >
+        <ChevronUp className="w-5 h-5 text-slate/50" />
+        <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-slate/50">
+          <MessageCircle className="w-3 h-3" />
+          Intercom
+        </div>
+        <div className="w-10 h-1 rounded-full bg-white/10" />
+      </div>
     </div>
   );
 }
