@@ -179,25 +179,19 @@ export default function AssignmentsPage() {
   const taskCount = inProgressByMe.length;
   const jobCount = items.filter((r) => r.status === "claimed").length;
   const allCount = items.length;
-  const totalAssignedToHandler = inProgressByMe.length;
-  const completedAssignedCount = inProgressByMe.filter(
-    (row) => (workflowById[row.id]?.stage ?? "idle") === "ready",
-  ).length;
-  const remainingAssignedCount = Math.max(totalAssignedToHandler - completedAssignedCount, 0);
-
-  const assignedByTypeData = useMemo(() => {
+  // Station-wide: all todos across the station grouped by service request type
+  const stationTodosByTypeData = useMemo(() => {
     const grouped = new Map<string, number>();
-    inProgressByMe.forEach((row) => {
+    items.forEach((row) => {
       const label = KIND_LABEL[row.kind];
       grouped.set(label, (grouped.get(label) ?? 0) + 1);
     });
-
     return Array.from(grouped.entries()).map(([name, value], index) => ({
       name,
       value,
       fill: TODO_TYPE_COLORS[index % TODO_TYPE_COLORS.length],
     }));
-  }, [inProgressByMe]);
+  }, [items]);
 
   const inboxAgingData = useMemo(() => {
     const buckets = [
@@ -220,12 +214,13 @@ export default function AssignmentsPage() {
     return buckets;
   }, [items, now]);
 
-  const completionData = useMemo(
+  // Station-wide status: unassigned (open) vs assigned (claimed)
+  const stationStatusData = useMemo(
     () => [
-      { name: "Completed", value: completedAssignedCount, fill: "#a3e635" },
-      { name: "Pending", value: remainingAssignedCount, fill: "rgba(148, 163, 184, 0.28)" },
+      { name: "Unassigned", value: assignmentCount, fill: "#38bdf8" },
+      { name: "Assigned", value: jobCount, fill: "#a3e635" },
     ],
-    [completedAssignedCount, remainingAssignedCount],
+    [assignmentCount, jobCount],
   );
 
   const currentStageStart =
@@ -351,7 +346,7 @@ export default function AssignmentsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={assignedByTypeData.length > 0 ? assignedByTypeData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]}
+                      data={stationTodosByTypeData.length > 0 ? stationTodosByTypeData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]}
                       cx="50%"
                       cy="50%"
                       innerRadius={22}
@@ -359,19 +354,19 @@ export default function AssignmentsPage() {
                       stroke="none"
                       dataKey="value"
                     >
-                      {(assignedByTypeData.length > 0 ? assignedByTypeData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]).map((entry, index) => (
+                      {(stationTodosByTypeData.length > 0 ? stationTodosByTypeData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]).map((entry, index) => (
                         <Cell key={`type-cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="text-lg font-extrabold font-mono leading-none text-white">{totalAssignedToHandler}</div>
-                  <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Assigned</div>
+                  <div className="text-lg font-extrabold font-mono leading-none text-white">{allCount}</div>
+                  <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Station</div>
                 </div>
               </div>
               <div className="mt-1 space-y-1">
-                {(assignedByTypeData.length > 0 ? assignedByTypeData : [{ name: "No assigned todos", value: 0, fill: "rgba(148, 163, 184, 0.35)" }]).slice(0, 2).map((entry, index) => (
+                {(stationTodosByTypeData.length > 0 ? stationTodosByTypeData : [{ name: "None pending", value: 0, fill: "rgba(148, 163, 184, 0.35)" }]).slice(0, 2).map((entry, index) => (
                   <div key={entry.name} className="flex items-center justify-between gap-1 text-[9px] text-slate">
                     <span className="inline-flex min-w-0 items-center gap-1 truncate">
                       <span
@@ -380,7 +375,7 @@ export default function AssignmentsPage() {
                             ? "bg-lime"
                             : index === 1
                               ? "bg-yellow-400"
-                              : "bg-slate"
+                              : "bg-sky-400"
                         }`}
                         aria-hidden="true"
                       />
@@ -422,12 +417,12 @@ export default function AssignmentsPage() {
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-completion">
-              <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate">Completed</div>
+              <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate">Status</div>
               <div className="relative mt-2 h-[88px] sm:h-[96px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={completionData}
+                      data={stationStatusData.some((d) => d.value > 0) ? stationStatusData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]}
                       cx="50%"
                       cy="50%"
                       innerRadius={24}
@@ -437,22 +432,26 @@ export default function AssignmentsPage() {
                       endAngle={-270}
                       dataKey="value"
                     >
-                      {completionData.map((entry, index) => (
-                        <Cell key={`completion-cell-${index}`} fill={entry.fill} />
+                      {(stationStatusData.some((d) => d.value > 0) ? stationStatusData : [{ name: "None", value: 1, fill: "rgba(148, 163, 184, 0.2)" }]).map((entry, index) => (
+                        <Cell key={`status-cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="text-base font-extrabold font-mono leading-none text-white">{completedAssignedCount}</div>
-                  <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Done</div>
+                  <div className="text-base font-extrabold font-mono leading-none text-sky-300">{assignmentCount}</div>
+                  <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Open</div>
                 </div>
               </div>
-              <div className="mt-1 flex items-center justify-between text-[9px] text-slate">
-                <span>Assigned done</span>
-                <span className="font-mono text-paper">
-                  {totalAssignedToHandler === 0 ? "0%" : `${Math.round((completedAssignedCount / totalAssignedToHandler) * 100)}%`}
-                </span>
+              <div className="mt-1 space-y-1">
+                <div className="flex items-center justify-between text-[9px] text-slate">
+                  <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-sky-400" aria-hidden="true" />Unassigned</span>
+                  <span className="font-mono text-paper">{assignmentCount}</span>
+                </div>
+                <div className="flex items-center justify-between text-[9px] text-slate">
+                  <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-lime" aria-hidden="true" />Assigned</span>
+                  <span className="font-mono text-paper">{jobCount}</span>
+                </div>
               </div>
             </div>
           </div>
