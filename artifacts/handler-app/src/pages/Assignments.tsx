@@ -113,15 +113,19 @@ export default function AssignmentsPage() {
 
   const [showPipeline, setShowPipeline] = useState(true);
   const [isOnHold, setIsOnHold] = useState(false);
+  const [showHoldSelector, setShowHoldSelector] = useState(false);
+  const [showTransferSelector, setShowTransferSelector] = useState(false);
   const [holdReason, setHoldReason] = useState("");
   const [transferTarget, setTransferTarget] = useState("");
   const [commentDraft, setCommentDraft] = useState("");
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [verificationInput, setVerificationInput] = useState("");
   const [verificationChecked, setVerificationChecked] = useState(false);
   const showSwipeHint = useSwipeHint("handler.hints.swipe.assignments.v1");
   const [localSeedComments, setLocalSeedComments] = useState<SeedComment[]>([]);
   const swipeStartRef = useRef<{ x: number; y: number; at: number } | null>(null);
   const swipeAxisLockRef = useRef<"x" | "y" | null>(null);
+  const voiceHoldStartRef = useRef<number | null>(null);
 
   const venueCode = activeVenue?.code ?? "";
   const list = useQuery({
@@ -210,9 +214,13 @@ export default function AssignmentsPage() {
 
   useEffect(() => {
     setIsOnHold(false);
+    setShowHoldSelector(false);
+    setShowTransferSelector(false);
     setHoldReason("");
     setTransferTarget("");
     setCommentDraft("");
+    setIsVoiceRecording(false);
+    voiceHoldStartRef.current = null;
     setVerificationInput("");
     setVerificationChecked(false);
     setShowPipeline(true);
@@ -260,6 +268,25 @@ export default function AssignmentsPage() {
     mutationFn: async (id: string) => addSeedVoiceComment(id, session?.handlerName ?? "Handler"),
     onSuccess: (note) => setLocalSeedComments((prev) => [note, ...prev]),
   });
+
+  const startVoiceNoteHold = () => {
+    if (!currentAssignment || addVoiceCommentMutation.isPending || addTextCommentMutation.isPending) return;
+    if (commentDraft.trim()) return;
+    if (isVoiceRecording) return;
+    voiceHoldStartRef.current = Date.now();
+    setIsVoiceRecording(true);
+  };
+
+  const stopVoiceNoteHold = () => {
+    if (!isVoiceRecording) return;
+    setIsVoiceRecording(false);
+    const startedAt = voiceHoldStartRef.current;
+    voiceHoldStartRef.current = null;
+    if (!currentAssignment || !startedAt) return;
+    const heldMs = Date.now() - startedAt;
+    if (heldMs < 220) return;
+    addVoiceCommentMutation.mutate(currentAssignment.id);
+  };
 
   const currentWorkflow = currentAssignment ? workflowById[currentAssignment.id] : undefined;
   const currentStage: WorkflowStage = currentWorkflow?.stage ?? "idle";
@@ -681,17 +708,6 @@ export default function AssignmentsPage() {
         <section className="space-y-3" data-testid="assignment-current-detail">
           {!currentAssignment ? (
             <>
-              <div className="rounded-2xl border border-white/10 bg-steel/30 p-6 text-center">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Standby timer</div>
-                <div className="mt-2 inline-flex items-center justify-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-lime/55 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]" aria-hidden="true" />
-                  <div className="text-3xl font-extrabold font-mono tracking-tight tabular-nums text-paper/90 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]">
-                    00:00:00
-                  </div>
-                </div>
-                <div className="mt-3 text-sm text-slate">No current todo in progress for this handler.</div>
-              </div>
-
               <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/40 p-4 opacity-75" data-testid="active-todo-empty-preview">
                 <div className="flex items-center justify-between gap-2">
                   <div>
@@ -727,15 +743,6 @@ export default function AssignmentsPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <select disabled aria-label="Hold reason" title="Hold reason" className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper disabled:opacity-60">
-                    <option>Hold reason</option>
-                  </select>
-                  <select disabled aria-label="Transfer target" title="Transfer target" className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper disabled:opacity-60">
-                    <option>Transfer target</option>
-                  </select>
-                </div>
-
                 <div className="space-y-2 rounded-xl border border-white/10 bg-obsidian/35 p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Completion trigger</div>
                   <button type="button" disabled className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-100 disabled:opacity-60">
@@ -744,20 +751,15 @@ export default function AssignmentsPage() {
                 </div>
 
                 <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/30 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Comments</div>
-                    <button type="button" disabled className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-obsidian/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-paper disabled:opacity-60">
-                      <Mic className="h-3.5 w-3.5" /> Voice
-                    </button>
-                  </div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Comments</div>
                   <div className="flex items-center gap-2">
                     <input
                       disabled
                       placeholder="Add comment for handoff/context"
                       className="flex-1 rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper placeholder:text-slate disabled:opacity-60"
                     />
-                    <button type="button" disabled className="inline-flex items-center gap-1 rounded-lg border border-lime/35 bg-lime/12 px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider text-lime disabled:opacity-60">
-                      <Send className="h-3.5 w-3.5" /> Add
+                    <button type="button" disabled className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-obsidian/40 px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider text-paper disabled:opacity-60">
+                      <Mic className="h-3.5 w-3.5" /> Voice
                     </button>
                   </div>
                   <div className="text-xs text-slate">No comments yet.</div>
@@ -838,12 +840,11 @@ export default function AssignmentsPage() {
                       if (isOnHold) {
                         setIsOnHold(false);
                         setHoldReason("");
+                        setShowHoldSelector(false);
                         return;
                       }
-                      holdMutation.mutate({
-                        id: currentAssignment.id,
-                        reason: holdReason || (seedConfigQuery.data?.holdReasons[0] ?? "Operational hold"),
-                      });
+                      setShowTransferSelector(false);
+                      setShowHoldSelector((prev) => !prev);
                     }}
                     disabled={holdMutation.isPending}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200"
@@ -853,12 +854,10 @@ export default function AssignmentsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      transferMutation.mutate({
-                        id: currentAssignment.id,
-                        target: transferTarget || (seedConfigQuery.data?.transferTargets[0] ?? "Shift Supervisor"),
-                      })
-                    }
+                    onClick={() => {
+                      setShowHoldSelector(false);
+                      setShowTransferSelector((prev) => !prev);
+                    }}
                     disabled={transferMutation.isPending}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-60"
                     data-testid="button-transfer-todo"
@@ -867,32 +866,73 @@ export default function AssignmentsPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <select
-                    value={holdReason}
-                    onChange={(e) => setHoldReason(e.target.value)}
-                    aria-label="Hold reason"
-                    title="Hold reason"
-                    className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper"
-                  >
-                    <option value="">Hold reason</option>
-                    {(seedConfigQuery.data?.holdReasons ?? ["Operational hold"]).map((reason) => (
-                      <option key={reason} value={reason}>{reason}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={transferTarget}
-                    onChange={(e) => setTransferTarget(e.target.value)}
-                    aria-label="Transfer target"
-                    title="Transfer target"
-                    className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper"
-                  >
-                    <option value="">Transfer target</option>
-                    {(seedConfigQuery.data?.transferTargets ?? ["Shift Supervisor"]).map((target) => (
-                      <option key={target} value={target}>{target}</option>
-                    ))}
-                  </select>
-                </div>
+                {showHoldSelector && !isOnHold ? (
+                  <div className="space-y-2 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3" data-testid="panel-hold-reason">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-amber-100">Select hold justification</div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <select
+                        value={holdReason}
+                        onChange={(e) => setHoldReason(e.target.value)}
+                        aria-label="Hold reason"
+                        title="Hold reason"
+                        className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper"
+                      >
+                        <option value="">Select hold reason</option>
+                        {(seedConfigQuery.data?.holdReasons ?? ["Operational hold"]).map((reason) => (
+                          <option key={reason} value={reason}>{reason}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          holdMutation.mutate({
+                            id: currentAssignment.id,
+                            reason: holdReason,
+                          })
+                        }
+                        disabled={!holdReason || holdMutation.isPending}
+                        className="inline-flex items-center justify-center rounded-lg border border-amber-300/40 bg-amber-500/20 px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-amber-100 disabled:opacity-50"
+                        data-testid="button-confirm-hold"
+                      >
+                        Confirm hold
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {showTransferSelector ? (
+                  <div className="space-y-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3" data-testid="panel-transfer-target">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-100">Select transfer target</div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <select
+                        value={transferTarget}
+                        onChange={(e) => setTransferTarget(e.target.value)}
+                        aria-label="Transfer target"
+                        title="Transfer target"
+                        className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper"
+                      >
+                        <option value="">Select transfer target</option>
+                        {(seedConfigQuery.data?.transferTargets ?? ["Shift Supervisor"]).map((target) => (
+                          <option key={target} value={target}>{target}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          transferMutation.mutate({
+                            id: currentAssignment.id,
+                            target: transferTarget,
+                          })
+                        }
+                        disabled={!transferTarget || transferMutation.isPending}
+                        className="inline-flex items-center justify-center rounded-lg border border-cyan-300/40 bg-cyan-500/20 px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-cyan-100 disabled:opacity-50"
+                        data-testid="button-confirm-transfer"
+                      >
+                        Confirm transfer
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {!isOnHold ? (
                   <button
@@ -952,18 +992,7 @@ export default function AssignmentsPage() {
               </div>
 
               <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/30 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Comments</div>
-                  <button
-                    type="button"
-                    onClick={() => addVoiceCommentMutation.mutate(currentAssignment.id)}
-                    disabled={addVoiceCommentMutation.isPending}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-obsidian/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-paper"
-                    data-testid="button-add-voice-comment"
-                  >
-                    <Mic className="h-3.5 w-3.5" /> Voice
-                  </button>
-                </div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Comments</div>
                 <div className="flex items-center gap-2">
                   <input
                     value={commentDraft}
@@ -973,17 +1002,54 @@ export default function AssignmentsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      commentDraft.trim() &&
-                      addTextCommentMutation.mutate({ id: currentAssignment.id, body: commentDraft.trim() })
+                    onClick={() => {
+                      if (!commentDraft.trim()) return;
+                      addTextCommentMutation.mutate({ id: currentAssignment.id, body: commentDraft.trim() });
+                    }}
+                    onMouseDown={() => {
+                      if (commentDraft.trim()) return;
+                      startVoiceNoteHold();
+                    }}
+                    onMouseUp={stopVoiceNoteHold}
+                    onMouseLeave={stopVoiceNoteHold}
+                    onTouchStart={(e) => {
+                      if (commentDraft.trim()) return;
+                      e.preventDefault();
+                      startVoiceNoteHold();
+                    }}
+                    onTouchEnd={(e) => {
+                      if (commentDraft.trim()) return;
+                      e.preventDefault();
+                      stopVoiceNoteHold();
+                    }}
+                    disabled={
+                      commentDraft.trim()
+                        ? addTextCommentMutation.isPending
+                        : addVoiceCommentMutation.isPending
                     }
-                    disabled={!commentDraft.trim() || addTextCommentMutation.isPending}
-                    className="inline-flex items-center gap-1 rounded-lg border border-lime/35 bg-lime/12 px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider text-lime disabled:opacity-50"
-                    data-testid="button-add-text-comment"
+                    className={`inline-flex min-w-[76px] items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider disabled:opacity-50 ${
+                      commentDraft.trim()
+                        ? "border border-lime/35 bg-lime/12 text-lime"
+                        : isVoiceRecording
+                          ? "border border-rose-400/40 bg-rose-500/15 text-rose-100"
+                          : "border border-white/10 bg-obsidian/40 text-paper"
+                    }`}
+                    data-testid={commentDraft.trim() ? "button-send-text-comment" : "button-hold-voice-comment"}
                   >
-                    <Send className="h-3.5 w-3.5" /> Add
+                    {commentDraft.trim() ? (
+                      <>
+                        <Send className="h-3.5 w-3.5" /> Send
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="h-3.5 w-3.5" /> {isVoiceRecording ? "Recording" : "Voice"}
+                      </>
+                    )}
                   </button>
                 </div>
+                {!commentDraft.trim() ? (
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Press and hold voice to record</div>
+                ) : null}
                 {localSeedComments.length === 0 ? (
                   <div className="text-xs text-slate">No comments yet.</div>
                 ) : (
