@@ -781,6 +781,13 @@ export default function Custody() {
         ) : null}
       </header>
 
+      <div
+        className="mb-3 inline-flex items-center rounded-full border border-white/10 bg-obsidian/35 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate"
+        data-testid="hint-swipe-back-custody"
+      >
+        Swipe left to return to Command Center
+      </div>
+
       <section className="mb-5 rounded-3xl border border-white/10 bg-steel/40 px-4 py-3 sm:px-5 sm:py-4" data-testid="card-custody-kpis">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate">

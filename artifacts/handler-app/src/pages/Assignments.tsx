@@ -483,6 +483,13 @@ export default function AssignmentsPage() {
         </div>
       </header>
 
+      <div
+        className="-mt-1 mb-1 inline-flex items-center rounded-full border border-white/10 bg-obsidian/35 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate"
+        data-testid="hint-swipe-back-assignments"
+      >
+        Swipe right to return to Command Center
+      </div>
+
       {!currentMode ? (
         <section className="rounded-3xl border border-white/10 bg-steel/40 px-3 py-3 sm:px-4 sm:py-4" data-testid="card-todos-dashboard">
           <div className="mb-3 text-[11px] font-mono uppercase tracking-wider text-slate">Todo dashboard</div>

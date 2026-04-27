@@ -397,6 +397,13 @@ export default function IntercomPage() {
         </button>
       </div>
 
+      <div
+        className="-mt-1 inline-flex items-center rounded-full border border-white/10 bg-obsidian/35 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate"
+        data-testid="hint-swipe-back-intercom"
+      >
+        Swipe down to return to Command Center
+      </div>
+
       {/* Channel header */}
       <div className="rounded-3xl border border-white/10 bg-steel/40 p-4">
         <div className="flex items-center gap-3">
