@@ -101,6 +101,10 @@ function stateTimerLabel(stage: WorkflowStage) {
   return "Timer";
 }
 
+function formatRecordingDuration(ms: number) {
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 export default function AssignmentsPage() {
   const { activeVenue, session, assets } = useStore();
   const [location, navigate] = useLocation();
@@ -119,6 +123,7 @@ export default function AssignmentsPage() {
   const [transferTarget, setTransferTarget] = useState("");
   const [commentDraft, setCommentDraft] = useState("");
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [voiceRecordingTick, setVoiceRecordingTick] = useState(0);
   const [verificationInput, setVerificationInput] = useState("");
   const [verificationChecked, setVerificationChecked] = useState(false);
   const showSwipeHint = useSwipeHint("handler.hints.swipe.assignments.v1");
@@ -213,6 +218,12 @@ export default function AssignmentsPage() {
   }, [seedCommentsQuery.data]);
 
   useEffect(() => {
+    if (!isVoiceRecording) return;
+    const id = window.setInterval(() => setVoiceRecordingTick(Date.now()), 100);
+    return () => window.clearInterval(id);
+  }, [isVoiceRecording]);
+
+  useEffect(() => {
     setIsOnHold(false);
     setShowHoldSelector(false);
     setShowTransferSelector(false);
@@ -220,6 +231,7 @@ export default function AssignmentsPage() {
     setTransferTarget("");
     setCommentDraft("");
     setIsVoiceRecording(false);
+    setVoiceRecordingTick(0);
     voiceHoldStartRef.current = null;
     setVerificationInput("");
     setVerificationChecked(false);
@@ -274,12 +286,14 @@ export default function AssignmentsPage() {
     if (commentDraft.trim()) return;
     if (isVoiceRecording) return;
     voiceHoldStartRef.current = Date.now();
+    setVoiceRecordingTick(Date.now());
     setIsVoiceRecording(true);
   };
 
   const stopVoiceNoteHold = () => {
     if (!isVoiceRecording) return;
     setIsVoiceRecording(false);
+    setVoiceRecordingTick(0);
     const startedAt = voiceHoldStartRef.current;
     voiceHoldStartRef.current = null;
     if (!currentAssignment || !startedAt) return;
@@ -290,6 +304,9 @@ export default function AssignmentsPage() {
 
   const currentWorkflow = currentAssignment ? workflowById[currentAssignment.id] : undefined;
   const currentStage: WorkflowStage = currentWorkflow?.stage ?? "idle";
+  const voiceRecordingDurationMs = isVoiceRecording && voiceHoldStartRef.current
+    ? Math.max(0, voiceRecordingTick - voiceHoldStartRef.current)
+    : 0;
 
   const activeTodo = inProgressByMe[0] ?? null;
   const activeTodoWorkflow = activeTodo ? workflowById[activeTodo.id] : undefined;
@@ -1042,13 +1059,17 @@ export default function AssignmentsPage() {
                       </>
                     ) : (
                       <>
-                        <Mic className="h-3.5 w-3.5" /> {isVoiceRecording ? "Recording" : "Voice"}
+                        <Mic className="h-3.5 w-3.5" /> {isVoiceRecording ? `Rec ${formatRecordingDuration(voiceRecordingDurationMs)}` : "Voice"}
                       </>
                     )}
                   </button>
                 </div>
                 {!commentDraft.trim() ? (
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Press and hold voice to record</div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">
+                    {isVoiceRecording
+                      ? `Recording ${formatRecordingDuration(voiceRecordingDurationMs)} · release to send`
+                      : "Press and hold voice to record"}
+                  </div>
                 ) : null}
                 {localSeedComments.length === 0 ? (
                   <div className="text-xs text-slate">No comments yet.</div>
