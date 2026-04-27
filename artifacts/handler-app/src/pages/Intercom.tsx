@@ -21,6 +21,7 @@ import {
   type IntercomTransmission,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
+import { useSwipeHint } from "@/lib/useSwipeHint";
 import { toast } from "@/hooks/use-toast";
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -69,6 +70,7 @@ export default function IntercomPage() {
   const [targets, setTargets] = useState<Set<string>>(
     () => new Set([TARGET_STATION]),
   );
+  const showSwipeHint = useSwipeHint("handler.hints.swipe.intercom.v1");
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
   const [lastHeard, setLastHeard] = useState<IntercomTransmission | null>(null);
   const [nowTalking, setNowTalking] = useState<string | null>(null);
@@ -397,12 +399,14 @@ export default function IntercomPage() {
         </button>
       </div>
 
-      <div
-        className="-mt-1 inline-flex items-center rounded-full border border-white/10 bg-obsidian/35 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate"
-        data-testid="hint-swipe-back-intercom"
-      >
-        Swipe down to return to Command Center
-      </div>
+      {showSwipeHint ? (
+        <div
+          className="-mt-1 inline-flex items-center rounded-full border border-white/10 bg-obsidian/35 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate"
+          data-testid="hint-swipe-back-intercom"
+        >
+          Swipe down to return to Command Center
+        </div>
+      ) : null}
 
       {/* Channel header */}
       <div className="rounded-3xl border border-white/10 bg-steel/40 p-4">
