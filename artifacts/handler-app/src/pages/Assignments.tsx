@@ -450,10 +450,15 @@ export default function AssignmentsPage() {
     const dy = t.clientY - start.y;
     const dt = Date.now() - start.at;
     swipeAxisLockRef.current = null;
-    if (dt > 650) return;
+    const maxSwipeDuration = currentMode ? 650 : 800;
+    if (dt > maxSwipeDuration) return;
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
-    if (absX < 70 || absX <= absY * 1.15) return;
+    const minHorizontalSwipe = currentMode ? 70 : 48;
+    const dominanceRatio = currentMode ? 1.15 : 0.85;
+    const edgeSwipe = start.x <= 44 && dx > 36 && absX > absY * 0.7;
+    const hasValidHorizontalSwipe = absX >= minHorizontalSwipe && absX > absY * dominanceRatio;
+    if (!edgeSwipe && !hasValidHorizontalSwipe) return;
     if (dx > 0) {
       navigate("/");
     }
