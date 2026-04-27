@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Search,
   Clock,
@@ -291,6 +291,9 @@ function groupTimelineByDate(entries: AssetTimelineEntry[]) {
 
 export default function Custody() {
   const { mode, assets, session, activeVenue, venues, setActiveVenue, canAccessMode } = useStore();
+  const [, navigate] = useLocation();
+  const swipeStartRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  const swipeAxisLockRef = useRef<"x" | "y" | null>(null);
   // Owner-targeted tamper-spike alert emails link to /custody?venue=<code>.
   // Honour that query param so the owner lands on the right venue's feed
   // instead of whichever venue they had selected last.
@@ -714,8 +717,48 @@ export default function Custody() {
     );
   }
 
+  const onPageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+    swipeAxisLockRef.current = null;
+  };
+
+  const onPageTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (!swipeAxisLockRef.current && (absX > 14 || absY > 14)) {
+      swipeAxisLockRef.current = absX > absY ? "x" : "y";
+    }
+    if (swipeAxisLockRef.current && (absX > 24 || absY > 24)) {
+      e.preventDefault();
+    }
+  };
+
+  const onPageTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.at;
+    swipeAxisLockRef.current = null;
+    if (dt > 650) return;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (absX < 70 || absX <= absY * 1.15) return;
+    if (dx < 0) {
+      navigate("/");
+    }
+  };
+
   return (
-    <div>
+    <div onTouchStart={onPageTouchStart} onTouchMove={onPageTouchMove} onTouchEnd={onPageTouchEnd}>
       <header className="mb-3">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-lime/15 border border-lime/30 flex items-center justify-center">

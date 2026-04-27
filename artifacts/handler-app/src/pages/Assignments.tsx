@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
@@ -118,6 +118,8 @@ export default function AssignmentsPage() {
   const [verificationInput, setVerificationInput] = useState("");
   const [verificationChecked, setVerificationChecked] = useState(false);
   const [localSeedComments, setLocalSeedComments] = useState<SeedComment[]>([]);
+  const swipeStartRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  const swipeAxisLockRef = useRef<"x" | "y" | null>(null);
 
   const venueCode = activeVenue?.code ?? "";
   const list = useQuery({
@@ -371,8 +373,54 @@ export default function AssignmentsPage() {
     });
   };
 
+  const onPageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+    swipeAxisLockRef.current = null;
+  };
+
+  const onPageTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (!swipeAxisLockRef.current && (absX > 14 || absY > 14)) {
+      swipeAxisLockRef.current = absX > absY ? "x" : "y";
+    }
+    if (swipeAxisLockRef.current && (absX > 24 || absY > 24)) {
+      e.preventDefault();
+    }
+  };
+
+  const onPageTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.at;
+    swipeAxisLockRef.current = null;
+    if (dt > 650) return;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (absX < 70 || absX <= absY * 1.15) return;
+    if (dx > 0) {
+      navigate("/");
+    }
+  };
+
   return (
-    <div className="space-y-4" data-testid="page-assignments">
+    <div
+      className="space-y-4"
+      data-testid="page-assignments"
+      onTouchStart={onPageTouchStart}
+      onTouchMove={onPageTouchMove}
+      onTouchEnd={onPageTouchEnd}
+    >
       <div className="flex items-center justify-between">
         <Link
           href="/"
@@ -621,16 +669,95 @@ export default function AssignmentsPage() {
       ) : (
         <section className="space-y-3" data-testid="assignment-current-detail">
           {!currentAssignment ? (
-            <div className="rounded-2xl border border-white/10 bg-steel/30 p-6 text-center">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Standby timer</div>
-              <div className="mt-2 inline-flex items-center justify-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-lime/55 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]" aria-hidden="true" />
-                <div className="text-3xl font-extrabold font-mono tracking-tight tabular-nums text-paper/90 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]">
-                  00:00:00
+            <>
+              <div className="rounded-2xl border border-white/10 bg-steel/30 p-6 text-center">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Standby timer</div>
+                <div className="mt-2 inline-flex items-center justify-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-lime/55 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]" aria-hidden="true" />
+                  <div className="text-3xl font-extrabold font-mono tracking-tight tabular-nums text-paper/90 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]">
+                    00:00:00
+                  </div>
+                </div>
+                <div className="mt-3 text-sm text-slate">No current todo in progress for this handler.</div>
+              </div>
+
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/40 p-4 opacity-75" data-testid="active-todo-empty-preview">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold text-white">Active Todo Preview</div>
+                    <div className="mt-0.5 text-xs text-slate">Controls stay visible while waiting for a claimed todo.</div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-obsidian/35 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-paper"
+                    aria-label="Todo pipeline"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" /> Pipeline
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-obsidian/40 p-3">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Retrieval timer</div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate">TA max 10 min</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-mono text-lg text-white">
+                    <Clock3 className="h-4 w-4 text-lime" /> 00:00
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" disabled className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 disabled:opacity-60">
+                    <PauseCircle className="h-4 w-4" /> Hold
+                  </button>
+                  <button type="button" disabled className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-60">
+                    <UserRoundPlus className="h-4 w-4" /> Transfer
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <select disabled aria-label="Hold reason" title="Hold reason" className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper disabled:opacity-60">
+                    <option>Hold reason</option>
+                  </select>
+                  <select disabled aria-label="Transfer target" title="Transfer target" className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper disabled:opacity-60">
+                    <option>Transfer target</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2 rounded-xl border border-white/10 bg-obsidian/35 p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Completion trigger</div>
+                  <button type="button" disabled className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-100 disabled:opacity-60">
+                    <CheckCircle2 className="h-4 w-4" /> Complete todo
+                  </button>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/30 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Comments</div>
+                    <button type="button" disabled className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-obsidian/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-paper disabled:opacity-60">
+                      <Mic className="h-3.5 w-3.5" /> Voice
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      disabled
+                      placeholder="Add comment for handoff/context"
+                      className="flex-1 rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper placeholder:text-slate disabled:opacity-60"
+                    />
+                    <button type="button" disabled className="inline-flex items-center gap-1 rounded-lg border border-lime/35 bg-lime/12 px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider text-lime disabled:opacity-60">
+                      <Send className="h-3.5 w-3.5" /> Add
+                    </button>
+                  </div>
+                  <div className="text-xs text-slate">No comments yet.</div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-steel/30 p-4">
+                  <div className="mb-2 text-[10px] font-mono uppercase tracking-wider text-slate">Todo pipeline</div>
+                  <div className="text-xs text-slate">No pipeline points yet.</div>
                 </div>
               </div>
-              <div className="mt-3 text-sm text-slate">No current todo in progress for this handler.</div>
-            </div>
+            </>
           ) : (
             <>
               <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/40 p-4">

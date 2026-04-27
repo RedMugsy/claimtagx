@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
   Radio,
@@ -60,6 +60,7 @@ const TARGET_STATION = "__station__";
 
 export default function IntercomPage() {
   const { activeVenue } = useStore();
+  const [, navigate] = useLocation();
   const venueCode = activeVenue?.code ?? "";
   const queryClient = useQueryClient();
   const [joined, setJoined] = useState(false);
@@ -78,6 +79,8 @@ export default function IntercomPage() {
   const lastSeenRef = useRef<number>(Date.now());
   const playedIdsRef = useRef<Set<string>>(new Set());
   const nowTalkingTimerRef = useRef<number | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  const swipeAxisLockRef = useRef<"x" | "y" | null>(null);
 
   const presence = useQuery({
     queryKey: getListIntercomPresenceQueryKey(venueCode),
@@ -321,8 +324,54 @@ export default function IntercomPage() {
     return `${individualCount} handlers`;
   }, [stationSelected, individualCount, targets, presenceList]);
 
+  const onPageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+    swipeAxisLockRef.current = null;
+  };
+
+  const onPageTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (!swipeAxisLockRef.current && (absX > 14 || absY > 14)) {
+      swipeAxisLockRef.current = absX > absY ? "x" : "y";
+    }
+    if (swipeAxisLockRef.current && (absX > 24 || absY > 24)) {
+      e.preventDefault();
+    }
+  };
+
+  const onPageTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.at;
+    swipeAxisLockRef.current = null;
+    if (dt > 650) return;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (absY < 70 || absY <= absX * 1.15) return;
+    if (dy > 0) {
+      navigate("/");
+    }
+  };
+
   return (
-    <div className="space-y-4 pb-44 sm:pb-40" data-testid="page-intercom">
+    <div
+      className="space-y-4 pb-56 sm:pb-40"
+      data-testid="page-intercom"
+      onTouchStart={onPageTouchStart}
+      onTouchMove={onPageTouchMove}
+      onTouchEnd={onPageTouchEnd}
+    >
       <div className="flex items-center justify-between">
         <Link
           href="/"
@@ -478,7 +527,7 @@ export default function IntercomPage() {
 
       {/* Sticky bottom PTT zone — ergonomic thumb-reach. */}
       <div
-        className="fixed inset-x-0 bottom-3 z-30 px-4"
+        className="fixed inset-x-0 bottom-[5.5rem] z-30 px-4 sm:bottom-3"
         data-testid="bar-ptt"
       >
         <div className="mx-auto max-w-md rounded-3xl border border-white/10 bg-gradient-to-t from-obsidian via-obsidian/95 to-obsidian/75 backdrop-blur px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex flex-col items-center shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
