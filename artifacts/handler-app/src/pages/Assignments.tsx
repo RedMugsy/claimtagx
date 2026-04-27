@@ -1,16 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Briefcase, Clock3, PlayCircle, CheckCircle2, PackageCheck, Flag } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  Briefcase,
+  CheckCircle2,
+  Clock3,
+  Flag,
+  GitBranch,
+  MessageSquare,
+  Mic,
+  PackageCheck,
+  PauseCircle,
+  PlayCircle,
+  Send,
+  UserRoundPlus,
+} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
 import {
+  claimServiceRequest,
+  completeServiceRequest,
   getListServiceRequestsQueryKey,
   listServiceRequests,
   type ServiceRequestKind,
 } from "@workspace/api-client-react";
 import { useStore } from "@/lib/store";
+import {
+  addSeedTextComment,
+  addSeedVoiceComment,
+  getActiveTodoSeedConfig,
+  holdSeedTodo,
+  listSeedComments,
+  transferSeedTodo,
+  type SeedComment,
+} from "@/lib/active-todo-seed-api";
 
 const TODO_TYPE_COLORS = ["#a3e635", "#facc15", "#38bdf8", "#c084fc", "#f97316"];
+
+const TODO_SCOPE_FILTERS = [
+  { key: "assignments", label: "Assignments", href: "/assignments/assignments" },
+  { key: "tasks", label: "Tasks", href: "/assignments/tasks" },
+  { key: "jobs", label: "Jobs", href: "/assignments/jobs" },
+  { key: "all", label: "All", href: "/assignments" },
+] as const;
 
 type WorkflowStage = "idle" | "started" | "collected" | "arrived" | "ready";
 
@@ -31,13 +63,6 @@ const KIND_LABEL: Record<ServiceRequestKind, string> = {
   deliver_to_table: "Deliver to table",
   other: "Other request",
 };
-
-const TODO_SCOPE_FILTERS = [
-  { key: "assignments", label: "Assignments", href: "/assignments/assignments" },
-  { key: "tasks", label: "Tasks", href: "/assignments/tasks" },
-  { key: "jobs", label: "Jobs", href: "/assignments/jobs" },
-  { key: "all", label: "All", href: "/assignments" },
-] as const;
 
 function readWorkflowState(): Record<string, WorkflowState> {
   if (typeof window === "undefined") return {};
@@ -78,10 +103,21 @@ function stateTimerLabel(stage: WorkflowStage) {
 export default function AssignmentsPage() {
   const { activeVenue, session, assets } = useStore();
   const [location, navigate] = useLocation();
+  const queryClient = useQueryClient();
+
   const [now, setNow] = useState(() => Date.now());
   const [workflowById, setWorkflowById] = useState<Record<string, WorkflowState>>(
     () => readWorkflowState(),
   );
+
+  const [showPipeline, setShowPipeline] = useState(true);
+  const [isOnHold, setIsOnHold] = useState(false);
+  const [holdReason, setHoldReason] = useState("");
+  const [transferTarget, setTransferTarget] = useState("");
+  const [commentDraft, setCommentDraft] = useState("");
+  const [verificationInput, setVerificationInput] = useState("");
+  const [verificationChecked, setVerificationChecked] = useState(false);
+  const [localSeedComments, setLocalSeedComments] = useState<SeedComment[]>([]);
 
   const venueCode = activeVenue?.code ?? "";
   const list = useQuery({
@@ -111,9 +147,7 @@ export default function AssignmentsPage() {
   const requestedId = params.get("id");
   const currentMode = scope === "current";
 
-  const items = (list.data ?? []).filter(
-    (r) => r.status === "open" || r.status === "claimed",
-  );
+  const items = (list.data ?? []).filter((r) => r.status === "open" || r.status === "claimed");
 
   const currentHandlerName = (session?.handlerName ?? "").trim().toLowerCase();
 
@@ -134,18 +168,14 @@ export default function AssignmentsPage() {
             : "All Todos";
 
   const visibleItems = useMemo(() => {
-    if (scope === "assignments") {
-      return items.filter((r) => r.status === "open");
-    }
+    if (scope === "assignments") return items.filter((r) => r.status === "open");
     if (scope === "tasks") {
       return items.filter((r) => {
         const claimedBy = (r.claimedByName ?? "").trim().toLowerCase();
         return r.status === "claimed" && claimedBy === currentHandlerName;
       });
     }
-    if (scope === "jobs") {
-      return items.filter((r) => r.status === "claimed");
-    }
+    if (scope === "jobs") return items.filter((r) => r.status === "claimed");
     return items;
   }, [items, scope, currentHandlerName]);
 
@@ -158,9 +188,77 @@ export default function AssignmentsPage() {
     return inProgressByMe[0] ?? null;
   }, [items, inProgressByMe, requestedId]);
 
+  const seedConfigQuery = useQuery({
+    queryKey: ["active-todo-seed-config", currentAssignment?.id, currentAssignment?.kind],
+    queryFn: () => getActiveTodoSeedConfig(currentAssignment?.kind ?? "other"),
+    enabled: Boolean(currentAssignment),
+  });
+
+  const seedCommentsQuery = useQuery({
+    queryKey: ["active-todo-seed-comments", currentAssignment?.id],
+    queryFn: () => listSeedComments(currentAssignment?.id ?? "seed-default"),
+    enabled: Boolean(currentAssignment),
+  });
+
+  useEffect(() => {
+    setLocalSeedComments(seedCommentsQuery.data ?? []);
+  }, [seedCommentsQuery.data]);
+
+  useEffect(() => {
+    setIsOnHold(false);
+    setHoldReason("");
+    setTransferTarget("");
+    setCommentDraft("");
+    setVerificationInput("");
+    setVerificationChecked(false);
+    setShowPipeline(true);
+  }, [currentAssignment?.id]);
+
+  const claimMutation = useMutation({
+    mutationFn: async (id: string) => claimServiceRequest(venueCode, id),
+    onSuccess: async (claimed) => {
+      await queryClient.invalidateQueries({ queryKey: getListServiceRequestsQueryKey(venueCode) });
+      navigate(`/assignments/current?id=${encodeURIComponent(claimed.id)}`);
+    },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: async (id: string) => completeServiceRequest(venueCode, id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: getListServiceRequestsQueryKey(venueCode) });
+      navigate("/assignments");
+    },
+  });
+
+  const holdMutation = useMutation({
+    mutationFn: async (payload: { id: string; reason: string }) => holdSeedTodo(payload.id, payload.reason),
+    onSuccess: () => setIsOnHold(true),
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: async (payload: { id: string; target: string }) => transferSeedTodo(payload.id, payload.target),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: getListServiceRequestsQueryKey(venueCode) });
+      navigate("/assignments");
+    },
+  });
+
+  const addTextCommentMutation = useMutation({
+    mutationFn: async (payload: { id: string; body: string }) =>
+      addSeedTextComment(payload.id, payload.body, session?.handlerName ?? "Handler"),
+    onSuccess: (note) => {
+      setLocalSeedComments((prev) => [note, ...prev]);
+      setCommentDraft("");
+    },
+  });
+
+  const addVoiceCommentMutation = useMutation({
+    mutationFn: async (id: string) => addSeedVoiceComment(id, session?.handlerName ?? "Handler"),
+    onSuccess: (note) => setLocalSeedComments((prev) => [note, ...prev]),
+  });
+
   const currentWorkflow = currentAssignment ? workflowById[currentAssignment.id] : undefined;
   const currentStage: WorkflowStage = currentWorkflow?.stage ?? "idle";
-  const activeCount = currentMode ? inProgressByMe.length : visibleItems.length;
 
   const activeTodo = inProgressByMe[0] ?? null;
   const activeTodoWorkflow = activeTodo ? workflowById[activeTodo.id] : undefined;
@@ -179,7 +277,7 @@ export default function AssignmentsPage() {
   const taskCount = inProgressByMe.length;
   const jobCount = items.filter((r) => r.status === "claimed").length;
   const allCount = items.length;
-  // Station-wide: all todos across the station grouped by service request type
+
   const stationTodosByTypeData = useMemo(() => {
     const grouped = new Map<string, number>();
     items.forEach((row) => {
@@ -202,19 +300,14 @@ export default function AssignmentsPage() {
 
     items.forEach((row) => {
       const ageMinutes = Math.max(0, (now - row.createdAt) / 60000);
-      if (ageMinutes < 5) {
-        buckets[0].value += 1;
-      } else if (ageMinutes < 15) {
-        buckets[1].value += 1;
-      } else {
-        buckets[2].value += 1;
-      }
+      if (ageMinutes < 5) buckets[0].value += 1;
+      else if (ageMinutes < 15) buckets[1].value += 1;
+      else buckets[2].value += 1;
     });
 
     return buckets;
   }, [items, now]);
 
-  // Station-wide status: unassigned (open) vs assigned (claimed)
   const stationStatusData = useMemo(
     () => [
       { name: "Unassigned", value: assignmentCount, fill: "#38bdf8" },
@@ -233,6 +326,18 @@ export default function AssignmentsPage() {
           : undefined;
 
   const currentStageTimer = currentStageStart ? msToMmSs(now - currentStageStart) : null;
+  const currentStageElapsedMs = currentStageStart ? Math.max(0, now - currentStageStart) : 0;
+  const slaLimitMs = (seedConfigQuery.data?.maxMinutes ?? 10) * 60_000;
+  const isSlaBreached = currentStage !== "ready" && currentStageElapsedMs > slaLimitMs;
+
+  const completionTriggerType = seedConfigQuery.data?.completionTriggerType ?? "button";
+  const completionTriggerLabel = seedConfigQuery.data?.completionLabel ?? "Complete todo";
+  const completionAllowed =
+    completionTriggerType === "button"
+      ? true
+      : completionTriggerType === "input"
+        ? verificationInput.trim().toUpperCase() === (currentAssignment?.ticketId ?? "").toUpperCase()
+        : verificationChecked;
 
   const activeAsset = currentAssignment
     ? assets.find((a) => a.ticketId === currentAssignment.ticketId)
@@ -258,15 +363,10 @@ export default function AssignmentsPage() {
       const existing = prev[currentAssignment.id] ?? { stage: "idle" as WorkflowStage };
       const ts = Date.now();
       let next: WorkflowState = existing;
-      if (existing.stage === "idle") {
-        next = { ...existing, stage: "started", startedAt: ts };
-      } else if (existing.stage === "started") {
-        next = { ...existing, stage: "collected", collectedAt: ts };
-      } else if (existing.stage === "collected") {
-        next = { ...existing, stage: "arrived", arrivedAt: ts };
-      } else if (existing.stage === "arrived") {
-        next = { ...existing, stage: "ready", readyAt: ts };
-      }
+      if (existing.stage === "idle") next = { ...existing, stage: "started", startedAt: ts };
+      else if (existing.stage === "started") next = { ...existing, stage: "collected", collectedAt: ts };
+      else if (existing.stage === "collected") next = { ...existing, stage: "arrived", arrivedAt: ts };
+      else if (existing.stage === "arrived") next = { ...existing, stage: "ready", readyAt: ts };
       return { ...prev, [currentAssignment.id]: next };
     });
   };
@@ -276,24 +376,24 @@ export default function AssignmentsPage() {
       <div className="flex items-center justify-between">
         <Link
           href="/"
-          className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate rounded-full px-2 py-1"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-mono uppercase tracking-wider text-slate hover:text-paper hover-elevate"
           data-testid="link-back-home"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Command Center
+          <ArrowLeft className="h-3.5 w-3.5" /> Command Center
         </Link>
       </div>
 
       <header className="mb-1">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-11 h-11 rounded-2xl bg-lime/15 border border-lime/30 flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-lime" />
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-lime/30 bg-lime/15">
+              <Briefcase className="h-5 w-5 text-lime" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-mono uppercase tracking-wider text-slate">
                 {currentMode ? "Active todo" : "All todos"}
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
                 {scopeTitle}
               </h1>
             </div>
@@ -308,14 +408,14 @@ export default function AssignmentsPage() {
               aria-label="Open all todos"
               title="Open all todos"
             >
-              <Briefcase className="w-5 h-5 text-indigo-200/70" />
+              <Briefcase className="h-5 w-5 text-indigo-200/70" />
               <span className="text-[10px] font-mono uppercase tracking-wider text-slate">All Todos</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => navigate("/assignments/current")}
-              className={`relative inline-flex items-center justify-center w-10 h-10 rounded-2xl border hover-elevate ${
+              className={`relative inline-flex h-10 w-10 items-center justify-center rounded-2xl border hover-elevate ${
                 activeTodo
                   ? "border-lime/40 bg-lime/15 text-lime"
                   : "border-white/10 bg-steel/40 text-slate"
@@ -324,9 +424,9 @@ export default function AssignmentsPage() {
               aria-label="Open active todo"
               title={activeTodo ? "Active todo in progress" : "No active todo in progress"}
             >
-              <PlayCircle className="w-4 h-4" />
+              <PlayCircle className="h-4 w-4" />
               {activeTodo ? (
-                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-lime/35 bg-obsidian/90 px-1.5 py-0.5 text-[9px] font-mono font-bold text-lime tabular-nums whitespace-nowrap">
+                <span className="absolute -bottom-2 left-1/2 whitespace-nowrap rounded-full border border-lime/35 bg-obsidian/90 px-1.5 py-0.5 text-[9px] font-mono font-bold tabular-nums text-lime -translate-x-1/2">
                   {activeTodoTimer ?? "00:00"}
                 </span>
               ) : null}
@@ -365,26 +465,6 @@ export default function AssignmentsPage() {
                   <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Station</div>
                 </div>
               </div>
-              <div className="mt-1 space-y-1">
-                {(stationTodosByTypeData.length > 0 ? stationTodosByTypeData : [{ name: "None pending", value: 0, fill: "rgba(148, 163, 184, 0.35)" }]).slice(0, 2).map((entry, index) => (
-                  <div key={entry.name} className="flex items-center justify-between gap-1 text-[9px] text-slate">
-                    <span className="inline-flex min-w-0 items-center gap-1 truncate">
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          index === 0
-                            ? "bg-lime"
-                            : index === 1
-                              ? "bg-yellow-400"
-                              : "bg-sky-400"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">{entry.name}</span>
-                    </span>
-                    <span className="font-mono text-paper">{entry.value}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-aging">
@@ -392,19 +472,11 @@ export default function AssignmentsPage() {
               <div className="mt-2 h-[88px] sm:h-[96px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={inboxAgingData} margin={{ top: 6, right: 0, left: -18, bottom: -8 }}>
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 9, fill: "#94a3b8" }}
-                    />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: "#94a3b8" }} />
                     <YAxis hide domain={[0, "dataMax + 1"]} />
                     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {inboxAgingData.map((entry, index) => (
-                        <Cell
-                          key={`aging-cell-${index}`}
-                          fill={index === 2 ? "#f97316" : index === 1 ? "#facc15" : "#38bdf8"}
-                        />
+                      {inboxAgingData.map((_, index) => (
+                        <Cell key={`aging-cell-${index}`} fill={index === 2 ? "#f97316" : index === 1 ? "#facc15" : "#38bdf8"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -416,7 +488,7 @@ export default function AssignmentsPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-completion">
+            <div className="rounded-2xl border border-white/10 bg-obsidian/30 p-2.5 sm:p-3" data-testid="dashboard-card-status">
               <div className="text-[9px] font-mono uppercase tracking-[0.2em] text-slate">Status</div>
               <div className="relative mt-2 h-[88px] sm:h-[96px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -443,12 +515,12 @@ export default function AssignmentsPage() {
                   <div className="mt-1 text-[8px] font-mono uppercase tracking-[0.18em] text-slate">Open</div>
                 </div>
               </div>
-              <div className="mt-1 space-y-1">
-                <div className="flex items-center justify-between text-[9px] text-slate">
+              <div className="mt-1 space-y-1 text-[9px] text-slate">
+                <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-sky-400" aria-hidden="true" />Unassigned</span>
                   <span className="font-mono text-paper">{assignmentCount}</span>
                 </div>
-                <div className="flex items-center justify-between text-[9px] text-slate">
+                <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-lime" aria-hidden="true" />Assigned</span>
                   <span className="font-mono text-paper">{jobCount}</span>
                 </div>
@@ -460,11 +532,9 @@ export default function AssignmentsPage() {
 
       {!currentMode ? (
         <section className="overflow-x-auto" data-testid="todos-filter-rail">
-          <div className="inline-flex min-w-full sm:min-w-0 items-center gap-1 rounded-2xl border border-white/10 bg-steel/35 p-1.5">
+          <div className="inline-flex min-w-full items-center gap-1 rounded-2xl border border-white/10 bg-steel/35 p-1.5 sm:min-w-0">
             {TODO_SCOPE_FILTERS.map((filter) => {
-              const isActive =
-                (scope === "all" && filter.key === "all") ||
-                (scope === filter.key);
+              const isActive = (scope === "all" && filter.key === "all") || scope === filter.key;
               const count =
                 filter.key === "assignments"
                   ? assignmentCount
@@ -478,7 +548,7 @@ export default function AssignmentsPage() {
                   key={filter.key}
                   type="button"
                   onClick={() => navigate(filter.href)}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-mono uppercase tracking-wider whitespace-nowrap hover-elevate ${
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-mono uppercase tracking-wider hover-elevate ${
                     isActive
                       ? "border border-lime/35 bg-lime/15 text-lime"
                       : "border border-transparent text-slate hover:text-paper"
@@ -486,7 +556,7 @@ export default function AssignmentsPage() {
                   data-testid={`todos-filter-${filter.key}`}
                 >
                   <span>{filter.label}</span>
-                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[10px] font-bold ${
+                  <span className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold ${
                     isActive ? "bg-lime text-obsidian" : "bg-obsidian/60 text-slate"
                   }`}>
                     {count}
@@ -509,25 +579,41 @@ export default function AssignmentsPage() {
               const flow = workflowById[row.id];
               const stage = flow?.stage ?? "idle";
               const isMine = (row.claimedByName ?? "").trim().toLowerCase() === currentHandlerName;
+              const isUnassigned = row.status === "open";
               return (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => navigate(`/assignments/current?id=${encodeURIComponent(row.id)}`)}
-                  className="w-full text-left rounded-2xl border border-white/10 bg-steel/40 p-3 hover-elevate"
-                  data-testid={`assignment-row-${row.id}`}
-                >
+                <div key={row.id} className="w-full rounded-2xl border border-white/10 bg-steel/40 p-3" data-testid={`assignment-row-${row.id}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold text-white truncate">{KIND_LABEL[row.kind]}</div>
+                    <div className="truncate text-sm font-semibold text-white">{KIND_LABEL[row.kind]}</div>
                     <span className="text-[10px] font-mono uppercase tracking-wider text-slate">{row.status}</span>
                   </div>
-                  <div className="text-xs text-slate mt-1 truncate">
+                  <div className="mt-1 truncate text-xs text-slate">
                     Requested by <span className="text-paper">{row.requestedByName}</span> · Ticket <span className="text-paper">{row.ticketId}</span>
                   </div>
-                  <div className="text-[10px] font-mono uppercase tracking-wider mt-1.5 text-slate">
+                  <div className="mt-1.5 text-[10px] font-mono uppercase tracking-wider text-slate">
                     {isMine ? "You" : row.claimedByName ? `Claimed by ${row.claimedByName}` : "Unclaimed"} · Workflow {stage}
                   </div>
-                </button>
+
+                  <div className="mt-2.5 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/assignments/current?id=${encodeURIComponent(row.id)}`)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-obsidian/35 px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-paper hover-elevate"
+                    >
+                      Open
+                    </button>
+                    {isUnassigned ? (
+                      <button
+                        type="button"
+                        onClick={() => claimMutation.mutate(row.id)}
+                        disabled={claimMutation.isPending}
+                        className="inline-flex items-center gap-1 rounded-lg border border-lime/35 bg-lime/12 px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-lime disabled:opacity-60"
+                        data-testid={`assignment-claim-${row.id}`}
+                      >
+                        <UserRoundPlus className="h-3.5 w-3.5" /> Claim
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               );
             })
           )}
@@ -538,13 +624,8 @@ export default function AssignmentsPage() {
             <div className="rounded-2xl border border-white/10 bg-steel/30 p-6 text-center">
               <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Standby timer</div>
               <div className="mt-2 inline-flex items-center justify-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-full bg-lime/55 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]"
-                  aria-hidden="true"
-                />
-                <div
-                  className="text-3xl font-extrabold font-mono tracking-tight text-paper/90 tabular-nums motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]"
-                >
+                <span className="h-2 w-2 rounded-full bg-lime/55 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]" aria-hidden="true" />
+                <div className="text-3xl font-extrabold font-mono tracking-tight tabular-nums text-paper/90 motion-safe:animate-pulse motion-safe:[animation-duration:2.4s]">
                   00:00:00
                 </div>
               </div>
@@ -552,63 +633,262 @@ export default function AssignmentsPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-2xl border border-white/10 bg-steel/40 p-4 space-y-3">
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/40 p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <div className="text-sm font-semibold text-white">{KIND_LABEL[currentAssignment.kind]}</div>
-                    <div className="text-xs text-slate mt-0.5">Requested by <span className="text-paper">{currentAssignment.requestedByName}</span></div>
+                    <div className="mt-0.5 text-xs text-slate">
+                      Requested by <span className="text-paper">{currentAssignment.requestedByName}</span>
+                    </div>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-obsidian/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-paper">
-                    {currentStage}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPipeline((prev) => !prev)}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-obsidian/35 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-paper hover-elevate"
+                      aria-label="Toggle todo pipeline"
+                      data-testid="button-toggle-todo-pipeline"
+                    >
+                      <GitBranch className="h-3.5 w-3.5" /> Pipeline
+                    </button>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
+                      isOnHold
+                        ? "border-amber-400/40 bg-amber-500/10 text-amber-200"
+                        : "border-white/10 bg-obsidian/40 text-paper"
+                    }`}>
+                      {isOnHold ? "On hold" : currentStage}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-obsidian/40 p-3">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-1">{stateTimerLabel(currentStage)}</div>
-                  <div className="flex items-center gap-1.5 text-white font-mono text-lg">
-                    <Clock3 className="w-4 h-4 text-lime" />
-                    {currentStageTimer ?? "00:00"}
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate">{stateTimerLabel(currentStage)}</div>
+                    <div className={`text-[10px] font-mono uppercase tracking-wider ${isSlaBreached ? "text-amber-300" : "text-slate"}`}>
+                      TA max {(seedConfigQuery.data?.maxMinutes ?? 10)} min
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 font-mono text-lg text-white">
+                      <Clock3 className={`h-4 w-4 ${isSlaBreached ? "text-amber-300" : "text-lime"}`} />
+                      {currentStageTimer ?? "00:00"}
+                    </div>
+                    {isSlaBreached ? (
+                      <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-amber-200">
+                        Over SLA
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={advanceCurrentStage}
-                  disabled={currentStage === "ready"}
-                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-lime/30 bg-lime/10 text-lime px-3 py-2 text-sm font-semibold hover-elevate disabled:opacity-50"
-                  data-testid="button-assignment-next-stage"
-                >
-                  {currentStage === "ready" ? <CheckCircle2 className="w-4 h-4" /> : <PackageCheck className="w-4 h-4" />}
-                  {stateActionLabel(currentStage)}
-                </button>
+                {!((currentAssignment.claimedByName ?? "").trim().toLowerCase() === currentHandlerName) && currentAssignment.status === "open" ? (
+                  <button
+                    type="button"
+                    onClick={() => claimMutation.mutate(currentAssignment.id)}
+                    disabled={claimMutation.isPending}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-lime/35 bg-lime/12 px-3 py-2 text-sm font-semibold text-lime disabled:opacity-60"
+                    data-testid="button-claim-current-assignment"
+                  >
+                    <UserRoundPlus className="h-4 w-4" /> Claim this todo
+                  </button>
+                ) : null}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isOnHold) {
+                        setIsOnHold(false);
+                        setHoldReason("");
+                        return;
+                      }
+                      holdMutation.mutate({
+                        id: currentAssignment.id,
+                        reason: holdReason || (seedConfigQuery.data?.holdReasons[0] ?? "Operational hold"),
+                      });
+                    }}
+                    disabled={holdMutation.isPending}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200"
+                    data-testid="button-hold-todo"
+                  >
+                    <PauseCircle className="h-4 w-4" /> {isOnHold ? "Resume" : "Hold"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      transferMutation.mutate({
+                        id: currentAssignment.id,
+                        target: transferTarget || (seedConfigQuery.data?.transferTargets[0] ?? "Shift Supervisor"),
+                      })
+                    }
+                    disabled={transferMutation.isPending}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-60"
+                    data-testid="button-transfer-todo"
+                  >
+                    <UserRoundPlus className="h-4 w-4" /> Transfer
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <select
+                    value={holdReason}
+                    onChange={(e) => setHoldReason(e.target.value)}
+                    aria-label="Hold reason"
+                    title="Hold reason"
+                    className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper"
+                  >
+                    <option value="">Hold reason</option>
+                    {(seedConfigQuery.data?.holdReasons ?? ["Operational hold"]).map((reason) => (
+                      <option key={reason} value={reason}>{reason}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={transferTarget}
+                    onChange={(e) => setTransferTarget(e.target.value)}
+                    aria-label="Transfer target"
+                    title="Transfer target"
+                    className="rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper"
+                  >
+                    <option value="">Transfer target</option>
+                    {(seedConfigQuery.data?.transferTargets ?? ["Shift Supervisor"]).map((target) => (
+                      <option key={target} value={target}>{target}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {!isOnHold ? (
+                  <button
+                    type="button"
+                    onClick={advanceCurrentStage}
+                    disabled={currentStage === "ready"}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-lime/30 bg-lime/10 px-3 py-2 text-sm font-semibold text-lime hover-elevate disabled:opacity-50"
+                    data-testid="button-assignment-next-stage"
+                  >
+                    {currentStage === "ready" ? <CheckCircle2 className="h-4 w-4" /> : <PackageCheck className="h-4 w-4" />}
+                    {stateActionLabel(currentStage)}
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    This todo is currently on hold. Resume to continue execution.
+                  </div>
+                )}
+
+                <div className="space-y-2 rounded-xl border border-white/10 bg-obsidian/35 p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Completion trigger</div>
+                  {completionTriggerType === "input" ? (
+                    <input
+                      value={verificationInput}
+                      onChange={(e) => setVerificationInput(e.target.value)}
+                      placeholder={`Type ticket ${currentAssignment.ticketId}`}
+                      className="w-full rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40"
+                    />
+                  ) : null}
+                  {completionTriggerType === "verification" ? (
+                    <label className="inline-flex items-center gap-2 text-xs text-paper">
+                      <input
+                        type="checkbox"
+                        checked={verificationChecked}
+                        onChange={(e) => setVerificationChecked(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-white/20 bg-obsidian/60"
+                      />
+                      Verification completed
+                    </label>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => completeMutation.mutate(currentAssignment.id)}
+                    disabled={!completionAllowed || completeMutation.isPending}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-100 disabled:opacity-50"
+                    data-testid="button-complete-todo"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> {completionTriggerLabel}
+                  </button>
+                </div>
 
                 {currentStage === "ready" ? (
                   <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100" data-testid="assignment-ready-signal">
-                    <Flag className="w-3.5 h-3.5 inline-block mr-1" />
+                    <Flag className="mr-1 inline-block h-3.5 w-3.5" />
                     Ready for release state is active and can now be surfaced to the ticket-facing patron experience.
                   </div>
                 ) : null}
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-steel/30 p-4">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-2">Asset custody timeline</div>
-                {timeline.length === 0 ? (
-                  <div className="text-xs text-slate">No timeline points yet.</div>
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-steel/30 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate">Comments</div>
+                  <button
+                    type="button"
+                    onClick={() => addVoiceCommentMutation.mutate(currentAssignment.id)}
+                    disabled={addVoiceCommentMutation.isPending}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-obsidian/40 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-paper"
+                    data-testid="button-add-voice-comment"
+                  >
+                    <Mic className="h-3.5 w-3.5" /> Voice
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={commentDraft}
+                    onChange={(e) => setCommentDraft(e.target.value)}
+                    placeholder="Add comment for handoff/context"
+                    className="flex-1 rounded-lg border border-white/10 bg-obsidian/60 px-2.5 py-2 text-xs text-paper placeholder:text-slate focus:outline-none focus:ring-1 focus:ring-lime/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      commentDraft.trim() &&
+                      addTextCommentMutation.mutate({ id: currentAssignment.id, body: commentDraft.trim() })
+                    }
+                    disabled={!commentDraft.trim() || addTextCommentMutation.isPending}
+                    className="inline-flex items-center gap-1 rounded-lg border border-lime/35 bg-lime/12 px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider text-lime disabled:opacity-50"
+                    data-testid="button-add-text-comment"
+                  >
+                    <Send className="h-3.5 w-3.5" /> Add
+                  </button>
+                </div>
+                {localSeedComments.length === 0 ? (
+                  <div className="text-xs text-slate">No comments yet.</div>
                 ) : (
-                  <ul className="space-y-1.5">
-                    {timeline.map((row) => (
-                      <li key={`${row.label}-${row.at}`} className="rounded-lg border border-white/10 bg-obsidian/30 px-2.5 py-1.5">
-                        <div className="flex items-center justify-between gap-2 text-xs">
-                          <span className="text-paper">{row.label}</span>
-                          <span className="text-slate font-mono">
-                            {row.at ? new Date(row.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+                  <ul className="max-h-36 space-y-1.5 overflow-y-auto pr-1">
+                    {localSeedComments.map((note) => (
+                      <li key={note.id} className="rounded-lg border border-white/10 bg-obsidian/35 px-2.5 py-2">
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono uppercase tracking-wider text-slate">
+                          <span className="inline-flex items-center gap-1">
+                            <MessageSquare className="h-3.5 w-3.5" /> {note.kind === "voice" ? "Voice" : "Text"}
                           </span>
+                          <span>{new Date(note.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
+                        <div className="mt-1 text-xs text-paper">
+                          {note.kind === "voice" ? `Voice note (${note.durationSec ?? 0}s)` : note.body}
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-slate">{note.by}</div>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
+
+              {showPipeline ? (
+                <div className="rounded-2xl border border-white/10 bg-steel/30 p-4">
+                  <div className="mb-2 text-[10px] font-mono uppercase tracking-wider text-slate">Todo pipeline</div>
+                  {timeline.length === 0 ? (
+                    <div className="text-xs text-slate">No pipeline points yet.</div>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {timeline.map((row) => (
+                        <li key={`${row.label}-${row.at}`} className="rounded-lg border border-white/10 bg-obsidian/30 px-2.5 py-1.5">
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="text-paper">{row.label}</span>
+                            <span className="font-mono text-slate">
+                              {row.at ? new Date(row.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </>
           )}
         </section>
