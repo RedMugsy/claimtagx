@@ -39,8 +39,8 @@ const rows: Row[] = [
   {
     to: "/settings/performance",
     Icon: BarChart3,
-    label: "Performance overview",
-    description: "Your handled-vehicle ratio over time",
+    label: "Performance",
+    description: "Shift/day/week/month activity, attendance, vehicles, todos, and reviews",
     testId: "settings-row-performance",
   },
   {
