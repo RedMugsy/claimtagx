@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Clock,
@@ -23,6 +24,8 @@ import {
   Play,
   Volume2,
   QrCode,
+  ClipboardPlus,
+  Hand,
 } from "lucide-react";
 import {
   Cell,
@@ -38,6 +41,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useStore } from "@/lib/store";
+import { toast } from "@/hooks/use-toast";
+import {
+  claimServiceRequest,
+  createServiceRequest,
+  getListServiceRequestsQueryKey,
+  listServiceRequests,
+  type ServiceRequest,
+  type ServiceRequestKind,
+} from "@workspace/api-client-react";
 import {
   DEFAULT_TA_POLICY,
   MODE_BY_ID,
@@ -290,9 +302,16 @@ function groupTimelineByDate(entries: AssetTimelineEntry[]) {
   }));
 }
 
+function getRetrievalKindForMode(mode: CustodyAsset["mode"]): ServiceRequestKind {
+  if (mode === "vehicles") return "bring_my_car";
+  if (mode === "cloakrooms") return "fetch_my_coat";
+  return "other";
+}
+
 export default function Custody() {
   const { mode, assets, session, activeVenue, venues, setActiveVenue, canAccessMode } = useStore();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const swipeStartRef = useRef<{ x: number; y: number; at: number } | null>(null);
   const swipeAxisLockRef = useRef<"x" | "y" | null>(null);
   // Owner-targeted tamper-spike alert emails link to /custody?venue=<code>.
@@ -338,6 +357,53 @@ export default function Custody() {
   const chunksRef = useRef<Blob[]>([]);
   const recordStartRef = useRef<number>(0);
   const recordAssetIdRef = useRef<string | null>(null);
+  const venueCode = activeVenue?.code ?? "";
+
+  const serviceRequestsQuery = useQuery({
+    queryKey: getListServiceRequestsQueryKey(venueCode),
+    queryFn: () => listServiceRequests(venueCode),
+    enabled: Boolean(venueCode),
+    staleTime: 15_000,
+  });
+
+  const refreshServiceRequests = () => {
+    if (!venueCode) return;
+    queryClient.invalidateQueries({ queryKey: getListServiceRequestsQueryKey(venueCode) });
+  };
+
+  const requestRetrievalMutation = useMutation({
+    mutationFn: async (asset: CustodyAsset) =>
+      createServiceRequest(venueCode, {
+        ticketId: asset.ticketId,
+        kind: getRetrievalKindForMode(asset.mode),
+        notes: `Retrieval requested from custody card · ${asset.patron.name}`,
+      }),
+    onSuccess: () => {
+      refreshServiceRequests();
+      toast({ title: "Retrieval requested", description: "Asset is now in the general assignments queue." });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Could not request retrieval", description: e.message, variant: "destructive" }),
+  });
+
+  const retrieveMineMutation = useMutation({
+    mutationFn: async (asset: CustodyAsset) => {
+      const created = await createServiceRequest(venueCode, {
+        ticketId: asset.ticketId,
+        kind: getRetrievalKindForMode(asset.mode),
+        notes: `Requested for direct handler retrieval · ${asset.patron.name}`,
+      });
+      const claimed = await claimServiceRequest(venueCode, created.id);
+      return claimed;
+    },
+    onSuccess: (claimed) => {
+      refreshServiceRequests();
+      toast({ title: "Assigned to you", description: "Asset retrieval is now in your assignments queue." });
+      navigate(`/assignments/current?id=${encodeURIComponent(claimed.id)}`);
+    },
+    onError: (e: Error) =>
+      toast({ title: "Could not assign retrieval", description: e.message, variant: "destructive" }),
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -1226,6 +1292,14 @@ export default function Custody() {
             const bandLabel = band === "overdue" ? "OVERDUE" : band === "watch" ? "WATCH" : "FRESH";
             const eventNotes = selectedEventNotes;
             const hasNotes = eventNotes.length > 0;
+            const selectedRequest = (serviceRequestsQuery.data ?? []).find(
+              (r: ServiceRequest) =>
+                r.ticketId === selected.ticketId && (r.status === "open" || r.status === "claimed"),
+            );
+            const selectedRequestedByMe =
+              selectedRequest != null &&
+              (selectedRequest.claimedByName ?? "").trim().toLowerCase() ===
+                (session?.handlerName ?? "").trim().toLowerCase();
             const subpageTitle =
               sheetPage === "notes" ? "Event notes"
               : sheetPage === "damage" ? "Damage report"
@@ -1565,6 +1639,81 @@ export default function Custody() {
                         ) : null}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-steel/25 p-4" data-testid="card-custody-retrieval-actions">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate mb-3">Retrieval actions</div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedRequest) {
+                            toast({
+                              title: "Already queued",
+                              description:
+                                selectedRequest.status === "claimed"
+                                  ? `Already assigned to ${selectedRequest.claimedByName ?? "another handler"}.`
+                                  : "Asset is already in the general assignments queue.",
+                            });
+                            return;
+                          }
+                          requestRetrievalMutation.mutate(selected);
+                        }}
+                        disabled={!venueCode || requestRetrievalMutation.isPending || retrieveMineMutation.isPending}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-400/35 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-100 disabled:opacity-60"
+                        data-testid="button-retrieval-requested"
+                      >
+                        <ClipboardPlus className="w-4 h-4" /> Retrieval Requested
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!selectedRequest) {
+                            retrieveMineMutation.mutate(selected);
+                            return;
+                          }
+                          if (selectedRequestedByMe) {
+                            navigate(`/assignments/current?id=${encodeURIComponent(selectedRequest.id)}`);
+                            return;
+                          }
+                          if (selectedRequest.status === "open") {
+                            try {
+                              const claimed = await claimServiceRequest(venueCode, selectedRequest.id);
+                              refreshServiceRequests();
+                              toast({ title: "Assigned to you", description: "Moved into your assignments queue." });
+                              navigate(`/assignments/current?id=${encodeURIComponent(claimed.id)}`);
+                            } catch (e) {
+                              const err = e as Error;
+                              toast({
+                                title: "Could not assign retrieval",
+                                description: err.message,
+                                variant: "destructive",
+                              });
+                            }
+                            return;
+                          }
+                          toast({
+                            title: "Already assigned",
+                            description: `This retrieval is already assigned to ${selectedRequest.claimedByName ?? "another handler"}.`,
+                          });
+                        }}
+                        disabled={!venueCode || requestRetrievalMutation.isPending || retrieveMineMutation.isPending}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-lime/35 bg-lime/12 px-3 py-2 text-xs font-semibold text-lime disabled:opacity-60"
+                        data-testid="button-retrieve-asset"
+                      >
+                        <Hand className="w-4 h-4" /> Retrieve Asset
+                      </button>
+                    </div>
+                    {selectedRequest ? (
+                      <div className="mt-2 text-[11px] text-slate">
+                        Queue status: <span className="text-paper">{selectedRequest.status}</span>
+                        {selectedRequest.claimedByName ? (
+                          <> · claimed by <span className="text-paper">{selectedRequest.claimedByName}</span></>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-[11px] text-slate">No retrieval request exists for this asset yet.</div>
+                    )}
                   </div>
                 </div>
 
