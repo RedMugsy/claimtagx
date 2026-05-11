@@ -717,7 +717,7 @@ export default function AssignmentsPage() {
                         className="inline-flex items-center gap-1 rounded-lg border border-lime/35 bg-lime/12 px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-lime disabled:opacity-60"
                         data-testid={`assignment-claim-${row.id}`}
                       >
-                        <UserRoundPlus className="h-3.5 w-3.5" /> Claim
+                        <UserRoundPlus className="h-3.5 w-3.5" /> Assign to Self
                       </button>
                     ) : null}
                   </div>
@@ -851,7 +851,7 @@ export default function AssignmentsPage() {
                     className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-lime/35 bg-lime/12 px-3 py-2 text-sm font-semibold text-lime disabled:opacity-60"
                     data-testid="button-claim-current-assignment"
                   >
-                    <UserRoundPlus className="h-4 w-4" /> Claim this todo
+                    <UserRoundPlus className="h-4 w-4" /> Assign to Self
                   </button>
                 ) : null}
 
