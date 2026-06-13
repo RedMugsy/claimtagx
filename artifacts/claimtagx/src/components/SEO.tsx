@@ -7,7 +7,7 @@ interface SEOProps {
   url?: string;
 }
 
-export default function SEO({ title, description, image = '/og-image.png', url = 'https://claimtagx.com' }: SEOProps) {
+export default function SEO({ title, description, image = 'https://claimtagx.com/opengraph.jpg', url = 'https://claimtagx.com' }: SEOProps) {
   useEffect(() => {
     document.title = title;
     

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /handler/
+
+Sitemap: https://claimtagx.com/sitemap.xml

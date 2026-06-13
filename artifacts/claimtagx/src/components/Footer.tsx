@@ -23,7 +23,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#05080f] pt-20 pb-10 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 lg:gap-12 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-12 md:gap-8 lg:gap-12 mb-16">
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-1 lg:col-span-1">
             <Link href="/" className="flex items-center gap-1 mb-4 inline-block">
@@ -47,6 +47,20 @@ export default function Footer() {
           </div>
 
           <div className="col-span-1">
+            <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Solutions</h4>
+            <ul className="flex flex-col gap-3">
+              <li><Link href="/solutions/hotels" className="text-slate hover:text-lime transition-colors text-sm">Hotels &amp; Resorts</Link></li>
+              <li><Link href="/solutions/clubs-restaurants" className="text-slate hover:text-lime transition-colors text-sm">Clubs &amp; Restaurants</Link></li>
+              <li><Link href="/solutions/beach-clubs" className="text-slate hover:text-lime transition-colors text-sm">Beach Clubs</Link></li>
+              <li><Link href="/solutions/valet" className="text-slate hover:text-lime transition-colors text-sm">Valet Parking</Link></li>
+              <li><Link href="/solutions/dry-cleaning" className="text-slate hover:text-lime transition-colors text-sm">Dry Cleaning</Link></li>
+              <li><Link href="/solutions/luggage" className="text-slate hover:text-lime transition-colors text-sm">Luggage Check</Link></li>
+              <li><Link href="/solutions/repair" className="text-slate hover:text-lime transition-colors text-sm">Repair Services</Link></li>
+              <li><Link href="/solutions/airlines" className="text-slate hover:text-lime transition-colors text-sm">Airlines</Link></li>
+            </ul>
+          </div>
+
+          <div className="col-span-1">
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Company</h4>
             <ul className="flex flex-col gap-3">
               <li><a href="mailto:info@claimtagx.com" className="text-slate hover:text-lime transition-colors text-sm">Contact</a></li>
@@ -61,6 +75,7 @@ export default function Footer() {
           <div className="col-span-1">
             <h4 className="text-white font-semibold text-sm mb-4 uppercase tracking-wider">Legal</h4>
             <ul className="flex flex-col gap-3">
+              <li><Link href="/security" className="text-slate hover:text-lime transition-colors text-sm">Security &amp; Trust</Link></li>
               <li><Link href="/privacy" className="text-slate hover:text-lime transition-colors text-sm">Privacy Policy</Link></li>
               <li><Link href="/terms" className="text-slate hover:text-lime transition-colors text-sm">Terms of Use</Link></li>
               <li><Link href="/refund" className="text-slate hover:text-lime transition-colors text-sm">Refund Policy</Link></li>

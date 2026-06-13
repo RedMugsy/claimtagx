@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,9 @@ import NotFound from "@/pages/not-found";
 
 import Home from "@/pages/Home";
 import PricingPage from "@/pages/Pricing";
+import SolutionPage from "@/pages/Solution";
+import DemoTicket from "@/pages/DemoTicket";
+import Security from "@/pages/Security";
 import Privacy from "@/pages/legal/Privacy";
 import Terms from "@/pages/legal/Terms";
 import GDPR from "@/pages/legal/GDPR";
@@ -29,10 +33,26 @@ function HandlerRedirect() {
   return null;
 }
 
+function ScrollToTop() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    // Skip when navigating to an in-page anchor
+    if (!window.location.hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [location]);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/solutions/:slug" component={SolutionPage} />
+      <Route path="/demo-ticket" component={DemoTicket} />
+      <Route path="/security" component={Security} />
       <Route path="/handler" component={HandlerRedirect} />
       <Route path="/handler/sign-in/*?" component={HandlerRedirect} />
       <Route path="/handler/sign-up/*?" component={HandlerRedirect} />
@@ -55,6 +75,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <ScrollToTop />
           <div className="flex min-h-screen flex-col bg-obsidian text-paper font-sans">
             <Nav />
             <main className="flex-1">

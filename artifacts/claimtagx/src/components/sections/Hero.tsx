@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'wouter';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, QrCode } from 'lucide-react';
 import heroMockup from '@/assets/hero-mockup.png';
+
+const industryLinks = [
+  { label: 'Hotel', href: '/solutions/hotels' },
+  { label: 'Club / restaurant', href: '/solutions/clubs-restaurants' },
+  { label: 'Beach club', href: '/solutions/beach-clubs' },
+  { label: 'Valet operation', href: '/solutions/valet' },
+  { label: 'Dry cleaner', href: '/solutions/dry-cleaning' },
+  { label: 'Luggage check', href: '/solutions/luggage' },
+  { label: 'Repair shop', href: '/solutions/repair' },
+  { label: 'Airline', href: '/solutions/airlines' },
+];
 
 export default function Hero() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -44,7 +56,7 @@ export default function Hero() {
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 className="w-2 h-2 rounded-full bg-lime"
               />
-              <span className="text-sm font-medium text-white/90">Now in public beta</span>
+              <span className="text-sm font-medium text-white/90">Free plan available — live in 60 seconds</span>
             </motion.div>
 
             {/* Heading */}
@@ -66,7 +78,7 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-lg md:text-xl text-slate mb-10 leading-relaxed max-w-lg"
             >
-              Replace paper claim tickets with cryptographically signed digital tags. Valet, laundry, luggage, repair — one platform, zero lost items.
+              A paper ticket can only prove a claim exists. ClaimTagX shows you everything that happens after — every handler, every handoff, every minute in between — at the same price per ticket as paper.
             </motion.p>
 
             {/* CTAs */}
@@ -74,15 +86,15 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center gap-4 mb-16 w-full"
+              className="flex flex-col sm:flex-row items-center gap-4 mb-5 w-full"
             >
               <a
                 href="https://app.claimtagx.com/signup"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto bg-lime text-obsidian px-8 py-4 rounded-lg font-bold text-lg hover:bg-lime-hover hover:-translate-y-px hover:shadow-[0_0_30px_rgba(198,242,78,0.4)] transition-all duration-200"
+                className="w-full sm:w-auto bg-lime text-obsidian px-8 py-4 rounded-lg font-bold text-lg hover:bg-lime-hover hover:-translate-y-px hover:shadow-[0_0_30px_rgba(198,242,78,0.4)] transition-all duration-200 text-center"
               >
-                Start free trial
+                Start free — no card needed
               </a>
               <a
                 href="https://calendly.com/claimtagx/demo"
@@ -93,6 +105,40 @@ export default function Hero() {
                 Book a demo
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </a>
+            </motion.div>
+
+            {/* Risk reversal */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="text-sm text-slate/80 mb-10"
+            >
+              Free plan forever · No credit card · Cancel anytime
+            </motion.p>
+
+            {/* Industry selector — self-identification routes to the vertical pages */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="mb-16 w-full border-t border-white/10 pt-8"
+            >
+              <p className="text-base font-bold text-white mb-4">
+                I run a<span className="text-lime">…</span>
+              </p>
+              <div className="flex flex-wrap gap-2.5">
+                {industryLinks.map((ind) => (
+                  <Link
+                    key={ind.href}
+                    href={ind.href}
+                    className="group/pill flex items-center gap-1.5 text-sm font-semibold text-white bg-steel/80 border border-lime/25 rounded-full px-4 py-2.5 hover:border-lime hover:bg-lime hover:text-obsidian transition-all duration-200"
+                  >
+                    {ind.label}
+                    <ArrowRight className="w-3.5 h-3.5 text-lime group-hover/pill:text-obsidian group-hover/pill:translate-x-0.5 transition-all" />
+                  </Link>
+                ))}
+              </div>
             </motion.div>
           </div>
 

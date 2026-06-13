@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, ScanLine, Smartphone, QrCode } from 'lucide-react';
+import { ArrowRight, CheckCircle, ScanLine, Smartphone, QrCode } from 'lucide-react';
 import howItWorks1 from '@/assets/how-it-works-1.png';
 import howItWorks2 from '@/assets/how-it-works-2.png';
 import howItWorks3 from '@/assets/how-it-works-3.png';
+import demoTicketQr from '@/assets/demo-ticket-qr.svg';
 
 const demoSteps = [
   {
@@ -33,17 +35,20 @@ export default function ProductDemo() {
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section className="py-24 bg-obsidian border-t border-white/5 relative overflow-hidden">
+    <section id="how" className="py-24 bg-obsidian border-t border-white/5 relative overflow-hidden">
       <div className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-lime opacity-[0.03] blur-[100px] rounded-full pointer-events-none" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-16">
           <span className="font-mono text-xs font-bold text-lime tracking-[0.2em] uppercase bg-lime/10 px-3 py-1 rounded-sm mb-6 inline-block">
-            Interactive Demo
+            How It Works
           </span>
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-            See it in action
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            Three taps. No paper.<br className="hidden sm:block" /> Full custody chain.
           </h2>
+          <p className="text-lg text-slate max-w-xl mx-auto">
+            Click through a real ticket's life — intake to release.
+          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-24">
@@ -105,7 +110,7 @@ export default function ProductDemo() {
             </div>
             
             {/* Animated elements floating around */}
-            <motion.div 
+            <motion.div
               className="absolute -right-6 top-1/4 bg-obsidian border border-lime/30 text-lime px-4 py-2 rounded-lg text-sm font-mono shadow-[0_0_15px_rgba(198,242,78,0.2)] flex items-center gap-2 z-20"
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -115,6 +120,52 @@ export default function ProductDemo() {
             </motion.div>
           </div>
         </div>
+
+        {/* Scan-to-try: experience the guest ticket on your own phone */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
+          className="mt-16 bg-steel/60 border border-lime/20 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-center gap-8"
+        >
+          {/* QR for desktop visitors */}
+          <div className="hidden md:block flex-shrink-0">
+            <div className="bg-white p-3 rounded-2xl shadow-[0_0_30px_rgba(198,242,78,0.15)]">
+              <img src={demoTicketQr} alt="Scan to open a sample guest ticket" className="w-36 h-36" />
+            </div>
+          </div>
+
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="text-2xl font-bold text-white mb-3">
+              Don't take our word for it — be the guest.
+            </h3>
+            <p className="text-slate leading-relaxed mb-2 hidden md:block">
+              Scan this code with your phone's camera and a real sample ticket opens
+              instantly. No app, no account — exactly what your guests will experience.
+            </p>
+            <p className="text-slate leading-relaxed mb-2 md:hidden">
+              Open a real sample ticket on this phone right now. No app, no account —
+              exactly what your guests will experience.
+            </p>
+          </div>
+
+          {/* Tap-through for mobile visitors */}
+          <Link
+            href="/demo-ticket"
+            className="md:hidden w-full bg-lime text-obsidian px-6 py-4 rounded-xl font-bold text-center flex items-center justify-center gap-2"
+          >
+            Open the sample ticket
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/demo-ticket"
+            className="hidden md:flex items-center gap-2 text-lime font-semibold hover:text-lime-hover transition-colors group flex-shrink-0"
+          >
+            Or open it here
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </motion.div>
       </div>
     </section>
   );

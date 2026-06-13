@@ -13,11 +13,16 @@ const handlerTargetDir = path.join(claimtagxDistDir, "handler");
 const redirectsPath = path.join(claimtagxDistDir, "_redirects");
 
 function run(cmd, args, options = {}) {
-  const result = spawnSync(cmd, args, {
+  // On Windows the command runs through cmd.exe, so paths with spaces
+  // (e.g. C:\Program Files\nodejs\node.exe) must be quoted.
+  const useShell = process.platform === "win32";
+  const quote = (s) => (useShell && /\s/.test(s) ? `"${s}"` : s);
+  const result = spawnSync(quote(cmd), args.map(quote), {
     cwd: repoRoot,
     stdio: "inherit",
     env: process.env,
-    shell: process.platform === "win32",
+    shell: useShell,
+    windowsVerbatimArguments: useShell,
     ...options,
   });
 

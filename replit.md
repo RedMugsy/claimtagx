@@ -32,7 +32,17 @@ pnpm workspace monorepo using TypeScript. Contains the ClaimTagX marketing websi
 - Fonts: Inter (sans) + JetBrains Mono (mono) via Google Fonts
 
 **Pages:**
-- `/` — Homepage (hero, problem, how it works, features, industries, pricing, comparison, CTA, footer)
+- `/` — Homepage (hero, trust strip, problem, price-per-ticket parity, interactive how-it-works (`#how`, ProductDemo.tsx), features, stats, industries, ROI calculator, comparison, pricing teaser, FAQ, CTA, footer). All signup CTAs use the wording "Start free" (free-forever plan; never "trial" in buttons). Per-ticket "~5¢, same as paper" framing is used in the hero chips, parity section, comparison table, pricing cards, and FAQ.
+- `/solutions/:slug` — Vertical solution pages; content lives in `src/lib/solutions.tsx`, template in `src/pages/Solution.tsx`. Linked from Industries cards and footer; listed in `public/sitemap.xml`. Each renders vertical-specific delivery-channel chips and BreadcrumbList JSON-LD. A vertical can override the primary CTA via `primaryCta` (airlines routes to sales instead of self-serve signup).
+  - **Taxonomy (Ali's):** *single asset class* (one flow): valet, dry-cleaning, luggage, repair, airlines. *Multi-flow venues* (one buyer, several custody flows): hotels, clubs-restaurants, beach-clubs. Homepage Industries grid shows multi-flow first with a tag badge per card.
+  - Hero images for hotels/clubs/beach-clubs/airlines currently reuse valet/luggage placeholders — Ali to supply bespoke images.
+- `/demo-ticket` — Sample guest ticket page (what patrons see; no app, no account). Reached via a scannable QR (`src/assets/demo-ticket-qr.svg`, generated with the `qrcode` devDependency) in the homepage demo section.
+
+**Channel messaging:** supported issuance/verification channels are QR Code, NFC, BLE, SMS, WhatsApp, Email, In-app push. Homepage `OmniChannel.tsx` section ("No signal. No app. No problem.") dramatizes offline-first + no-patron-app and lists all channels. The `/price` feature matrix has "Issuance & transfer" and "Input methods" groups; metered rows (SMS/WhatsApp, AI-assisted capture) carry an asterisk with the note beside the row, not in a footer.
+
+**Core hero message:** "A paper ticket can only prove a claim exists. ClaimTagX shows you everything that happens after — at the same price per ticket as paper." Features section is framed as "The Custody Operating System" (pillars: guest experience, operational visibility, control).
+
+**Windows dev note:** the pnpm overrides blocking platform binaries exclude win32-x64 variants (esbuild, rollup, lightningcss, tailwind oxide) so the site builds on Windows; all other non-linux platforms remain blocked for slim Replit installs.
 - `/privacy` — Privacy Policy
 - `/terms` — Terms of Service
 - `/gdpr` — GDPR
@@ -45,7 +55,17 @@ pnpm workspace monorepo using TypeScript. Contains the ClaimTagX marketing websi
 - `src/components/Footer.tsx` — Full footer with links
 - `src/components/CookieBanner.tsx` — Cookie consent banner (localStorage)
 - `src/components/SEO.tsx` — SEO meta tags
+- `src/components/StickyCTA.tsx` — Mobile-only sticky signup bar (appears after hero scroll)
 - `src/components/sections/` — All homepage sections as individual components
+  - `ROICalculator.tsx` — interactive paper-cost calculator (sliders → monthly waste estimate); accepts per-vertical defaults via props
+  - `PricePerTicket.tsx` — price-parity section ("same ~5¢ as paper, with visibility"); used on home + solution pages
+  - `PricingTeaser.tsx` — 3-card homepage pricing summary linking to `/price`
+  - `FAQ.tsx` — accordion FAQ; injects FAQPage JSON-LD for SEO
+
+**Content rules:**
+- No fabricated social proof: no fake client logos, invented usage stats, or fake testimonials.
+  TrustStrip shows real capabilities; Stats shows true product facts only.
+- `index.html` carries the canonical SEO meta (title, description, OG, JSON-LD) since the site is a client-rendered SPA.
 
 ### API Server (`artifacts/api-server`)
 - Express 5 API server at `/api`

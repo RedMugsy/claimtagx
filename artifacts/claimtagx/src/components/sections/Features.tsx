@@ -5,13 +5,13 @@ import featureHero from '@/assets/feature-hero.png';
 const features = [
   {
     icon: <ShieldCheck className="w-6 h-6 text-lime" />,
-    title: "Ed25519 Signed Tickets",
-    description: "Every ticket carries a cryptographic signature. Mathematically impossible to forge or tamper with."
+    title: "Tamper-proof by math",
+    description: "A stale screenshot, a forged stub, a tampered record — all fail verification. Every ticket carries an Ed25519 cryptographic signature; mismatch blocks the release.",
   },
   {
     icon: <Database className="w-6 h-6 text-lime" />,
-    title: "Multi-Tenant Isolation",
-    description: "Your data is yours. Row-level security with architectural separation between tenants."
+    title: "Your data, your instance",
+    description: "Strict tenant isolation at the database layer — one operator never sees another operator's records. Backed by row-level security on PostgreSQL.",
   },
   {
     icon: <Smartphone className="w-6 h-6 text-lime" />,
@@ -20,8 +20,8 @@ const features = [
   },
   {
     icon: <LayoutDashboard className="w-6 h-6 text-lime" />,
-    title: "GM Dashboard",
-    description: "Real-time view of all active tickets, handler performance metrics, and wait times."
+    title: "Handler Visibility",
+    description: "Who did what, when — and how many assets they handled. Accountability that protects your team in disputes, not surveillance. Live dashboard with active tickets and wait times."
   },
   {
     icon: <Globe className="w-6 h-6 text-lime" />,
@@ -79,13 +79,19 @@ export default function Features() {
         >
           <motion.div variants={itemVariants} className="mb-6">
             <span className="font-mono text-xs font-bold text-lime tracking-[0.2em] uppercase bg-lime/10 px-3 py-1 rounded-sm">
-              Platform
+              The Custody Operating System
             </span>
           </motion.div>
-          
+
           <motion.h2 variants={itemVariants} className="text-3xl md:text-5xl font-bold text-white mb-6">
             Built for operators who <br className="hidden sm:block" /> can't afford mistakes.
           </motion.h2>
+
+          <motion.p variants={itemVariants} className="text-lg text-slate max-w-2xl">
+            More than digital tickets — an operating system for everything in your custody.
+            Guest experience, transformed. Visibility into who did what, when, and how many
+            assets they handled. Control over every station, shift, and handoff.
+          </motion.p>
         </motion.div>
 
         {/* Hero Visual for Features */}
@@ -96,9 +102,11 @@ export default function Features() {
           transition={{ duration: 0.8 }}
           className="w-full relative mb-24 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group"
         >
-          <img 
-            src={featureHero} 
-            alt="ClaimTagX Dashboard Visualization" 
+          <img
+            src={featureHero}
+            alt="ClaimTagX Dashboard Visualization"
+            loading="lazy"
+            decoding="async"
             className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-1000"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent pointer-events-none" />

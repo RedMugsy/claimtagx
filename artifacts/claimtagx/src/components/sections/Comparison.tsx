@@ -9,8 +9,8 @@ const comparisonData = [
   { feature: "Patron app-free", paper: true, legacy: false, us: true },
   { feature: "Multi-tenant", paper: false, legacy: false, us: true },
   { feature: "Audit trail", paper: false, legacy: "partial", us: true },
-  { feature: "Setup time", paper: "Minutes", legacy: "Days/weeks", us: "60 seconds" },
-  { feature: "Price", paper: "Low upfront, high risk", legacy: "$$$+", us: "From $79/mo" }
+  { feature: "Setup time", paper: "Days — order, print, ship", legacy: "Days/weeks", us: "Minutes" },
+  { feature: "Price per ticket", paper: "~5¢, zero visibility", legacy: "$$$+", us: "~5¢, full custody chain" }
 ];
 
 export default function Comparison() {

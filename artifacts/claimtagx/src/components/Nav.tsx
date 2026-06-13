@@ -74,7 +74,7 @@ export default function Nav() {
             rel="noopener noreferrer"
             className="bg-lime text-obsidian px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-lime-hover hover:-translate-y-px hover:shadow-[0_0_20px_rgba(198,242,78,0.3)] transition-all duration-200 inline-block"
           >
-            Start free trial
+            Start free
           </a>
         </nav>
 
@@ -135,7 +135,7 @@ export default function Nav() {
                 className="bg-lime text-obsidian px-5 py-3 rounded-lg font-semibold text-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Start free trial
+                Start free
               </a>
             </div>
           </motion.div>

@@ -42,19 +42,19 @@ export default function Stats() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="flex flex-col items-center text-center"
           >
             <div className="text-4xl md:text-5xl font-extrabold text-white mb-2 font-mono">
-              <Counter from={0} to={100} duration={2.5} suffix="k+" />
+              &lt;<Counter from={0} to={2} duration={2.5} suffix="s" />
             </div>
-            <div className="text-sm text-lime font-medium uppercase tracking-wider">Tickets Issued</div>
+            <div className="text-sm text-lime font-medium uppercase tracking-wider">To Issue a Ticket</div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -62,9 +62,9 @@ export default function Stats() {
             className="flex flex-col items-center text-center"
           >
             <div className="text-4xl md:text-5xl font-extrabold text-white mb-2 font-mono">
-              <Counter from={100} to={0} duration={2} />
+              $<Counter from={100} to={0} duration={2} />
             </div>
-            <div className="text-sm text-lime font-medium uppercase tracking-wider">Forged Signatures</div>
+            <div className="text-sm text-lime font-medium uppercase tracking-wider">Hardware Required</div>
           </motion.div>
 
           <motion.div 

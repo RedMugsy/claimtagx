@@ -23,11 +23,13 @@ export default function FinalCTA() {
           transition={{ duration: 0.7 }}
         >
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">
-            Ready to ditch the paper?
+            Paper tickets look cheap.
+            <span className="block text-shimmer mt-2">Until lost claims, disputes, and blind shifts are not.</span>
           </h2>
-          
+
           <p className="text-xl text-slate mb-12 max-w-2xl mx-auto leading-relaxed">
-            Start your free trial today. No credit card required. Live in 60 seconds.
+            ClaimTagX gives every handover a verified custody trail —
+            for the same price as a paper ticket.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8">
@@ -37,7 +39,7 @@ export default function FinalCTA() {
               rel="noopener noreferrer"
               className="w-full sm:w-auto bg-lime text-obsidian px-10 py-5 rounded-xl font-extrabold text-lg hover:bg-lime-hover hover:scale-105 hover:shadow-[0_0_40px_rgba(198,242,78,0.4)] transition-all duration-300"
             >
-              Start free trial
+              Start free
             </a>
             <a
               href="https://calendly.com/claimtagx/demo"
@@ -51,7 +53,7 @@ export default function FinalCTA() {
           </div>
           
           <p className="text-sm text-slate/60 font-medium">
-            14-day free trial on all plans. Cancel anytime.
+            Go live next shift. No credit card, no hardware, no app. From about 5¢ per ticket.
           </p>
         </motion.div>
       </div>

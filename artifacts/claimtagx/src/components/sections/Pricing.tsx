@@ -35,7 +35,7 @@ const plans: {
     period: '/month',
     description: 'For small operators getting started with digital tags.',
     highlights: ['1 station', 'Up to 5 staff', '250 tickets / month', 'OOTB ticket template', 'Static QR + optional PIN', 'Logo branding'],
-    cta: 'Start free trial',
+    cta: 'Start free',
     url: 'https://app.claimtagx.com/signup',
   },
   {
@@ -45,7 +45,7 @@ const plans: {
     period: '/month',
     description: 'For growing operations needing workflow and validation.',
     highlights: ['Up to 5 stations', 'Up to 25 staff', '1,000 tickets / month', 'Configurable tickets', 'Dynamic QR + OTP', 'Shift management', 'Marketplace access (buy)'],
-    cta: 'Start free trial',
+    cta: 'Start free',
     url: 'https://app.claimtagx.com/signup',
     primary: true,
     badge: 'MOST POPULAR',
@@ -59,7 +59,7 @@ const plans: {
     period: '/month',
     description: 'For multi-station operators needing full control.',
     highlights: ['Unlimited stations', 'Unlimited staff', '2,000 tickets / month', 'Multi-template per station', 'NFC / BLE validation', 'Supervisor controls', 'Marketplace buy + sell', 'Limited API access'],
-    cta: 'Start free trial',
+    cta: 'Start free',
     url: 'https://app.claimtagx.com/signup',
   },
   {
@@ -75,7 +75,7 @@ const plans: {
 ];
 
 type Cell = boolean | string;
-type Row = { feature: string; values: Record<Tier, Cell> };
+type Row = { feature: string; values: Record<Tier, Cell>; note?: string };
 type Group = { category: string; rows: Row[] };
 
 const matrix: Group[] = [
@@ -95,6 +95,27 @@ const matrix: Group[] = [
       { feature: 'Multi-asset support', values: { free: false, basic: 'Limited', essential: true, advanced: true, enterprise: true } },
       { feature: 'Workflow engine', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
       { feature: 'Per-station configuration', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Issuance & transfer',
+    rows: [
+      { feature: 'Web link / in-app delivery', values: { free: 'Text only', basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Email delivery', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'QR claim & release', values: { free: false, basic: 'Static', essential: 'Dynamic + OTP', advanced: 'Dynamic + OTP', enterprise: 'Full' } },
+      { feature: 'SMS / WhatsApp delivery *', note: '* Metered at carrier cost', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'NFC / BLE transfer', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'In-app push (app-based deployments)', values: { free: false, basic: false, essential: false, advanced: true, enterprise: true } },
+      { feature: 'Offline issuance & release', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+    ],
+  },
+  {
+    category: 'Input methods',
+    rows: [
+      { feature: 'Manual entry', values: { free: true, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'Photo capture', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
+      { feature: 'AI-assisted capture *', note: '* Metered, where enabled', values: { free: false, basic: false, essential: 'Basic', advanced: 'Advanced', enterprise: 'Full' } },
+      { feature: 'Lookup & recovery (name / phone / ticket)', values: { free: false, basic: true, essential: true, advanced: true, enterprise: true } },
     ],
   },
   {
@@ -285,7 +306,7 @@ export default function Pricing() {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-24"
         >
           {plans.map((plan) => {
-            const isMostPopular = isAnnual ? plan.key === 'advanced' : plan.key === 'essential';
+            const isMostPopular = plan.key === 'essential';
             const showAnnualDiscount = isAnnual && plan.key === 'advanced' && Boolean(plan.discountLabel);
 
             return (
@@ -402,7 +423,12 @@ export default function Pricing() {
                           key={`${group.category}-${row.feature}`}
                           className={`border-t border-white/5 ${rIdx % 2 === 0 ? '' : 'bg-white/[0.015]'}`}
                         >
-                          <td className="py-3 px-5 text-sm text-white/90 font-medium">{row.feature}</td>
+                          <td className="py-3 px-5 text-sm text-white/90 font-medium">
+                            {row.feature}
+                            {row.note && (
+                              <span className="block text-[11px] text-slate/70 font-normal mt-0.5">{row.note}</span>
+                            )}
+                          </td>
                           {tierOrder.map((t) => (
                             <td
                               key={t}
