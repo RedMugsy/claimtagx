@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Camera, Check, Clock, QrCode, ShieldCheck } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { track } from '@/lib/analytics';
 
 const timeline = [
   { label: 'Checked in', detail: 'Photos captured · Handler: Alex M.', time: '7:42 PM', done: true },
@@ -114,6 +115,7 @@ export default function DemoTicket() {
               href="https://app.claimtagx.com/signup"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track('cta_clicked', { action: 'start_free', location: 'demo_ticket' })}
               className="inline-flex items-center justify-center gap-2 bg-lime text-obsidian px-8 py-4 rounded-xl font-bold text-lg hover:bg-lime-hover hover:shadow-[0_0_30px_rgba(198,242,78,0.4)] transition-all duration-200"
             >
               Issue tickets like this — free

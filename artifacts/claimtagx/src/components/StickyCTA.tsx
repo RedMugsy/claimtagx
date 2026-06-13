@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { track } from '@/lib/analytics';
 
 export default function StickyCTA() {
   const [visible, setVisible] = useState(false);
@@ -31,6 +32,7 @@ export default function StickyCTA() {
             href="https://app.claimtagx.com/signup"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => track('cta_clicked', { action: 'start_free', location: 'sticky_mobile' })}
             className="bg-lime text-obsidian px-5 py-3 rounded-lg font-bold text-sm whitespace-nowrap"
           >
             Start free

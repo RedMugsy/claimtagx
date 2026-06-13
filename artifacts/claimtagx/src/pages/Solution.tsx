@@ -10,6 +10,7 @@ import FinalCTA from '@/components/sections/FinalCTA';
 import StickyCTA from '@/components/StickyCTA';
 import { getSolution, solutions } from '@/lib/solutions';
 import { Link } from 'wouter';
+import { track } from '@/lib/analytics';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -103,6 +104,7 @@ export default function SolutionPage() {
                     href={solution.primaryCta?.url ?? 'https://app.claimtagx.com/signup'}
                     target={solution.primaryCta?.url.startsWith('mailto:') ? undefined : '_blank'}
                     rel={solution.primaryCta?.url.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+                    onClick={() => track('cta_clicked', { action: solution.primaryCta?.url.startsWith('mailto:') ? 'talk_to_sales' : 'start_free', location: 'solution_page', vertical: solution.slug })}
                     className="w-full sm:w-auto bg-lime text-obsidian px-8 py-4 rounded-lg font-bold text-lg hover:bg-lime-hover hover:-translate-y-px hover:shadow-[0_0_30px_rgba(198,242,78,0.4)] transition-all duration-200 text-center"
                   >
                     {solution.primaryCta?.label ?? 'Start free — no card needed'}
@@ -111,6 +113,7 @@ export default function SolutionPage() {
                     href="https://calendly.com/claimtagx/demo"
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => track('cta_clicked', { action: 'book_demo', location: 'solution_page', vertical: solution.slug })}
                     className="w-full sm:w-auto border border-white/15 text-white px-8 py-4 rounded-lg font-bold text-lg hover:border-lime/40 hover:text-lime transition-all duration-200 group flex items-center justify-center gap-2"
                   >
                     Book a demo

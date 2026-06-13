@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 export default function FinalCTA() {
   return (
@@ -37,6 +38,7 @@ export default function FinalCTA() {
               href="https://app.claimtagx.com/signup"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track('cta_clicked', { action: 'start_free', location: 'final_cta' })}
               className="w-full sm:w-auto bg-lime text-obsidian px-10 py-5 rounded-xl font-extrabold text-lg hover:bg-lime-hover hover:scale-105 hover:shadow-[0_0_40px_rgba(198,242,78,0.4)] transition-all duration-300"
             >
               Start free
@@ -45,6 +47,7 @@ export default function FinalCTA() {
               href="https://calendly.com/claimtagx/demo"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track('cta_clicked', { action: 'book_demo', location: 'final_cta' })}
               className="w-full sm:w-auto bg-white/5 border border-white/10 text-white px-10 py-5 rounded-xl font-bold text-lg hover:border-lime/50 hover:bg-white/10 hover:text-lime transition-all duration-300 group flex items-center justify-center gap-2"
             >
               Book a demo

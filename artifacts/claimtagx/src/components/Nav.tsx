@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { track } from '@/lib/analytics';
 
 export default function Nav() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -64,6 +65,7 @@ export default function Nav() {
             href="https://calendly.com/claimtagx/demo"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => track('cta_clicked', { action: 'book_demo', location: 'nav' })}
             className="text-sm font-semibold text-white px-4 py-2.5 rounded-lg border border-white/15 hover:border-lime/40 hover:text-lime transition-all duration-200 inline-block"
           >
             Book a demo
@@ -72,6 +74,7 @@ export default function Nav() {
             href="https://app.claimtagx.com/signup"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => track('cta_clicked', { action: 'start_free', location: 'nav' })}
             className="bg-lime text-obsidian px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-lime-hover hover:-translate-y-px hover:shadow-[0_0_20px_rgba(198,242,78,0.3)] transition-all duration-200 inline-block"
           >
             Start free
@@ -124,7 +127,7 @@ export default function Nav() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="border border-white/15 text-white px-5 py-3 rounded-lg font-semibold text-center mt-2"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => { track('cta_clicked', { action: 'book_demo', location: 'nav_mobile' }); setMobileMenuOpen(false); }}
               >
                 Book a demo
               </a>
@@ -133,7 +136,7 @@ export default function Nav() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-lime text-obsidian px-5 py-3 rounded-lg font-semibold text-center"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => { track('cta_clicked', { action: 'start_free', location: 'nav_mobile' }); setMobileMenuOpen(false); }}
               >
                 Start free
               </a>

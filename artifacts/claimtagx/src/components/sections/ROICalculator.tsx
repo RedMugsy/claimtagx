@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 const HOURLY_LABOR_COST = 18; // blended front-of-house labor $/hr
 const MINUTES_SAVED_PER_ITEM = 1.5; // search, verify, dispute time saved per transaction
@@ -46,6 +47,23 @@ export default function ROICalculator({
   const totalMonthly = Math.round(laborSavings + disputeSavings);
   const hoursSaved = Math.round(itemsPerMonth * MINUTES_SAVED_PER_ITEM / 60);
   const plan = recommendPlan(Math.round(itemsPerMonth));
+
+  // Debounced — only fire once a user actually settles on a value, not on every drag tick.
+  const interactedRef = useRef(false);
+  useEffect(() => { interactedRef.current = true; }, [itemsPerDay, daysPerWeek]);
+  useEffect(() => {
+    if (!interactedRef.current) return;
+    const timer = window.setTimeout(() => {
+      track('roi_calculated', {
+        items_per_day: itemsPerDay,
+        days_per_week: daysPerWeek,
+        items_per_month: Math.round(itemsPerMonth),
+        estimated_monthly_waste: totalMonthly,
+        recommended_plan: plan.name,
+      });
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [itemsPerDay, daysPerWeek, itemsPerMonth, totalMonthly, plan.name]);
 
   return (
     <section id="roi" className="py-24 md:py-32 bg-obsidian border-t border-white/5 relative overflow-hidden">
@@ -163,6 +181,7 @@ export default function ROICalculator({
                 href="https://app.claimtagx.com/signup"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => track('cta_clicked', { action: 'start_free', location: 'roi_calculator', recommended_plan: plan.name, estimated_monthly_waste: totalMonthly })}
                 className="inline-flex items-center justify-center gap-2 bg-obsidian text-lime px-8 py-4 rounded-xl font-bold text-lg hover:scale-[1.02] hover:shadow-2xl transition-all duration-200 w-full sm:w-auto"
               >
                 Stop paying the paper tax

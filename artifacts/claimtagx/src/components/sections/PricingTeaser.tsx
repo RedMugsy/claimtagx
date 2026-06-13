@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import { ArrowRight, Check } from 'lucide-react';
+import { track } from '@/lib/analytics';
 
 const tiers = [
   {
@@ -104,6 +105,7 @@ export default function PricingTeaser() {
                 href={tier.url}
                 target={tier.url.startsWith('mailto:') ? undefined : '_blank'}
                 rel={tier.url.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+                onClick={() => track('cta_clicked', { action: tier.url.startsWith('mailto:') ? 'talk_to_sales' : 'start_free', location: 'pricing_teaser', plan: tier.name })}
                 className={`text-center px-6 py-3.5 rounded-xl font-bold transition-all duration-200 ${
                   tier.featured
                     ? 'bg-lime text-obsidian hover:bg-lime-hover hover:shadow-[0_0_25px_rgba(198,242,78,0.35)]'
@@ -125,6 +127,7 @@ export default function PricingTeaser() {
         >
           <Link
             href="/price"
+            onClick={() => track('cta_clicked', { action: 'see_full_pricing', location: 'pricing_teaser' })}
             className="inline-flex items-center gap-2 text-lime font-semibold hover:text-lime-hover transition-colors group"
           >
             Compare all five plans and features

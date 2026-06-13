@@ -43,6 +43,38 @@ pnpm workspace monorepo using TypeScript. Contains the ClaimTagX marketing websi
 **Core hero message:** "A paper ticket can only prove a claim exists. ClaimTagX shows you everything that happens after — at the same price per ticket as paper." Features section is framed as "The Custody Operating System" (pillars: guest experience, operational visibility, control).
 
 **Windows dev note:** the pnpm overrides blocking platform binaries exclude win32-x64 variants (esbuild, rollup, lightningcss, tailwind oxide) so the site builds on Windows; all other non-linux platforms remain blocked for slim Replit installs.
+
+**Analytics — three-destination fanout:** marketing-site events live in `src/lib/analytics.ts`. Consent-gated against the cookie banner. Each destination is independent — every helper is a safe no-op when its env var is unset. Configure via build-time env vars:
+- `VITE_POSTHOG_KEY` — PostHog project key. Defaults host to `https://us.i.posthog.com`; override with `VITE_POSTHOG_HOST` for EU.
+- `VITE_GA_ID` — Google Analytics 4 measurement ID (G-XXXXXXX). When set, the gtag script is injected; IP anonymization on, ad personalization off.
+- `VITE_CLAIMTAGX_EVENTS_ENDPOINT` — first-party endpoint for the sales team's portal. Marketing site POSTs events via `navigator.sendBeacon` (with `fetch` keepalive fallback).
+
+Each `track(event, properties)` call fans out to all three destinations: PostHog for funnels/replay, GA4 for source/medium/UTM/geo, the ClaimTagX backend for the sales team's portal view.
+
+**First-visit attribution** is captured once per session and attached to every backend event:
+- `landing_path` (path + query of the very first page in the session)
+- `referrer` (`document.referrer` on first hit)
+- `utm_source` / `utm_medium` / `utm_campaign` / `utm_term` / `utm_content` (lifted from URL params)
+
+**Identifiers:**
+- `anonymous_id` — UUID in `localStorage` (persists across visits)
+- `session_id` — UUID in `sessionStorage` (resets per tab session)
+
+Events emitted (marketing-site only — the app/onboarding funnel emits separately):
+- `industry_selected` — `{ industry, label, location: 'hero' }` — fires on the "I run a…" pill clicks
+- `cta_clicked` — `{ action, location, vertical?, plan?, recommended_plan?, estimated_monthly_waste? }`
+  - `action`: `start_free` · `book_demo` · `talk_to_sales` · `request_security_docs` · `see_full_pricing`
+  - `location`: `nav` · `nav_mobile` · `hero` · `sticky_mobile` · `pricing_teaser` · `roi_calculator` · `final_cta` · `solution_page` · `demo_ticket` · `security_hero` · `security_enterprise_cta`
+- `roi_calculated` — `{ items_per_day, days_per_week, items_per_month, estimated_monthly_waste, recommended_plan }` — debounced (1.5s after slider settles), only fires if the user actually interacted.
+- Pageviews auto-captured by PostHog and GA4 (works with wouter SPA routing).
+
+**Backend pipeline (`/api/marketing/events`):**
+- Schema: `marketing_events` table (`lib/db/src/schema/marketingEvents.ts`) — one row per event, indexed on (event, at), (anonymous_id, at), (session_id), (utm_campaign).
+- Route: `artifacts/api-server/src/routes/marketing.ts` — POST, anonymous (no auth), Zod-validated, properties capped at 4 KB, server-side capture of IP, user-agent, and Cloudflare geo headers (`CF-IPCountry`, `CF-Region`, `CF-IPCity`) when present.
+- Migration: `pnpm --filter @workspace/db run push` after pulling these changes pushes the new table.
+- CORS: the api-server CORS allowlist is built from `CORS_ALLOWED_ORIGINS` — add `https://claimtagx.com,https://www.claimtagx.com` there. The marketing site sends with `credentials: 'omit'`, so it does not need to ride the credentialed allowlist semantics.
+
+**Sales-team portal dashboard:** pending — needs Ali to confirm the portal's framework/design system so the component drops in cleanly.
 - `/privacy` — Privacy Policy
 - `/terms` — Terms of Service
 - `/gdpr` — GDPR

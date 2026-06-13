@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
+import { disableAnalytics, enableAnalytics } from '@/lib/analytics';
 
 export default function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
@@ -14,11 +15,13 @@ export default function CookieBanner() {
 
   const acceptCookies = () => {
     localStorage.setItem('claimtagx-cookie-consent', 'accepted');
+    enableAnalytics();
     setIsVisible(false);
   };
 
   const rejectCookies = () => {
     localStorage.setItem('claimtagx-cookie-consent', 'rejected');
+    disableAnalytics();
     setIsVisible(false);
   };
 

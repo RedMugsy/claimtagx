@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import SEO from '@/components/SEO';
+import { track } from '@/lib/analytics';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -131,6 +132,7 @@ export default function Security() {
               <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
                   href="mailto:sales@claimtagx.com?subject=Security%20documentation%20request"
+                  onClick={() => track('cta_clicked', { action: 'request_security_docs', location: 'security_hero' })}
                   className="w-full sm:w-auto bg-lime text-obsidian px-7 py-3.5 rounded-lg font-bold hover:bg-lime-hover hover:shadow-[0_0_25px_rgba(198,242,78,0.35)] transition-all duration-200"
                 >
                   Request security documentation
@@ -267,6 +269,7 @@ export default function Security() {
             </p>
             <a
               href="mailto:sales@claimtagx.com?subject=Enterprise%20security%20review"
+              onClick={() => track('cta_clicked', { action: 'talk_to_sales', location: 'security_enterprise_cta' })}
               className="inline-flex items-center gap-2 bg-lime text-obsidian px-8 py-4 rounded-xl font-bold hover:bg-lime-hover hover:shadow-[0_0_30px_rgba(198,242,78,0.4)] transition-all duration-200"
             >
               Talk to our team

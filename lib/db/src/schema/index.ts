@@ -9,3 +9,4 @@ export * from "./shifts";
 export * from "./serviceRequests";
 export * from "./messages";
 export * from "./intercom";
+export * from "./marketingEvents";

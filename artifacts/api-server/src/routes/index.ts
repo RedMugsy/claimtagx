@@ -7,6 +7,7 @@ import shiftsRouter from "./shifts";
 import servicesRouter from "./services";
 import messagesRouter from "./messages";
 import intercomRouter from "./intercom";
+import marketingRouter from "./marketing";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(servicesRouter);
 router.use(messagesRouter);
 router.use(intercomRouter);
 router.use(assetsRouter);
+router.use(marketingRouter);
 
 export default router;
