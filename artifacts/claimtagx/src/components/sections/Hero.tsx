@@ -160,10 +160,14 @@ export default function Hero() {
             style={{ y: y1, perspective: '1000px' }}
             className="relative lg:h-[700px] flex items-center justify-center lg:justify-end"
           >
-            {/* Entrance animation — Framer Motion owns transform here so it
-                must NOT also carry the mouse tilt, or the two clobber each
-                other. We put the tilt on an inner div with its own CSS
-                transform. */}
+            {/* Three nested transforms, isolated per layer so they compose
+                instead of overwriting each other:
+                  1) entrance animation (Framer Motion: opacity/x/scale)
+                  2) mouse tilt (rotateY/rotateX)
+                  3) idle float (CSS keyframes via animate-float)
+                CSS animations override inline styles per the cascade, so
+                tilt + animate-float on the same element silently clobbers
+                the tilt every keyframe. */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, x: 50 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -172,13 +176,13 @@ export default function Hero() {
               style={{ transformStyle: "preserve-3d" }}
             >
             <div
-              className="relative w-full animate-float"
               style={{
                 transform: `rotateY(${tilt.x * 25}deg) rotateX(${-tilt.y * 25}deg)`,
                 transformStyle: "preserve-3d",
-                transition: "transform 0.15s ease-out",
+                transition: "transform 0.1s ease-out",
               }}
             >
+            <div className="relative w-full animate-float">
               <img 
                 src={heroMockup} 
                 alt="ClaimTagX App Mockup" 
@@ -215,6 +219,7 @@ export default function Hero() {
                   &lt;2s <span className="text-slate">issue time</span>
                 </div>
               </motion.div>
+            </div>
             </div>
             </motion.div>
           </motion.div>
