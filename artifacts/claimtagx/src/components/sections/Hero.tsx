@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, QrCode } from 'lucide-react';
 import heroMockup from '@/assets/hero-mockup.png';
+import NodeNetworkBg from '@/components/NodeNetworkBg';
 import { track } from '@/lib/analytics';
 
 const industryLinks = [
@@ -17,30 +18,38 @@ const industryLinks = [
 ];
 
 export default function Hero() {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  // Phone-wrap-relative mouse tracking — the rotation only responds when the
+  // pointer is near/over the phone, so the effect feels direct instead of
+  // diluted across the whole viewport.
+  const phoneWrapRef = useRef<HTMLDivElement | null>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const { scrollY } = useScroll();
   const y1 = useTransform(scrollY, [0, 1000], [0, 200]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({
-        x: (e.clientX / window.innerWidth) - 0.5,
-        y: (e.clientY / window.innerHeight) - 0.5,
-      });
+    const wrap = phoneWrapRef.current;
+    if (!wrap) return;
+
+    const handleMove = (e: MouseEvent) => {
+      const rect = wrap.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      setTilt({ x, y });
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    const handleLeave = () => setTilt({ x: 0, y: 0 });
+
+    wrap.addEventListener('mousemove', handleMove);
+    wrap.addEventListener('mouseleave', handleLeave);
+    return () => {
+      wrap.removeEventListener('mousemove', handleMove);
+      wrap.removeEventListener('mouseleave', handleLeave);
+    };
   }, []);
 
   return (
     <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden flex flex-col items-center justify-center min-h-[100vh] bg-gradient-mesh">
-      {/* Dynamic Spotlight */}
-      <div 
-        className="absolute w-[800px] h-[800px] bg-lime opacity-[0.03] blur-[120px] rounded-full pointer-events-none transition-transform duration-700 ease-out"
-        style={{ 
-          transform: `translate(${mousePos.x * 200}px, ${mousePos.y * 200}px)`
-        }}
-      />
+      {/* Custody-chain node network — ambient atmosphere behind the hero. */}
+      <NodeNetworkBg />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
@@ -146,18 +155,28 @@ export default function Hero() {
             </motion.div>
           </div>
 
-          <motion.div 
-            style={{ y: y1 }}
+          <motion.div
+            ref={phoneWrapRef}
+            style={{ y: y1, perspective: '1000px' }}
             className="relative lg:h-[700px] flex items-center justify-center lg:justify-end"
           >
+            {/* Entrance animation — Framer Motion owns transform here so it
+                must NOT also carry the mouse tilt, or the two clobber each
+                other. We put the tilt on an inner div with its own CSS
+                transform. */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, x: 50 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.2, type: "spring", bounce: 0.4 }}
-              className="relative w-full max-w-[360px] animate-float"
+              className="relative w-full max-w-[360px]"
+              style={{ transformStyle: "preserve-3d" }}
+            >
+            <div
+              className="relative w-full animate-float"
               style={{
-                transform: `rotateY(${mousePos.x * 20}deg) rotateX(${-mousePos.y * 20}deg)`,
-                transformStyle: "preserve-3d"
+                transform: `rotateY(${tilt.x * 25}deg) rotateX(${-tilt.y * 25}deg)`,
+                transformStyle: "preserve-3d",
+                transition: "transform 0.15s ease-out",
               }}
             >
               <img 
@@ -196,6 +215,7 @@ export default function Hero() {
                   &lt;2s <span className="text-slate">issue time</span>
                 </div>
               </motion.div>
+            </div>
             </motion.div>
           </motion.div>
         </div>
